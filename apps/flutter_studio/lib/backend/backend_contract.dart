@@ -1,6 +1,8 @@
 abstract interface class BackendService {
   Future<BackendLaunchResult> ensureStarted({required String apiBase});
 
+  List<String> recentLogs({int limit = 200});
+
   Future<void> stop();
 }
 

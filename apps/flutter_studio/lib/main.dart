@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'backend/backend_service.dart';
 
@@ -49,6 +50,8 @@ class _StudioShellState extends State<StudioShell> {
   final _userIdController = TextEditingController(text: 'admin');
   final _apiKeyController = TextEditingController();
   final _chatController = TextEditingController();
+  final _setupPasswordController = TextEditingController();
+  final _setupConfirmController = TextEditingController();
   final _systemController = TextEditingController(
     text: 'You are a concise and reliable local assistant.',
   );
@@ -57,17 +60,20 @@ class _StudioShellState extends State<StudioShell> {
 
   int _pageIndex = 0;
   bool _loading = false;
+  bool _requiresSetup = false;
   String? _error;
   String _backendStatus = 'Backend has not started yet.';
   Map<String, dynamic>? _runtime;
+  Map<String, dynamic>? _currentModel;
   List<dynamic> _models = const [];
+  String? _selectedModelId;
   final List<ChatTurn> _turns = [];
 
   @override
   void initState() {
     super.initState();
     if (widget.autoRefresh) {
-      unawaited(_refreshAll());
+      unawaited(_bootstrap());
     }
   }
 
@@ -79,23 +85,101 @@ class _StudioShellState extends State<StudioShell> {
     _apiKeyController.dispose();
     _chatController.dispose();
     _systemController.dispose();
+    _setupPasswordController.dispose();
+    _setupConfirmController.dispose();
     super.dispose();
   }
 
-  Future<void> _refreshAll() async {
+  Future<void> _bootstrap() async {
+    await _loadPreferences();
+    await _refreshAll();
+  }
+
+  Future<void> _loadPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    _apiBaseController.text =
+        prefs.getString('llm_studio.api_base_url') ?? defaultApiBase;
+    _userIdController.text = prefs.getString('llm_studio.user_id') ?? 'admin';
+    _apiKeyController.text = prefs.getString('llm_studio.api_key') ?? '';
+    _selectedModelId = prefs.getString('llm_studio.selected_model_id');
+    _syncClientAuth();
+  }
+
+  Future<void> _savePreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'llm_studio.api_base_url',
+      _apiBaseController.text.trim(),
+    );
+    await prefs.setString('llm_studio.user_id', _userIdController.text.trim());
+    await prefs.setString('llm_studio.api_key', _apiKeyController.text.trim());
+    final selected = _selectedModelId;
+    if (selected == null || selected.isEmpty) {
+      await prefs.remove('llm_studio.selected_model_id');
+    } else {
+      await prefs.setString('llm_studio.selected_model_id', selected);
+    }
+  }
+
+  void _syncClientAuth() {
     _client.baseUrl = _apiBaseController.text.trim();
     _client.userId = _userIdController.text.trim();
     _client.apiKey = _apiKeyController.text.trim();
+  }
+
+  Future<void> _refreshAll() async {
+    _syncClientAuth();
     await _guarded(() async {
       setState(() => _backendStatus = 'Starting backend...');
       final backend = await _backend.ensureStarted(apiBase: _client.baseUrl);
       setState(() => _backendStatus = backend.message);
+      final setup = await _client.setupStatus();
+      if (setup['requires_setup'] == true) {
+        setState(() {
+          _requiresSetup = true;
+          _runtime = null;
+          _models = const [];
+          _currentModel = null;
+        });
+        return;
+      }
+      setState(() => _requiresSetup = false);
       final runtime = await _client.runtime();
       final models = await _client.models();
+      final current = await _client.currentModel();
       setState(() {
         _runtime = runtime;
         _models = models;
+        _currentModel = current;
+        if (_selectedModelId != null &&
+            !models.any(
+              (model) => model is Map && model['id'] == _selectedModelId,
+            )) {
+          _selectedModelId = null;
+        }
       });
+      await _savePreferences();
+    });
+  }
+
+  Future<void> _initializeSetup() async {
+    final password = _setupPasswordController.text;
+    final confirm = _setupConfirmController.text;
+    if (password.isEmpty || password != confirm) {
+      setState(() => _error = 'Passwords do not match.');
+      return;
+    }
+    await _guarded(() async {
+      _syncClientAuth();
+      final result = await _client.initialize(adminPassword: password);
+      _userIdController.text = '${result['user_id'] ?? 'admin'}';
+      _apiKeyController.text = '${result['api_key'] ?? ''}';
+      _setupPasswordController.clear();
+      _setupConfirmController.clear();
+      _requiresSetup = false;
+      _syncClientAuth();
+      await _savePreferences();
+      await _refreshAll();
     });
   }
 
@@ -123,7 +207,17 @@ class _StudioShellState extends State<StudioShell> {
         for (final turn in nextTurns) {
           messages.add({'role': turn.role, 'content': turn.content});
         }
-        final text = await _client.chat(messages);
+        final modelId =
+            _selectedModelId ??
+            (_currentModel?['loaded'] == true
+                ? '${_currentModel?['model_id']}'
+                : '');
+        if (modelId.isEmpty) {
+          throw StudioApiException(
+            'Please load a model on the Models page first.',
+          );
+        }
+        final text = await _client.chat(modelId, messages);
         setState(() {
           _turns[_turns.length - 1] = ChatTurn.assistant(text);
         });
@@ -136,6 +230,56 @@ class _StudioShellState extends State<StudioShell> {
         });
       },
     );
+  }
+
+  Future<void> _scanModels() async {
+    await _guarded(() async {
+      await _client.scanModels();
+      await _refreshAll();
+    });
+  }
+
+  Future<void> _loadModel(String modelId) async {
+    await _guarded(() async {
+      final current = await _client.loadModel(modelId);
+      _selectedModelId = '${current['model_id'] ?? modelId}';
+      await _savePreferences();
+      await _refreshAll();
+    });
+  }
+
+  Future<void> _unloadModel() async {
+    final modelId =
+        _selectedModelId ??
+        (_currentModel?['loaded'] == true
+            ? '${_currentModel?['model_id']}'
+            : '');
+    if (modelId.isEmpty) {
+      return;
+    }
+    await _guarded(() async {
+      await _client.unloadModel(modelId);
+      _selectedModelId = null;
+      await _savePreferences();
+      await _refreshAll();
+    });
+  }
+
+  Future<void> _selectModel(String modelId) async {
+    setState(() => _selectedModelId = modelId);
+    await _savePreferences();
+  }
+
+  Future<void> _clearAuth() async {
+    _apiKeyController.clear();
+    _selectedModelId = null;
+    await _savePreferences();
+    _syncClientAuth();
+    setState(() {
+      _runtime = null;
+      _currentModel = null;
+      _error = 'Authentication has been cleared.';
+    });
   }
 
   Future<void> _guarded(
@@ -160,13 +304,34 @@ class _StudioShellState extends State<StudioShell> {
 
   @override
   Widget build(BuildContext context) {
+    if (_requiresSetup) {
+      return _SetupPage(
+        passwordController: _setupPasswordController,
+        confirmController: _setupConfirmController,
+        loading: _loading,
+        error: _error,
+        onInitialize: _initializeSetup,
+        backendStatus: _backendStatus,
+      );
+    }
     final pages = [
       _DashboardPage(runtime: _runtime, models: _models),
-      _ModelsPage(models: _models, onRefresh: _refreshAll),
+      _ModelsPage(
+        models: _models,
+        currentModel: _currentModel,
+        selectedModelId: _selectedModelId,
+        onRefresh: _refreshAll,
+        onScan: _scanModels,
+        onLoad: _loadModel,
+        onUnload: _unloadModel,
+        onSelect: _selectModel,
+      ),
       _ChatPage(
         turns: _turns,
         chatController: _chatController,
         systemController: _systemController,
+        selectedModelId: _selectedModelId,
+        currentModel: _currentModel,
         onSend: _sendChat,
         onClear: () => setState(_turns.clear),
       ),
@@ -174,7 +339,9 @@ class _StudioShellState extends State<StudioShell> {
         apiBaseController: _apiBaseController,
         userIdController: _userIdController,
         apiKeyController: _apiKeyController,
+        backendLogs: _backend.recentLogs(),
         onApply: _refreshAll,
+        onClearAuth: _clearAuth,
       ),
     ];
 
@@ -261,13 +428,75 @@ class LlmStudioClient {
     return (body['data'] as List?) ?? const [];
   }
 
-  Future<String> chat(List<Map<String, String>> messages) async {
+  Future<Map<String, dynamic>> setupStatus() async {
+    final response = await http
+        .get(Uri.parse('$baseUrl/v1/setup/status'))
+        .timeout(const Duration(seconds: 8));
+    return _decodeMap(response);
+  }
+
+  Future<Map<String, dynamic>> initialize({
+    required String adminPassword,
+  }) async {
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/v1/setup/initialize'),
+          headers: {'content-type': 'application/json'},
+          body: jsonEncode({
+            'admin_password': adminPassword,
+            'display_name': 'Admin',
+          }),
+        )
+        .timeout(const Duration(seconds: 15));
+    return _decodeMap(response);
+  }
+
+  Future<void> scanModels() async {
+    final response = await http
+        .post(Uri.parse('$baseUrl/v1/models/scan'), headers: _authHeaders())
+        .timeout(const Duration(seconds: 15));
+    _decodeMap(response);
+  }
+
+  Future<Map<String, dynamic>> loadModel(String modelId) async {
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/v1/models/${Uri.encodeComponent(modelId)}/load'),
+          headers: {..._authHeaders(), 'content-type': 'application/json'},
+          body: jsonEncode({'strategy': 'auto'}),
+        )
+        .timeout(const Duration(minutes: 10));
+    return _decodeMap(response);
+  }
+
+  Future<void> unloadModel(String modelId) async {
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/v1/models/unload'),
+          headers: {..._authHeaders(), 'content-type': 'application/json'},
+          body: jsonEncode({'model': modelId}),
+        )
+        .timeout(const Duration(seconds: 30));
+    _decodeMap(response);
+  }
+
+  Future<Map<String, dynamic>> currentModel() async {
+    final response = await http
+        .get(Uri.parse('$baseUrl/v1/models/current'), headers: _authHeaders())
+        .timeout(const Duration(seconds: 8));
+    return _decodeMap(response);
+  }
+
+  Future<String> chat(
+    String modelId,
+    List<Map<String, String>> messages,
+  ) async {
     final response = await http
         .post(
           Uri.parse('$baseUrl/v1/chat/completions'),
           headers: {..._authHeaders(), 'content-type': 'application/json'},
           body: jsonEncode({
-            'model': 'auto',
+            'model': modelId,
             'messages': messages,
             'stream': false,
           }),
@@ -301,11 +530,17 @@ class LlmStudioClient {
     throw StudioApiException('API response is not a JSON object.');
   }
 
+  Map<String, String> authHeadersForTesting() => _authHeaders();
+
   Map<String, String> _authHeaders() {
     if (apiKey.isEmpty) {
       return const {};
     }
-    return {'X-User-ID': userId, 'X-API-Key': apiKey};
+    return {
+      'X-User-ID': userId,
+      'X-API-Key': apiKey,
+      'Authorization': 'Bearer $apiKey',
+    };
   }
 }
 
@@ -329,6 +564,94 @@ class ChatTurn {
 
   final String role;
   final String content;
+}
+
+class _SetupPage extends StatelessWidget {
+  const _SetupPage({
+    required this.passwordController,
+    required this.confirmController,
+    required this.loading,
+    required this.error,
+    required this.onInitialize,
+    required this.backendStatus,
+  });
+
+  final TextEditingController passwordController;
+  final TextEditingController confirmController;
+  final bool loading;
+  final String? error;
+  final VoidCallback onInitialize;
+  final String backendStatus;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460),
+          child: Card(
+            elevation: 0,
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Initialize LLM Studio',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    backendStatus,
+                    style: const TextStyle(color: Colors.black54),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'First use requires a local admin account and API key.',
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: passwordController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Admin password',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: confirmController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Confirm password',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  if (error != null) ...[
+                    const SizedBox(height: 12),
+                    Text(error!, style: const TextStyle(color: Colors.red)),
+                  ],
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: loading ? null : onInitialize,
+                    icon: loading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.check),
+                    label: const Text('Initialize'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _TopBar extends StatelessWidget {
@@ -427,10 +750,25 @@ class _DashboardPage extends StatelessWidget {
 }
 
 class _ModelsPage extends StatelessWidget {
-  const _ModelsPage({required this.models, required this.onRefresh});
+  const _ModelsPage({
+    required this.models,
+    required this.currentModel,
+    required this.selectedModelId,
+    required this.onRefresh,
+    required this.onScan,
+    required this.onLoad,
+    required this.onUnload,
+    required this.onSelect,
+  });
 
   final List<dynamic> models;
+  final Map<String, dynamic>? currentModel;
+  final String? selectedModelId;
   final VoidCallback onRefresh;
+  final VoidCallback onScan;
+  final Future<void> Function(String modelId) onLoad;
+  final VoidCallback onUnload;
+  final Future<void> Function(String modelId) onSelect;
 
   @override
   Widget build(BuildContext context) {
@@ -445,6 +783,12 @@ class _ModelsPage extends StatelessWidget {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               ),
               const Spacer(),
+              OutlinedButton.icon(
+                onPressed: onScan,
+                icon: const Icon(Icons.manage_search),
+                label: const Text('Scan'),
+              ),
+              const SizedBox(width: 8),
               FilledButton.icon(
                 onPressed: onRefresh,
                 icon: const Icon(Icons.search),
@@ -466,10 +810,19 @@ class _ModelsPage extends StatelessWidget {
                     itemBuilder: (context, index) {
                       final model = models[index];
                       final map = model is Map ? model : const {};
+                      final id = '${map['id'] ?? ''}';
+                      final status = '${map['status'] ?? 'unknown'}';
+                      final isReady = status == 'ready';
+                      final isLoaded =
+                          currentModel?['loaded'] == true &&
+                          currentModel?['model_id'] == id;
+                      final isSelected = selectedModelId == id;
                       return Card(
                         elevation: 0,
                         child: ListTile(
-                          leading: const Icon(Icons.view_in_ar),
+                          leading: Icon(
+                            isLoaded ? Icons.check_circle : Icons.view_in_ar,
+                          ),
                           title: Text(
                             '${map['display_name'] ?? map['id'] ?? map['path'] ?? 'unknown'}',
                           ),
@@ -477,7 +830,30 @@ class _ModelsPage extends StatelessWidget {
                             '${map['format'] ?? 'unknown'} - ${map['status'] ?? 'unknown'}\n${map['path'] ?? ''}',
                           ),
                           isThreeLine: true,
-                          trailing: Text('${map['quantization'] ?? ''}'),
+                          trailing: Wrap(
+                            spacing: 8,
+                            children: [
+                              if (isSelected) const Chip(label: Text('Chat')),
+                              TextButton(
+                                onPressed: id.isEmpty
+                                    ? null
+                                    : () => onSelect(id),
+                                child: const Text('Use'),
+                              ),
+                              FilledButton.tonal(
+                                onPressed: isReady && !isLoaded
+                                    ? () => onLoad(id)
+                                    : null,
+                                child: Text(isLoaded ? 'Loaded' : 'Load'),
+                              ),
+                              if (isLoaded)
+                                IconButton(
+                                  onPressed: onUnload,
+                                  icon: const Icon(Icons.eject),
+                                  tooltip: 'Unload',
+                                ),
+                            ],
+                          ),
                         ),
                       );
                     },
@@ -494,6 +870,8 @@ class _ChatPage extends StatelessWidget {
     required this.turns,
     required this.chatController,
     required this.systemController,
+    required this.selectedModelId,
+    required this.currentModel,
     required this.onSend,
     required this.onClear,
   });
@@ -501,16 +879,37 @@ class _ChatPage extends StatelessWidget {
   final List<ChatTurn> turns;
   final TextEditingController chatController;
   final TextEditingController systemController;
+  final String? selectedModelId;
+  final Map<String, dynamic>? currentModel;
   final VoidCallback onSend;
   final VoidCallback onClear;
 
   @override
   Widget build(BuildContext context) {
+    final loaded = currentModel?['loaded'] == true;
+    final modelId =
+        selectedModelId ?? (loaded ? '${currentModel?['model_id'] ?? ''}' : '');
+    final canChat = modelId.isNotEmpty && loaded;
     return _PagePadding(
       child: Column(
         children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  canChat
+                      ? 'Current model: $modelId'
+                      : 'Please load a model on the Models page.',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           TextField(
             controller: systemController,
+            enabled: canChat,
             decoration: const InputDecoration(
               labelText: 'System Prompt',
               border: OutlineInputBorder(),
@@ -559,13 +958,18 @@ class _ChatPage extends StatelessWidget {
               Expanded(
                 child: TextField(
                   controller: chatController,
+                  enabled: canChat,
                   minLines: 1,
                   maxLines: 4,
                   decoration: const InputDecoration(
                     hintText: 'Message',
                     border: OutlineInputBorder(),
                   ),
-                  onSubmitted: (_) => onSend(),
+                  onSubmitted: (_) {
+                    if (canChat) {
+                      onSend();
+                    }
+                  },
                 ),
               ),
               const SizedBox(width: 8),
@@ -576,7 +980,7 @@ class _ChatPage extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               FilledButton.icon(
-                onPressed: onSend,
+                onPressed: canChat ? onSend : null,
                 icon: const Icon(Icons.send),
                 label: const Text('Send'),
               ),
@@ -593,13 +997,17 @@ class _SettingsPage extends StatelessWidget {
     required this.apiBaseController,
     required this.userIdController,
     required this.apiKeyController,
+    required this.backendLogs,
     required this.onApply,
+    required this.onClearAuth,
   });
 
   final TextEditingController apiBaseController;
   final TextEditingController userIdController;
   final TextEditingController apiKeyController;
+  final List<String> backendLogs;
   final VoidCallback onApply;
+  final VoidCallback onClearAuth;
 
   @override
   Widget build(BuildContext context) {
@@ -625,6 +1033,12 @@ class _SettingsPage extends StatelessWidget {
             icon: const Icon(Icons.check),
             label: const Text('Apply'),
           ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: onClearAuth,
+            icon: const Icon(Icons.key_off),
+            label: const Text('Clear auth'),
+          ),
           const SizedBox(height: 24),
           const Text(
             'The Flutter desktop app starts and owns the local FastAPI service when it is not already running.',
@@ -644,6 +1058,41 @@ class _SettingsPage extends StatelessWidget {
             decoration: const InputDecoration(
               labelText: 'X-API-Key',
               border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Backend logs',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: const Color(0xff111827),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: ListView(
+                padding: const EdgeInsets.all(12),
+                children: backendLogs.isEmpty
+                    ? const [
+                        Text(
+                          'No backend logs captured yet.',
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                      ]
+                    : backendLogs
+                          .map(
+                            (line) => Text(
+                              line,
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontFamily: 'monospace',
+                              ),
+                            ),
+                          )
+                          .toList(),
+              ),
             ),
           ),
         ],

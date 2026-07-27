@@ -1,15 +1,29 @@
-# LLM Studio Flutter Client
+﻿# LLM Studio Flutter Client
 
-This is the Flutter desktop client for LLM-Studio.
-It owns the local Python/FastAPI backend lifecycle on desktop: when the app starts, it checks `/health` and starts the backend if it is not already running.
+This is the Windows Flutter desktop client for LLM-Studio. It owns the local Python/FastAPI backend lifecycle on desktop: when the app starts, it checks `/health` and starts the backend if it is not already running.
 
-## Current scope
+## Current Scope
 
-- Runtime status dashboard via `GET /v1/runtime`
-- Local model list via `GET /v1/models`
-- Non-streaming chat via `POST /v1/chat/completions`
-- Configurable API base URL
-- Runtime-only API key entry through Settings. Keys are sent as `X-User-ID` and `X-API-Key` headers and are not persisted by the Flutter client.
+Supported:
+
+- First-run setup through `GET /v1/setup/status` and `POST /v1/setup/initialize`.
+- API Key persistence with `shared_preferences`.
+- Authenticated API calls using `Authorization: Bearer`, `X-User-ID`, and `X-API-Key`.
+- Runtime status dashboard via `GET /v1/runtime`.
+- Local model list via `GET /v1/models`.
+- Model scan via `POST /v1/models/scan`.
+- Model load via `POST /v1/models/{id}/load`.
+- Current model via `GET /v1/models/current`.
+- Model unload via `POST /v1/models/unload`.
+- Non-streaming chat via `POST /v1/chat/completions` using the selected model ID.
+- Backend stdout/stderr log capture with secret redaction.
+
+Current limitations:
+
+- Chat streaming/SSE UI is not yet enabled.
+- Full download progress UI is not yet complete.
+- LoRA merge and benchmark pages remain experimental.
+- `shared_preferences` is not a secure Windows key vault; move to Windows Credential Manager or secure storage in a later hardening pass.
 
 ## Run on Windows
 
@@ -17,12 +31,6 @@ From the repository root:
 
 ```powershell
 .\scripts\start_desktop.ps1
-```
-
-The Flutter app locates the repository root through `LLM_STUDIO_ROOT` and starts:
-
-```text
-.venv\Scripts\python.exe -m llm_studio.cli serve --host 127.0.0.1 --port 8000
 ```
 
 For direct Flutter development, pass the repository root explicitly:
@@ -48,12 +56,3 @@ py -3.12 -m venv .venv
 .\scripts\install_windows_cuda.ps1
 .\scripts\install_base.ps1
 ```
-
-## Next UI milestones
-
-- Streaming SSE chat
-- Model download and job progress pages
-- RAG management
-- LoRA management
-- Benchmark reports
-- Config import/export and diagnostics export

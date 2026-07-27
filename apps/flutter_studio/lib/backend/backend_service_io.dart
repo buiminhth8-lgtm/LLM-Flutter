@@ -7,15 +7,14 @@ import 'package:http/http.dart' as http;
 import 'backend_contract.dart';
 
 const _configuredProjectRoot = String.fromEnvironment('LLM_STUDIO_ROOT');
-const _configuredPythonExecutable = String.fromEnvironment(
-  'LLM_STUDIO_PYTHON',
-);
+const _configuredPythonExecutable = String.fromEnvironment('LLM_STUDIO_PYTHON');
 
 BackendService createBackendService() => DesktopBackendService();
 
 class DesktopBackendService implements BackendService {
   Process? _process;
   bool _startedByApp = false;
+  final List<String> _logs = <String>[];
 
   @override
   Future<BackendLaunchResult> ensureStarted({required String apiBase}) async {
@@ -46,8 +45,8 @@ class DesktopBackendService implements BackendService {
       mode: ProcessStartMode.normal,
     );
     _startedByApp = true;
-    _drain(_process!.stdout);
-    _drain(_process!.stderr);
+    _drain(_process!.stdout, 'stdout');
+    _drain(_process!.stderr, 'stderr');
     var exited = false;
     unawaited(_process!.exitCode.then((_) => exited = true));
 
@@ -59,12 +58,25 @@ class DesktopBackendService implements BackendService {
         );
       }
       if (exited) {
-        throw StateError('Backend process exited before becoming healthy.');
+        throw StateError(
+          'Backend process exited before becoming healthy.\n'
+          '${recentLogs(limit: 20).join('\n')}',
+        );
       }
       await Future<void>.delayed(const Duration(seconds: 1));
     }
 
-    throw TimeoutException('Backend startup timed out.');
+    throw TimeoutException(
+      'Backend startup timed out.\n${recentLogs(limit: 20).join('\n')}',
+    );
+  }
+
+  @override
+  List<String> recentLogs({int limit = 200}) {
+    if (_logs.length <= limit) {
+      return List<String>.unmodifiable(_logs);
+    }
+    return List<String>.unmodifiable(_logs.sublist(_logs.length - limit));
   }
 
   @override
@@ -154,7 +166,33 @@ class DesktopBackendService implements BackendService {
     }
   }
 
-  void _drain(Stream<List<int>> stream) {
-    stream.transform(utf8.decoder).listen((_) {});
+  void _drain(Stream<List<int>> stream, String source) {
+    stream
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())
+        .listen((line) => _appendLog('[$source] ${_redactSecrets(line)}'));
+  }
+
+  void _appendLog(String line) {
+    _logs.add(line);
+    if (_logs.length > 200) {
+      _logs.removeRange(0, _logs.length - 200);
+    }
+  }
+
+  String _redactSecrets(String value) {
+    var redacted = value.replaceAll(
+      RegExp(r'Authorization:\s*Bearer\s+\S+', caseSensitive: false),
+      'Authorization: Bearer <redacted>',
+    );
+    redacted = redacted.replaceAll(
+      RegExp(r'X-API-Key:\s*\S+', caseSensitive: false),
+      'X-API-Key: <redacted>',
+    );
+    redacted = redacted.replaceAll(
+      RegExp(r'(api_key|password|cookie|token)=\S+', caseSensitive: false),
+      r'$1=<redacted>',
+    );
+    return redacted;
   }
 }

@@ -12,5 +12,8 @@ class _UnsupportedBackendService implements BackendService {
   }
 
   @override
+  List<String> recentLogs({int limit = 200}) => const [];
+
+  @override
   Future<void> stop() async {}
 }
