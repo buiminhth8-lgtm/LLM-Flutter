@@ -2,6 +2,40 @@
 
 > This README is the single source of project documentation. The former `docs/` documents were merged here.
 
+## Flutter Desktop 启动说明
+
+推荐从项目根目录启动桌面端：
+
+```powershell
+.\scripts\start_desktop.ps1
+```
+
+该脚本会把项目根目录通过 `LLM_STUDIO_ROOT` 传给 Flutter，并由 Flutter Desktop 自动启动本地 FastAPI 后端。
+
+如果需要直接运行 Flutter：
+
+```powershell
+cd apps\flutter_studio
+flutter run -d windows --dart-define="LLM_STUDIO_ROOT=D:\develop\LLM-Studio\LLM-Studio"
+```
+
+如果 Python 解释器不在 `.venv\Scripts\python.exe`，请额外指定：
+
+```powershell
+flutter run -d windows `
+  --dart-define="LLM_STUDIO_ROOT=D:\develop\LLM-Studio\LLM-Studio" `
+  --dart-define="LLM_STUDIO_PYTHON=D:\path\to\python.exe"
+```
+
+看到 `Missing Python executable` 时，说明项目根目录已经识别成功，但还没有可用于启动后端的 Python 环境。先创建 Python 3.12 虚拟环境并安装依赖：
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip setuptools wheel
+.\scripts\install_windows_cuda.ps1
+.\scripts\install_base.ps1
+```
+
 ## Table of Contents
 
 1. [功能说明](#功能说明)
@@ -208,8 +242,7 @@ LLM Studio 是一个**跨平台**的大语言模型（LLM）一站式管理工�
 | `/v1/vision/analyze` | POST | 图片分析（指定本地路径） |
 | `/v1/vision/analyze/upload` | POST | 上传图片分析 |
 | `/v1/vision/ocr` | POST | 图片 OCR 文字识别 |
-| `/admin` | GET | **管理后台页面** |
-| `/admin/api/*` | — | 管理后台 API（用户 CRUD、密钥管理） |
+| `/admin/api/*` | — | 内部管理 API（用户 CRUD、密钥管理；供 Flutter 管理页复用） |
 
 **认证方式**：`X-User-ID` + `X-API-Key` 请求头（在管理后台中创建用户后获取）。
 
@@ -234,10 +267,10 @@ requests.post(f"{API}/v1/models/load", json={
     "model": "./models/Qwen--Qwen2.5-1.5B-Instruct"
 }, headers=HEADERS)
 
-# 对话（OpenAI 兼容）
+# Chat completion (OpenAI compatible)
 resp = requests.post(f"{API}/v1/chat/completions", json={
     "model": "./models/Qwen--Qwen2.5-1.5B-Instruct",
-    "messages": [{"role": "user", "content": "你好"}],
+    "messages": [{"role": "user", "content": "hello"}],
     "temperature": 0.7
 }, headers=HEADERS)
 print(resp.json()["choices"][0]["message"]["content"])
@@ -256,11 +289,10 @@ print(resp.json()["answer"])
 
 ---
 
-### 2.8 API 密钥管理后台
+### 2.8 Flutter Desktop API Key Management
 
-内置 Web 管理后台，用于创建和管理 API 用户密钥，无需手动编辑配置文件。
+API users and keys are managed through Flutter Desktop calling local management APIs.
 
-**访问地址**：`http://localhost:8000/admin`
 
 #### 登录
 
@@ -414,7 +446,6 @@ llm-studio
 
 ```bash
 # 安装
-install.bat                                         # Windows
 
 # 下载一个轻量模型
 llm-studio model download "Qwen2.5-1.5B-Instruct"
@@ -584,7 +615,6 @@ sudo dnf install python3 python3-devel python3-pip
 
 ```powershell
 cd LLM-Studio
-.\install.bat
 ```
 
 脚本会自动完成：创建虚拟环境 → 安装依赖 → 注册 `llm-studio` 命令。
@@ -593,8 +623,8 @@ cd LLM-Studio
 
 ```bash
 cd LLM-Studio
-chmod +x install.sh
-./install.sh
+.\scripts\setup_windows_python312.ps1
+.\scripts\install_base.ps1
 ```
 
 ### 4.2 手动安装
@@ -991,14 +1021,14 @@ auth:
   enabled: true
 ```
 
-> 用户管理已迁移到管理后台（`/admin`），无需手动编辑配置文件。
+> 用户管理由 Flutter Desktop 通过本地管理 API 完成，无需手动编辑配置文件。
 
 ### 2.1 管理后台
 
 启动 API 服务后，访问管理后台创建和管理 API 用户：
 
 ```
-http://localhost:8000/admin
+Flutter Desktop 设置页
 ```
 
 - 不再提供硬编码默认管理员密码；首次启动读取 `LLM_STUDIO_INITIAL_ADMIN_PASSWORD`，未设置时生成一次性随机初始密码并只在启动日志显示。
@@ -1042,8 +1072,7 @@ Authorization: Bearer sk-llmstudio-admin-key
 | `/docs`           | Swagger UI 文档 |
 | `/openapi.json`   | OpenAPI Schema  |
 | `/redoc`          | ReDoc 文档      |
-| `/admin`          | 管理后台        |
-| `/admin/api/*`    | 管理后台 API    |
+| `/admin/api/*`    | 内部管理 API    |
 
 ### 2.4 认证失败响应
 
@@ -1077,8 +1106,7 @@ HTTP 状态码：**401 Unauthorized**
 | 视觉     | POST   | `/v1/vision/analyze`       | 图片识别分析           |
 | 视觉     | POST   | `/v1/vision/analyze/upload`| 上传图片进行识别       |
 | 视觉     | POST   | `/v1/vision/ocr`           | 图片 OCR 文字识别      |
-| 管理     | GET    | `/admin`                   | 管理后台页面           |
-| 管理     | POST   | `/admin/api/login`         | 管理后台登录           |
+| 管理     | POST   | `/admin/api/login`         | 管理 API 登录          |
 | 管理     | GET    | `/admin/api/users`         | 列出所有 API 用户      |
 | 管理     | POST   | `/admin/api/users`         | 创建新用户             |
 | 管理     | DELETE | `/admin/api/users/{id}`    | 删除用户               |
@@ -1476,7 +1504,7 @@ RemoteAssistant                       LLM Studio
 | 模型自动加载                 | ? 支持  | 首次对话自动加载模型，无需手动操作     |
 | `X-User-ID + X-API-Key` 认证 | ? 支持  | 需在管理后台创建用户获取密钥      |
 | `Authorization: Bearer` 头  | ? 兼容  | 作为 X-API-Key 的备选传递方式     |
-| 管理后台                     | ? 支持  | `/admin` 页面管理用户和密钥       |
+| Flutter 管理页                | 支持    | 通过本地管理 API 管理用户和密钥     |
 | Embeddings 接口             | ? 暂无  | `/v1/embeddings` 未实现              |
 
 ---
@@ -1966,8 +1994,6 @@ LLM-Studio/
 ├── pyproject.toml               # 构建配置 (PEP 517)
 ├── requirements.txt             # 依赖列表
 ├── config.yaml                  # 运行时配置
-├── install.bat                  # Windows 一键安装
-├── install.sh                   # macOS/Linux 一键安装
 ├── llm_studio/                  # Python 包
 │   ├── __init__.py
 │   ├── cli.py                   # CLI 入口 (click)

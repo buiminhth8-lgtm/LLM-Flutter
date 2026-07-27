@@ -83,3 +83,17 @@ def test_api_preserves_multi_turn_messages(tmp_path):
 
 def test_queue_full_error_type():
     assert str(QueueFullError("full")) == "full"
+
+
+def test_legacy_admin_html_page_is_not_exposed(tmp_path):
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text("auth:\n  enabled: false\n", encoding="utf-8")
+    app = get_app(Config(cfg_path))
+    client = TestClient(app)
+
+    response = client.get("/admin")
+
+    assert response.status_code == 404

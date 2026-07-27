@@ -9,7 +9,6 @@ import secrets
 import time
 import uuid
 from contextlib import asynccontextmanager
-from pathlib import Path
 from typing import Annotated
 
 from .adapters import AdapterRepository
@@ -903,8 +902,6 @@ def get_app(config: Config):
 
     # ── Admin Backend ──────────────────────────────────────
 
-    from fastapi.responses import HTMLResponse
-
     # Simple session token store (in-memory, cleared on restart)
     _admin_sessions: set[str] = set()
 
@@ -1016,14 +1013,6 @@ def get_app(config: Config):
         if not _admin.change_admin_password(req.old_password, req.new_password):
             raise HTTPException(status_code=400, detail="原密码错误")
         return {"status": "ok"}
-
-    @app.get("/admin", response_class=HTMLResponse)
-    async def admin_page():
-        """管理后台页面"""
-        html_path = Path(__file__).parent / "admin_ui.html"
-        if html_path.exists():
-            return HTMLResponse(html_path.read_text(encoding="utf-8"))
-        return HTMLResponse("<h1>Admin UI not found</h1>", status_code=500)
 
     # ── /api/v1 alias (RemoteAssistant compatibility) ──────
     # RemoteAssistant llmstudio preset uses /api/v1/* paths
