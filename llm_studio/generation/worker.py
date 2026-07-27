@@ -58,6 +58,9 @@ class GenerationWorker:
             for chunk in self.streamer:
                 if self.cancellation_token.is_cancelled:
                     raise GenerationCancelledError("生成已取消。")
+                if self.timeout_seconds > 0 and time.monotonic() - started_at > self.timeout_seconds:
+                    self.cancellation_token.cancel()
+                    raise GenerationTimeoutError(f"生成超时，超过 {self.timeout_seconds:.0f} 秒。")
                 if chunk:
                     yield chunk
             self._raise_worker_error_if_any()
