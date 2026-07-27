@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import secrets
@@ -10,23 +9,30 @@ import time
 from pathlib import Path
 from typing import Optional
 
+from .security import hash_api_key, redact_secret
 
 def generate_api_key(prefix: str = "sk-llmstudio") -> str:
     """Generate a secure random API key."""
     return f"{prefix}-{secrets.token_hex(20)}"
 
 
-def _hash_secret(secret: str, salt: str | None = None) -> str:
-    salt = salt or secrets.token_hex(16)
-    digest = hashlib.pbkdf2_hmac("sha256", secret.encode("utf-8"), bytes.fromhex(salt), 310_000)
-    return f"pbkdf2_sha256${salt}${digest.hex()}"
+def _hash_secret(secret: str) -> str:
+    from argon2 import PasswordHasher
+
+    return PasswordHasher().hash(secret)
 
 
 def _verify_secret(secret: str, stored: str) -> bool:
+    if stored.startswith("$argon2"):
+        from argon2 import PasswordHasher
+        from argon2.exceptions import VerifyMismatchError
+
+        try:
+            return PasswordHasher().verify(stored, secret)
+        except VerifyMismatchError:
+            return False
     if stored.startswith("pbkdf2_sha256$"):
-        _, salt, digest = stored.split("$", 2)
-        candidate = _hash_secret(secret, salt).split("$", 2)[2]
-        return secrets.compare_digest(candidate, digest)
+        return False
     # Legacy plaintext migration path.
     return secrets.compare_digest(secret, stored)
 
@@ -77,7 +83,7 @@ class UserRecord:
         api_key_hash = data.get("api_key_hash")
         api_key_masked = data.get("api_key_masked")
         if legacy_key and not api_key_hash:
-            api_key_hash = _hash_secret(legacy_key)
+            api_key_hash = hash_api_key(legacy_key)
             api_key_masked = _mask_key(legacy_key)
         if not api_key_hash:
             raise ValueError(f"User {data.get('user_id', '<unknown>')} has no API key hash")
@@ -110,7 +116,7 @@ class AdminManager:
             with open(self._db_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             stored_password = data.get("admin_password_hash") or data.get("admin_password", "")
-            if stored_password and not stored_password.startswith("pbkdf2_sha256$"):
+            if stored_password and not stored_password.startswith("$argon2"):
                 self._admin_password_hash = _hash_secret(stored_password)
             else:
                 self._admin_password_hash = stored_password
@@ -136,15 +142,15 @@ class AdminManager:
         if "LLM_STUDIO_INITIAL_ADMIN_PASSWORD" not in os.environ:
             self.initial_admin_password = password
             print(
-                "[Admin] Generated initial admin password. "
-                "It will be shown once in this startup log; change it immediately."
+                "[Admin] LLM_STUDIO_INITIAL_ADMIN_PASSWORD 未设置；"
+                "已生成一次性初始密码，仅建议绑定 127.0.0.1 时使用。"
             )
-            print(f"[Admin] Initial admin password: {password}")
+            print(f"[Admin] Initial admin password: {redact_secret(password)}")
         self._admin_password_hash = _hash_secret(password)
         api_key = generate_api_key()
         admin = UserRecord(
             user_id="admin",
-            api_key_hash=_hash_secret(api_key),
+            api_key_hash=hash_api_key(api_key),
             api_key_masked=_mask_key(api_key),
             role="admin",
             note="Default admin user created on first startup.",
@@ -152,7 +158,7 @@ class AdminManager:
         admin.plain_api_key = api_key
         self._users["admin"] = admin
         self.save()
-        print(f"[Admin] Initial admin API key: {api_key}")
+        print(f"[Admin] Initial admin API key: {redact_secret(api_key)}")
 
     def verify_admin_password(self, password: str) -> bool:
         """Verify admin dashboard login password."""
@@ -169,7 +175,7 @@ class AdminManager:
     def authenticate(self, user_id: str, api_key: str) -> Optional[UserRecord]:
         """Authenticate an API request. Returns user record or None."""
         user = self._users.get(user_id)
-        if user and user.enabled and _verify_secret(api_key, user.api_key_hash):
+        if user and user.enabled and secrets.compare_digest(hash_api_key(api_key), user.api_key_hash):
             return user
         return None
 
@@ -180,7 +186,7 @@ class AdminManager:
         api_key = generate_api_key()
         rec = UserRecord(
             user_id=user_id,
-            api_key_hash=_hash_secret(api_key),
+            api_key_hash=hash_api_key(api_key),
             api_key_masked=_mask_key(api_key),
             role=role,
             note=note,
@@ -218,7 +224,7 @@ class AdminManager:
         user = self._users.get(user_id)
         if user:
             api_key = generate_api_key()
-            user.api_key_hash = _hash_secret(api_key)
+            user.api_key_hash = hash_api_key(api_key)
             user.api_key_masked = _mask_key(api_key)
             user.plain_api_key = api_key
             self.save()

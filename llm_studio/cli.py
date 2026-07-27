@@ -51,6 +51,52 @@ def info():
     console.print(table)
 
 
+@cli.command()
+@click.pass_context
+def doctor(ctx):
+    """Run environment self checks."""
+    from pathlib import Path
+
+    from .runtime.capabilities import detect_runtime_capabilities
+
+    config = ctx.obj["config"]
+    checks = []
+
+    try:
+        Path("config.yaml").read_text(encoding="utf-8")
+        checks.append(("PASS", "UTF-8", "config.yaml 可按 UTF-8 读取"))
+    except Exception as exc:
+        checks.append(("FAIL", "UTF-8", str(exc)))
+
+    caps = detect_runtime_capabilities()
+    checks.append(("PASS" if caps.torch_version else "WARN", "torch", caps.torch_version or "未安装"))
+    checks.append(("PASS" if caps.cuda_available else "WARN", "CUDA", str(caps.cuda_available)))
+    checks.append(("PASS" if caps.bf16_supported else "WARN", "BF16", str(caps.bf16_supported)))
+    checks.append(("PASS" if caps.bitsandbytes_4bit_usable else "WARN", "bitsandbytes", caps.bitsandbytes_error or "usable"))
+    checks.append(("PASS" if caps.llama_cpp_cuda_enabled else "WARN", "llama.cpp", caps.llama_cpp_error or "CUDA enabled"))
+    checks.append(("PASS" if caps.gptqmodel_installed else "WARN", "GPTQModel", str(caps.gptqmodel_installed)))
+
+    for label, path in (
+        ("models_dir", config.models_dir),
+        ("datasets_dir", config.datasets_dir),
+        ("finetune_output_dir", config.finetune_output_dir),
+    ):
+        checks.append(("PASS" if path.exists() else "FAIL", label, str(path)))
+
+    auth_enabled = config.get("auth", {}).get("enabled", False)
+    checks.append(("PASS" if auth_enabled else "WARN", "auth", f"enabled={auth_enabled}"))
+    checks.append(("PASS", "CORS", ", ".join(config.get("api", {}).get("allowed_origins", []))))
+
+    table = Table(title="LLM Studio Doctor")
+    table.add_column("Status")
+    table.add_column("Check")
+    table.add_column("Detail")
+    for status, name, detail in checks:
+        style = {"PASS": "green", "WARN": "yellow", "FAIL": "red"}[status]
+        table.add_row(f"[{style}]{status}[/{style}]", name, detail)
+    console.print(table)
+
+
 # ── Model Download ───────────────────────────────────────
 
 @cli.group()

@@ -385,6 +385,31 @@ python -m llm_studio.runtime.diagnostics
 
 默认 `trust_remote_code: false`。只有在你信任模型仓库代码时才显式打开。
 
+## 第二阶段运行时改进
+
+- API、CLI 和 Web UI 统一使用 `ChatMessage` 与 `PromptBuilder`，多轮 user/assistant 历史和 system prompt 不再丢失。
+- 无 chat template 的模型使用 `<|system|>`、`<|user|>`、`<|assistant|>` 回退模板。
+- 流式生成支持后台线程异常回传、超时和取消。
+- Web UI 提供停止生成按钮；API 客户端断开会取消生成。
+- 单 GPU 推理默认并发为 1，队列上限默认为 8。
+- RAG 默认 embedding 设备为 CPU，索引保存 embedding 模型、维度和 schema 版本。
+- 微调默认使用动态 padding 和 assistant-only loss。
+- 管理员密码使用 Argon2id，API Key 只保存哈希。
+
+诊断：
+
+```powershell
+python -m llm_studio.runtime.diagnostics
+python -m llm_studio.cli doctor
+```
+
+更多文档：
+
+- [RTX5060_RUNTIME_GUIDE.md](docs/RTX5060_RUNTIME_GUIDE.md)
+- [RAG_GUIDE.md](docs/RAG_GUIDE.md)
+- [FINETUNE_LOW_VRAM_GUIDE.md](docs/FINETUNE_LOW_VRAM_GUIDE.md)
+- [API_SECURITY_GUIDE.md](docs/API_SECURITY_GUIDE.md)
+
 ## 常见错误
 
 | 现象 | 处理 |

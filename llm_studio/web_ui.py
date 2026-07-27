@@ -14,6 +14,7 @@ from .exporter import ModelExporter
 from .rag import RAGPipeline
 from .vision import VisionRunner
 from .document_loader import get_supported_extensions
+from .generation import CancellationToken
 
 
 class LLMStudioUI:
@@ -25,6 +26,7 @@ class LLMStudioUI:
         self.exporter = ModelExporter()
         self.current_runner: Optional[BaseRunner] = None
         self.current_model_path: Optional[str] = None
+        self.cancellation_token = CancellationToken()
 
         # RAG pipeline
         rag_cfg = config.get("rag", {})
@@ -109,7 +111,9 @@ class LLMStudioUI:
             return "请选择或输入模型路径"
         try:
             if self.current_runner:
+                self.cancellation_token.cancel()
                 self.current_runner.unload()
+                self.cancellation_token = CancellationToken()
 
             progress(0, desc="正在加载模型...")
             self.current_runner = create_runner(model_path, self.config)
@@ -121,6 +125,7 @@ class LLMStudioUI:
 
     def unload_model(self):
         if self.current_runner:
+            self.cancellation_token.cancel()
             self.current_runner.unload()
             self.current_runner = None
             self.current_model_path = None
@@ -132,11 +137,16 @@ class LLMStudioUI:
             return history + [{"role": "user", "content": message}, {"role": "assistant", "content": "?? 请先加载模型"}]
 
         history = history + [{"role": "user", "content": message}]
+        self.cancellation_token = CancellationToken()
 
         try:
             response = ""
             for chunk in self.current_runner.generate_stream(
-                history, temperature=temperature, max_tokens=int(max_tokens), top_p=top_p
+                history,
+                cancellation_token=self.cancellation_token,
+                temperature=temperature,
+                max_tokens=int(max_tokens),
+                top_p=top_p,
             ):
                 response += chunk
 
@@ -145,6 +155,10 @@ class LLMStudioUI:
             history = history + [{"role": "assistant", "content": f"? 生成失败: {str(e)}"}]
 
         return history
+
+    def stop_generation(self):
+        self.cancellation_token.cancel()
+        return "已请求停止生成"
 
     # ── Fine-tune Tab ──────────────────────────────────────────
 
@@ -304,8 +318,12 @@ class LLMStudioUI:
 
         try:
             response = ""
+            self.cancellation_token = CancellationToken()
             for chunk in self.current_runner.generate_stream(
-                rag_messages, temperature=temperature, max_tokens=int(max_tokens)
+                rag_messages,
+                cancellation_token=self.cancellation_token,
+                temperature=temperature,
+                max_tokens=int(max_tokens),
             ):
                 response += chunk
             history = history + [{"role": "assistant", "content": response}]
@@ -510,7 +528,9 @@ class LLMStudioUI:
                                 scale=4,
                             )
                             btn_send = gr.Button("发送", variant="primary", scale=1)
-                        btn_clear = gr.Button("清空对话")
+                        with gr.Row():
+                            btn_stop = gr.Button("停止生成", variant="stop")
+                            btn_clear = gr.Button("清空对话")
 
                 btn_load.click(self.load_model, inputs=[model_path_input], outputs=[load_status])
                 btn_unload.click(self.unload_model, outputs=[load_status])
@@ -524,7 +544,8 @@ class LLMStudioUI:
                     inputs=[msg_input, chatbot, temperature, max_tokens, top_p],
                     outputs=[chatbot],
                 ).then(lambda: "", outputs=[msg_input])
-                btn_clear.click(lambda: [], outputs=[chatbot])
+                btn_stop.click(self.stop_generation, outputs=[load_status])
+                btn_clear.click(lambda: (self.cancellation_token.cancel(), [])[1], outputs=[chatbot])
 
             # ── Tab: Fine-tune ──
             with gr.Tab("? 模型微调"):

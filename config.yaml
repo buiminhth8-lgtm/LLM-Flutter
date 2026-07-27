@@ -58,6 +58,7 @@ rag:
   chunk_size: 500
   chunk_overlap: 50
   top_k: 5
+  index_path: "./data/rag"
   system_template: |
     你是一个智能助手。请根据以下参考资料回答用户的问题。
     如果参考资料中没有相关信息，请根据你的知识回答并说明。
@@ -71,7 +72,7 @@ rag:
 api:
   host: "127.0.0.1"
   port: 8000
-  cors_origins:
+  allowed_origins:
     - "http://127.0.0.1:7860"
     - "http://localhost:7860"
 

@@ -20,6 +20,22 @@ from .downloader import ModelDownloader
 from .rag import RAGPipeline
 from .vision import VisionRunner
 from .admin import AdminManager
+from .chat import ChatMessage as CoreChatMessage
+from .chat import InvalidChatMessageError
+from .generation import CancellationToken
+from .generation.exceptions import CudaOutOfMemoryError, GenerationCancelledError, GenerationTimeoutError
+from .runtime.capabilities import detect_runtime_capabilities
+from .runtime.concurrency import ModelConcurrencyController, QueueFullError
+from .api.errors import (
+    CUDA_OUT_OF_MEMORY,
+    GENERATION_CANCELLED,
+    GENERATION_TIMEOUT,
+    INVALID_MESSAGES,
+    QUEUE_FULL,
+    UNAUTHORIZED,
+    api_error,
+    error_payload,
+)
 
 
 # Loaded model runners keyed by model_path
@@ -28,8 +44,7 @@ _vision_runners: dict[str, VisionRunner] = {}
 _rag_pipeline: Optional[RAGPipeline] = None
 _config: Optional[Config] = None
 _admin: Optional[AdminManager] = None
-_model_load_lock: Optional[asyncio.Lock] = None
-_inference_semaphore: Optional[asyncio.Semaphore] = None
+_concurrency: Optional[ModelConcurrencyController] = None
 
 
 def get_app(config: Config):
@@ -40,12 +55,14 @@ def get_app(config: Config):
     from starlette.middleware.base import BaseHTTPMiddleware
     from pydantic import BaseModel, Field
 
-    global _config, _rag_pipeline, _admin, _model_load_lock, _inference_semaphore
+    global _config, _rag_pipeline, _admin, _concurrency
     _config = config
     _admin = AdminManager(config.models_dir.parent / "data")
-    _model_load_lock = asyncio.Lock()
     runtime_cfg = config.runtime
-    _inference_semaphore = asyncio.Semaphore(int(runtime_cfg.get("inference_concurrency", 1)))
+    _concurrency = ModelConcurrencyController(
+        max_inference_concurrency=int(runtime_cfg.get("inference_concurrency", 1)),
+        max_queue_size=int(runtime_cfg.get("queue_limit", 8)),
+    )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -73,11 +90,31 @@ def get_app(config: Config):
         lifespan=lifespan,
     )
 
+    @app.middleware("http")
+    async def request_id_middleware(request: Request, call_next):
+        request.state.request_id = f"req-{uuid.uuid4().hex[:12]}"
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request.state.request_id
+        return response
+
+    @app.exception_handler(HTTPException)
+    async def http_exception_handler(request: Request, exc: HTTPException):
+        if isinstance(exc.detail, dict) and "error" in exc.detail:
+            return JSONResponse(status_code=exc.status_code, content=exc.detail)
+        request_id = getattr(request.state, "request_id", f"req-{uuid.uuid4().hex[:12]}")
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=error_payload("HTTP_ERROR", str(exc.detail), request_id),
+        )
+
+    api_cfg = config.get("api", {})
+    allowed_origins = api_cfg.get("allowed_origins", api_cfg.get("cors_origins", []))
+    if "*" in allowed_origins:
+        raise ValueError('api.allowed_origins 不能在 allow_credentials=True 时包含 "*"。')
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=config.get("api", {}).get(
-            "cors_origins", ["http://127.0.0.1:7860", "http://localhost:7860"]
-        ),
+        allow_origins=allowed_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -89,7 +126,7 @@ def get_app(config: Config):
     auth_enabled = auth_config.get("enabled", False)
 
     # Paths that skip authentication
-    _public_paths = {"/health", "/docs", "/openapi.json", "/redoc"}
+    _public_paths = {"/health", "/ready", "/docs", "/openapi.json", "/redoc"}
     _admin_paths_prefix = "/admin"
 
     class AuthMiddleware(BaseHTTPMiddleware):
@@ -122,15 +159,14 @@ def get_app(config: Config):
 
             user = _admin.authenticate(user_id, api_key)
             if not user:
+                request_id = getattr(request.state, "request_id", uuid.uuid4().hex)
                 return JSONResponse(
                     status_code=401,
-                    content={
-                        "error": {
-                            "message": "Invalid or missing authentication. Provide X-User-ID and X-API-Key headers.",
-                            "type": "authentication_error",
-                            "code": "invalid_api_key",
-                        }
-                    },
+                    content=error_payload(
+                        UNAUTHORIZED,
+                        "Invalid or missing authentication. Provide X-User-ID and X-API-Key headers.",
+                        request_id,
+                    ),
                 )
 
             # Attach user info to request state
@@ -141,13 +177,15 @@ def get_app(config: Config):
 
     # ── Pydantic Models ────────────────────────────────────
 
-    class ChatMessage(BaseModel):
+    class ChatMessageModel(BaseModel):
         role: str = "user"
         content: str
+        name: Optional[str] = None
+        tool_call_id: Optional[str] = None
 
     class ChatRequest(BaseModel):
         model: str = Field(default="auto", description="模型路径，'auto' 自动选择")
-        messages: list[ChatMessage]
+        messages: list[ChatMessageModel]
         temperature: float = 0.7
         max_tokens: int = 2048
         top_p: float = 0.9
@@ -155,7 +193,7 @@ def get_app(config: Config):
 
     class ChatChoice(BaseModel):
         index: int = 0
-        message: ChatMessage
+        message: ChatMessageModel
         finish_reason: str = "stop"
 
     class Usage(BaseModel):
@@ -232,8 +270,8 @@ def get_app(config: Config):
         if model_path not in _runners:
             # Auto-load: compatible with LM Studio behavior
             try:
-                assert _model_load_lock is not None
-                async with _model_load_lock:
+                assert _concurrency is not None
+                async with _concurrency.model_load():
                     if model_path in _runners:
                         return _runners[model_path]
                     runner = create_runner(model_path, config)
@@ -316,14 +354,22 @@ def get_app(config: Config):
     @app.post("/v1/chat/completions")
     async def chat_completions(req: ChatRequest):
         """OpenAI 兼容的聊天补全接口（支持 stream 模式）"""
+        request_id = f"req-{uuid.uuid4().hex[:12]}"
         runner = await _get_or_load_runner(req.model)
-        messages = [
+        raw_messages = [
             msg.model_dump() if hasattr(msg, "model_dump") else msg.dict()
             for msg in req.messages
         ]
-
-        if not any(msg["role"] == "user" for msg in messages):
-            raise HTTPException(status_code=400, detail="No user message found")
+        try:
+            messages = [CoreChatMessage.from_dict(item) for item in raw_messages]
+        except InvalidChatMessageError as exc:
+            raise api_error(400, INVALID_MESSAGES, str(exc), request_id) from exc
+        if not messages:
+            raise api_error(400, INVALID_MESSAGES, "messages 不能为空。", request_id)
+        if not any(message.role == "user" for message in messages):
+            raise api_error(400, INVALID_MESSAGES, "至少需要一条 user 消息。", request_id)
+        if messages[-1].role not in {"user", "tool"}:
+            raise api_error(400, INVALID_MESSAGES, "最后一条消息通常应为 user 或 tool。", request_id)
 
         # ── Streaming mode (SSE) ──
         if req.stream:
@@ -333,14 +379,21 @@ def get_app(config: Config):
                 chat_id = f"chatcmpl-{uuid.uuid4().hex[:8]}"
                 created = int(time.time())
                 try:
-                    assert _inference_semaphore is not None
-                    async with _inference_semaphore:
+                    assert _concurrency is not None
+                    cancellation = CancellationToken()
+                    async with _concurrency.inference(
+                        wait_timeout_seconds=float(config.runtime.get("request_timeout_seconds", 300))
+                    ):
                         for chunk_text in runner.generate_stream(
                             messages,
+                            cancellation_token=cancellation,
                             temperature=req.temperature,
                             max_tokens=req.max_tokens,
                             top_p=req.top_p,
                         ):
+                            if await request.is_disconnected():
+                                cancellation.cancel()
+                                break
                             chunk = {
                                 "id": chat_id,
                                 "object": "chat.completion.chunk",
@@ -354,9 +407,21 @@ def get_app(config: Config):
                             }
                             yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
                             await asyncio.sleep(0)
-                except Exception as e:
-                    error_chunk = {"error": {"message": str(e)}}
-                    yield f"data: {json.dumps(error_chunk)}\n\n"
+                except QueueFullError as e:
+                    yield f"data: {json.dumps(error_payload(QUEUE_FULL, str(e), request_id), ensure_ascii=False)}\n\n"
+                    return
+                except GenerationTimeoutError as e:
+                    yield f"data: {json.dumps(error_payload(GENERATION_TIMEOUT, str(e), request_id), ensure_ascii=False)}\n\n"
+                    return
+                except GenerationCancelledError as e:
+                    yield f"data: {json.dumps(error_payload(GENERATION_CANCELLED, str(e), request_id), ensure_ascii=False)}\n\n"
+                    return
+                except CudaOutOfMemoryError as e:
+                    yield f"data: {json.dumps(error_payload(CUDA_OUT_OF_MEMORY, str(e), request_id), ensure_ascii=False)}\n\n"
+                    return
+                except Exception:
+                    yield f"data: {json.dumps(error_payload('GENERATION_ERROR', '生成失败。', request_id), ensure_ascii=False)}\n\n"
+                    return
 
                 # Final chunk with finish_reason
                 done_chunk = {
@@ -381,8 +446,10 @@ def get_app(config: Config):
 
         # ── Non-streaming mode ──
         try:
-            assert _inference_semaphore is not None
-            async with _inference_semaphore:
+            assert _concurrency is not None
+            async with _concurrency.inference(
+                wait_timeout_seconds=float(config.runtime.get("request_timeout_seconds", 300))
+            ):
                 response_text = await asyncio.to_thread(
                     runner.generate,
                     messages,
@@ -390,8 +457,16 @@ def get_app(config: Config):
                     max_tokens=req.max_tokens,
                     top_p=req.top_p,
                 )
+        except QueueFullError as e:
+            raise api_error(429, QUEUE_FULL, str(e), request_id) from e
+        except GenerationTimeoutError as e:
+            raise api_error(504, GENERATION_TIMEOUT, str(e), request_id) from e
+        except GenerationCancelledError as e:
+            raise api_error(499, GENERATION_CANCELLED, str(e), request_id) from e
+        except CudaOutOfMemoryError as e:
+            raise api_error(507, CUDA_OUT_OF_MEMORY, str(e), request_id) from e
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            raise api_error(500, "GENERATION_ERROR", "生成失败。", request_id) from e
 
         return ChatResponse(
             id=f"chatcmpl-{uuid.uuid4().hex[:8]}",
@@ -399,7 +474,7 @@ def get_app(config: Config):
             model=req.model,
             choices=[
                 ChatChoice(
-                    message=ChatMessage(role="assistant", content=response_text)
+                    message=ChatMessageModel(role="assistant", content=response_text)
                 )
             ],
             usage=Usage(),
@@ -585,11 +660,39 @@ def get_app(config: Config):
 
     @app.get("/health")
     async def health():
+        return {"status": "ok"}
+
+    @app.get("/ready")
+    async def ready():
         return {
             "status": "ok",
+            "config_loaded": _config is not None,
+            "model_manager_available": _concurrency is not None,
+            "model_loading": _concurrency.is_loading_locked if _concurrency else False,
             "loaded_text_models": list(_runners.keys()),
             "loaded_vision_models": list(_vision_runners.keys()),
             "rag_documents": _rag_pipeline.document_count if _rag_pipeline else 0,
+        }
+
+    @app.get("/v1/runtime")
+    async def runtime_status():
+        caps = detect_runtime_capabilities(run_bnb_probe=False)
+        current_model = next(iter(_runners), None)
+        runner = _runners.get(current_model) if current_model else None
+        policy = getattr(runner, "load_policy", None) if runner else None
+        return {
+            "python_version": caps.python_version,
+            "torch_version": caps.torch_version,
+            "cuda_runtime": caps.cuda_runtime,
+            "cuda_available": caps.cuda_available,
+            "gpu_name": caps.gpu_name,
+            "total_vram_bytes": caps.total_vram_bytes,
+            "bf16_supported": caps.bf16_supported,
+            "current_model": current_model,
+            "backend": type(runner).__name__ if runner else None,
+            "quantization": getattr(policy, "quantization", None),
+            "queue_length": _concurrency.queue_size if _concurrency else 0,
+            "inference_concurrency": _concurrency.max_inference_concurrency if _concurrency else None,
         }
 
     # ── Admin Backend ──────────────────────────────────────

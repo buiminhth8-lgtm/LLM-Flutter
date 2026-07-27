@@ -60,11 +60,12 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "chunk_size": 500,
         "chunk_overlap": 50,
         "top_k": 5,
+        "index_path": "./data/rag",
     },
     "api": {
         "host": "127.0.0.1",
         "port": 8000,
-        "cors_origins": ["http://127.0.0.1:7860", "http://localhost:7860"],
+        "allowed_origins": ["http://127.0.0.1:7860", "http://localhost:7860"],
     },
     "auth": {"enabled": True},
     "finetune": {
