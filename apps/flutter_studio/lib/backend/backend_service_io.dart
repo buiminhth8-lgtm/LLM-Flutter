@@ -7,6 +7,9 @@ import 'package:http/http.dart' as http;
 import 'backend_contract.dart';
 
 const _configuredProjectRoot = String.fromEnvironment('LLM_STUDIO_ROOT');
+const _configuredPythonExecutable = String.fromEnvironment(
+  'LLM_STUDIO_PYTHON',
+);
 
 BackendService createBackendService() => DesktopBackendService();
 
@@ -24,12 +27,12 @@ class DesktopBackendService implements BackendService {
     }
 
     final root = _findProjectRoot();
-    final python = File(
-      '${root.path}${Platform.pathSeparator}.venv'
-      '${Platform.pathSeparator}Scripts${Platform.pathSeparator}python.exe',
-    );
+    final python = _resolvePython(root);
     if (!python.existsSync()) {
-      throw StateError('Missing Python virtual environment at ${python.path}.');
+      throw StateError(
+        'Missing Python executable at ${python.path}. '
+        'Run scripts/setup_windows_python312.ps1, or set LLM_STUDIO_PYTHON.',
+      );
     }
 
     final uri = Uri.parse(apiBase);
@@ -105,21 +108,41 @@ class DesktopBackendService implements BackendService {
     }
 
     throw StateError(
-      'Could not locate LLM-Studio project root. Set LLM_STUDIO_ROOT.',
+      'Could not locate LLM-Studio project root. '
+      'Set LLM_STUDIO_ROOT to the repository directory.',
+    );
+  }
+
+  File _resolvePython(Directory root) {
+    if (_configuredPythonExecutable.isNotEmpty) {
+      return File(_configuredPythonExecutable);
+    }
+
+    final envPython = Platform.environment['LLM_STUDIO_PYTHON'];
+    if (envPython != null && envPython.isNotEmpty) {
+      return File(envPython);
+    }
+
+    return File(
+      '${root.path}${Platform.pathSeparator}.venv'
+      '${Platform.pathSeparator}Scripts${Platform.pathSeparator}python.exe',
     );
   }
 
   Directory? _walkUp(Directory start) {
     var current = start;
     while (true) {
-      final python = File(
-        '${current.path}${Platform.pathSeparator}.venv'
-        '${Platform.pathSeparator}Scripts${Platform.pathSeparator}python.exe',
-      );
       final package = Directory(
         '${current.path}${Platform.pathSeparator}llm_studio',
       );
-      if (python.existsSync() && package.existsSync()) {
+      final pyproject = File(
+        '${current.path}${Platform.pathSeparator}pyproject.toml',
+      );
+      final config = File(
+        '${current.path}${Platform.pathSeparator}config.yaml',
+      );
+      if (package.existsSync() &&
+          (pyproject.existsSync() || config.existsSync())) {
         return current;
       }
 

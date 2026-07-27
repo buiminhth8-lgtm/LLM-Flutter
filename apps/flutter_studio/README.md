@@ -25,16 +25,29 @@ The Flutter app locates the repository root through `LLM_STUDIO_ROOT` and starts
 .venv\Scripts\python.exe -m llm_studio.cli serve --host 127.0.0.1 --port 8000
 ```
 
-## Run as Flutter Web
-
-Flutter Web does not start the backend process. Start the API separately for web development, then run:
+For direct Flutter development, pass the repository root explicitly:
 
 ```powershell
 cd apps\flutter_studio
-flutter run -d chrome --web-port 5000 --dart-define="LLM_STUDIO_API_BASE=http://127.0.0.1:8000"
+flutter run -d windows --dart-define="LLM_STUDIO_ROOT=D:\develop\LLM-Studio\LLM-Studio"
 ```
 
-The API CORS defaults include common Flutter dev origins on ports `5000` and `8080`.
+If your Python environment is not in `.venv`, also pass the Python executable:
+
+```powershell
+flutter run -d windows `
+  --dart-define="LLM_STUDIO_ROOT=D:\develop\LLM-Studio\LLM-Studio" `
+  --dart-define="LLM_STUDIO_PYTHON=D:\path\to\python.exe"
+```
+
+If the app reports a missing Python executable, create the project virtual environment first:
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip setuptools wheel
+.\scripts\install_windows_cuda.ps1
+.\scripts\install_base.ps1
+```
 
 ## Next UI milestones
 
