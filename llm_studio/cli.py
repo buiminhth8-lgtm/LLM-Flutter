@@ -360,25 +360,6 @@ def upload(ctx, model_path, repo_id, private, token):
             console.print(f"[green]? 上传成功: {url}[/green]")
         except Exception as e:
             console.print(f"[red]? 上传失败: {e}[/red]")
-
-
-# ── Web UI ───────────────────────────────────────────────
-
-@cli.command()
-@click.option("--port", "-p", default=7860, help="端口号")
-@click.option("--share", is_flag=True, help="创建公开分享链接")
-@click.pass_context
-def ui(ctx, port, share):
-    """启动 Web 界面"""
-    from .web_ui import launch_ui
-    config = ctx.obj["config"]
-    console.print(f"[green]? 启动 Web UI: http://localhost:{port}[/green]")
-    launch_ui(config, share=share, port=port)
-
-
-# ── API Server ───────────────────────────────────────────
-
-@cli.command()
 @click.option("--host", default=None, help="监听地址，默认读取 config.yaml 的 api.host")
 @click.option("--port", "-p", default=None, type=int, help="API 端口号，默认读取 config.yaml 的 api.port")
 @click.pass_context

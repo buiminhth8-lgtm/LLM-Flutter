@@ -35,7 +35,7 @@
 | ?? **图像识别** | 视觉语言模型，图片描述/问答/OCR，支持 PaddleOCR / EasyOCR |
 | ? **REST API** | OpenAI 兼容接口（`/v1/chat/completions`），SSE 流式，可对接任意第三方客户端 |
 | ? **API 密钥管理** | 内置 Web 管理后台，可视化创建/管理用户和 API Key |
-| ? **Web 界面** | Gradio 8 页签可视化操作，浏览器即用 |
+| ? **Flutter Desktop** | Flutter 桌面客户端，启动后自动拉起本地 FastAPI 服务 |
 | ?? **CLI 命令行** | Click + Rich 终端工具，完整命令行操作能力 |
 | ? **模型导出** | LoRA 合并、HuggingFace 上传、GGUF 转换 |
 
@@ -80,8 +80,8 @@ python -m llm_studio.runtime.diagnostics
 ### 三种使用方式
 
 ```bash
-# 1. Web 界面
-llm-studio ui
+# 1. Flutter Desktop
+.\scripts\start_desktop.ps1
 
 # 2. 命令行
 llm-studio model download "Qwen2.5-7B-Instruct"
@@ -266,13 +266,15 @@ curl -H "X-User-ID: admin" -H "X-API-Key: sk-llmstudio-xxx" \
 
 ---
 
-## ? Web 界面
+## Flutter Desktop
 
 ```bash
-llm-studio ui
+.\scripts\start_desktop.ps1
 ```
 
-浏览器打开 `http://localhost:7860`，8 个功能页签：
+Flutter Windows 客户端会在启动时检查 `http://127.0.0.1:8000/health`。如果服务未运行，会自动通过 `.venv\Scripts\python.exe -m llm_studio.cli serve` 启动本地 FastAPI 服务。
+
+如果 `auth.enabled=true`，请在 Flutter Settings 中输入启动日志里生成的一次性 API Key，客户端会以 `X-User-ID` + `X-API-Key` 请求本地 API；Flutter 不会把 Key 写入配置文件。
 
 ? 模型下载 · ? 模型推理 · ? 模型微调 · ? 知识库(RAG) · ?? 图像识别 · ? 模型导出 · ? API 服务 · ?? 系统信息
 
@@ -298,7 +300,7 @@ LLM-Studio/
 │   ├── admin.py                 # API 用户/密钥管理
 │   ├── admin_ui.html            # 管理后台前端
 │   ├── exporter.py              # 模型导出/上传
-│   └── web_ui.py                # Gradio Web 界面
+│   └── api_server.py            # Flutter 桌面客户端使用的本地 FastAPI 服务
 ├── docs/
 │   ├── 功能说明.md
 │   ├── 环境安装说明.md
@@ -346,7 +348,7 @@ api:
 
 ## 依赖分层
 
-根目录 `requirements.txt` 只安装基础推理与 Web UI：
+根目录 `requirements.txt` 只安装基础推理与 FastAPI 服务：
 
 ```text
 -r requirements/base.txt
@@ -399,10 +401,10 @@ python -m llm_studio.runtime.diagnostics
 
 ## 第二阶段运行时改进
 
-- API、CLI 和 Web UI 统一使用 `ChatMessage` 与 `PromptBuilder`，多轮 user/assistant 历史和 system prompt 不再丢失。
+- API、CLI 和 Flutter Desktop 统一使用 `ChatMessage` 与 `PromptBuilder`，多轮 user/assistant 历史和 system prompt 不再丢失。
 - 无 chat template 的模型使用 `<|system|>`、`<|user|>`、`<|assistant|>` 回退模板。
 - 流式生成支持后台线程异常回传、超时和取消。
-- Web UI 提供停止生成按钮；API 客户端断开会取消生成。
+- Flutter Desktop 后续提供停止生成按钮；API 客户端断开会取消生成。
 - 单 GPU 推理默认并发为 1，队列上限默认为 8。
 - RAG 默认 embedding 设备为 CPU，索引保存 embedding 模型、维度和 schema 版本。
 - 微调默认使用动态 padding 和 assistant-only loss。

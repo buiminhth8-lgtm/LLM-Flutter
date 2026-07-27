@@ -1,4 +1,4 @@
-"""Immutable chat message model shared by API, Web UI, and runners."""
+"""Immutable chat message model shared by API, Flutter UI, and runners."""
 
 from __future__ import annotations
 

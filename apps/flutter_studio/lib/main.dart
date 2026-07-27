@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+import 'backend/backend_service.dart';
+
 const defaultApiBase = String.fromEnvironment(
   'LLM_STUDIO_API_BASE',
   defaultValue: 'http://127.0.0.1:8000',
@@ -44,15 +46,19 @@ class StudioShell extends StatefulWidget {
 
 class _StudioShellState extends State<StudioShell> {
   final _apiBaseController = TextEditingController(text: defaultApiBase);
+  final _userIdController = TextEditingController(text: 'admin');
+  final _apiKeyController = TextEditingController();
   final _chatController = TextEditingController();
   final _systemController = TextEditingController(
     text: 'You are a concise and reliable local assistant.',
   );
   final _client = LlmStudioClient(defaultApiBase);
+  final BackendService _backend = createBackendService();
 
   int _pageIndex = 0;
   bool _loading = false;
   String? _error;
+  String _backendStatus = 'Backend has not started yet.';
   Map<String, dynamic>? _runtime;
   List<dynamic> _models = const [];
   final List<ChatTurn> _turns = [];
@@ -67,7 +73,10 @@ class _StudioShellState extends State<StudioShell> {
 
   @override
   void dispose() {
+    unawaited(_backend.stop());
     _apiBaseController.dispose();
+    _userIdController.dispose();
+    _apiKeyController.dispose();
     _chatController.dispose();
     _systemController.dispose();
     super.dispose();
@@ -75,7 +84,12 @@ class _StudioShellState extends State<StudioShell> {
 
   Future<void> _refreshAll() async {
     _client.baseUrl = _apiBaseController.text.trim();
+    _client.userId = _userIdController.text.trim();
+    _client.apiKey = _apiKeyController.text.trim();
     await _guarded(() async {
+      setState(() => _backendStatus = 'Starting backend...');
+      final backend = await _backend.ensureStarted(apiBase: _client.baseUrl);
+      setState(() => _backendStatus = backend.message);
       final runtime = await _client.runtime();
       final models = await _client.models();
       setState(() {
@@ -158,6 +172,8 @@ class _StudioShellState extends State<StudioShell> {
       ),
       _SettingsPage(
         apiBaseController: _apiBaseController,
+        userIdController: _userIdController,
+        apiKeyController: _apiKeyController,
         onApply: _refreshAll,
       ),
     ];
@@ -197,7 +213,11 @@ class _StudioShellState extends State<StudioShell> {
           Expanded(
             child: Column(
               children: [
-                _TopBar(loading: _loading, onRefresh: _refreshAll),
+                _TopBar(
+                  loading: _loading,
+                  backendStatus: _backendStatus,
+                  onRefresh: _refreshAll,
+                ),
                 if (_error != null)
                   MaterialBanner(
                     content: Text(_error!),
@@ -223,17 +243,19 @@ class LlmStudioClient {
   LlmStudioClient(this.baseUrl);
 
   String baseUrl;
+  String userId = 'admin';
+  String apiKey = '';
 
   Future<Map<String, dynamic>> runtime() async {
     final response = await http
-        .get(Uri.parse('$baseUrl/v1/runtime'))
+        .get(Uri.parse('$baseUrl/v1/runtime'), headers: _authHeaders())
         .timeout(const Duration(seconds: 8));
     return _decodeMap(response);
   }
 
   Future<List<dynamic>> models() async {
     final response = await http
-        .get(Uri.parse('$baseUrl/v1/models'))
+        .get(Uri.parse('$baseUrl/v1/models'), headers: _authHeaders())
         .timeout(const Duration(seconds: 8));
     final body = _decodeMap(response);
     return (body['data'] as List?) ?? const [];
@@ -243,7 +265,7 @@ class LlmStudioClient {
     final response = await http
         .post(
           Uri.parse('$baseUrl/v1/chat/completions'),
-          headers: {'content-type': 'application/json'},
+          headers: {..._authHeaders(), 'content-type': 'application/json'},
           body: jsonEncode({
             'model': 'auto',
             'messages': messages,
@@ -278,6 +300,13 @@ class LlmStudioClient {
     }
     throw StudioApiException('API response is not a JSON object.');
   }
+
+  Map<String, String> _authHeaders() {
+    if (apiKey.isEmpty) {
+      return const {};
+    }
+    return {'X-User-ID': userId, 'X-API-Key': apiKey};
+  }
 }
 
 class StudioApiException implements Exception {
@@ -303,9 +332,14 @@ class ChatTurn {
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.loading, required this.onRefresh});
+  const _TopBar({
+    required this.loading,
+    required this.backendStatus,
+    required this.onRefresh,
+  });
 
   final bool loading;
+  final String backendStatus;
   final VoidCallback onRefresh;
 
   @override
@@ -322,11 +356,13 @@ class _TopBar extends StatelessWidget {
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
           ),
           const SizedBox(width: 12),
-          const Text(
-            'Flutter client preview',
-            style: TextStyle(color: Colors.black54),
+          Expanded(
+            child: Text(
+              backendStatus,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.black54),
+            ),
           ),
-          const Spacer(),
           if (loading)
             const SizedBox(
               width: 20,
@@ -553,9 +589,16 @@ class _ChatPage extends StatelessWidget {
 }
 
 class _SettingsPage extends StatelessWidget {
-  const _SettingsPage({required this.apiBaseController, required this.onApply});
+  const _SettingsPage({
+    required this.apiBaseController,
+    required this.userIdController,
+    required this.apiKeyController,
+    required this.onApply,
+  });
 
   final TextEditingController apiBaseController;
+  final TextEditingController userIdController;
+  final TextEditingController apiKeyController;
   final VoidCallback onApply;
 
   @override
@@ -584,7 +627,24 @@ class _SettingsPage extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           const Text(
-            'This Flutter client talks to the local REST API. The legacy Gradio UI remains available via scripts/start_web.ps1.',
+            'The Flutter desktop app starts and owns the local FastAPI service when it is not already running.',
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: userIdController,
+            decoration: const InputDecoration(
+              labelText: 'X-User-ID',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: apiKeyController,
+            obscureText: true,
+            decoration: const InputDecoration(
+              labelText: 'X-API-Key',
+              border: OutlineInputBorder(),
+            ),
           ),
         ],
       ),

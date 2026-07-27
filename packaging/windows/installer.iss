@@ -13,7 +13,7 @@ OutputBaseFilename=LLM-Studio-Setup
 Source: "..\..\dist\LLM-Studio\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
 
 [Icons]
-Name: "{group}\LLM-Studio Web"; Filename: "{app}\scripts\start_web.ps1"
+Name: "{group}\LLM-Studio"; Filename: "{app}\scripts\start_desktop.ps1"
 
 [UninstallDelete]
 ; User data is intentionally preserved by default.
