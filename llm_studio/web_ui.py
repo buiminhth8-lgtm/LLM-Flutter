@@ -1,20 +1,23 @@
 """Gradio Web UI for LLM Studio."""
 
-import os
-import json
-import gradio as gr
 from pathlib import Path
-from typing import Optional
 
-from .config import Config, get_platform_info, get_device
+import gradio as gr
+
+from .adapters import AdapterRepository
+from .benchmarks import BenchmarkConfig, BenchmarkRunner
+from .config import Config, get_device, get_platform_info
 from .downloader import ModelDownloader
-from .runner import create_runner, BaseRunner
-from .finetuner import FineTuner, FineTuneArgs
 from .exporter import ModelExporter
-from .rag import RAGPipeline
-from .vision import VisionRunner
-from .document_loader import get_supported_extensions
+from .finetuner import FineTuneArgs, FineTuner
 from .generation import CancellationToken
+from .jobs import JobQueue, JobRepository, JobType
+from .models import LocalModelRepository
+from .models.storage import layout_from_config
+from .rag import RAGPipeline
+from .runner import BaseRunner, create_runner
+from .storage import collect_disk_usage
+from .vision import VisionRunner
 
 
 class LLMStudioUI:
@@ -24,8 +27,13 @@ class LLMStudioUI:
         self.config = config
         self.downloader = ModelDownloader(config)
         self.exporter = ModelExporter()
-        self.current_runner: Optional[BaseRunner] = None
-        self.current_model_path: Optional[str] = None
+        self.model_repository = LocalModelRepository(config)
+        layout = layout_from_config(config)
+        self.job_repository = JobRepository(layout.jobs_dir / "jobs.sqlite")
+        self.job_queue = JobQueue(self.job_repository)
+        self.adapter_repository = AdapterRepository(config)
+        self.current_runner: BaseRunner | None = None
+        self.current_model_path: str | None = None
         self.cancellation_token = CancellationToken()
 
         # RAG pipeline
@@ -39,7 +47,66 @@ class LLMStudioUI:
         self.rag.load()
 
         # Vision runner
-        self.vision_runner: Optional[VisionRunner] = None
+        self.vision_runner: VisionRunner | None = None
+
+    def model_management_text(self) -> str:
+        models = self.model_repository.list_models(refresh=False)
+        if not models:
+            return "暂无已索引模型，请点击扫描。"
+        lines = []
+        for model in models[:100]:
+            size_gb = model.size_bytes / (1024**3)
+            lines.append(
+                f"- {model.display_name} | {model.format.value} | {model.status.value} | "
+                f"{size_gb:.2f}GB | {model.quantization or 'none'} | {model.path}"
+            )
+        return "\n".join(lines)
+
+    def scan_models_job(self) -> str:
+        def handler(job, update, cancel):
+            update(0.1, "扫描本地模型。")
+            models = self.model_repository.scan()
+            update(1.0, f"扫描完成: {len(models)} 个模型。")
+
+        job = self.job_queue.submit(JobType.MODEL_SCAN.value, {}, handler)
+        return f"已创建扫描任务: {job.id}"
+
+    def adapters_text(self) -> str:
+        adapters = self.adapter_repository.list()
+        if not adapters:
+            return "暂无已发现 LoRA adapter。"
+        return "\n".join(
+            f"- {item.name} | rank={item.rank} | alpha={item.alpha} | compatible={item.compatible} | {item.path}"
+            for item in adapters
+        )
+
+    def jobs_text(self) -> str:
+        jobs = self.job_repository.list(limit=20)
+        if not jobs:
+            return "暂无后台任务。"
+        return "\n".join(
+            f"- {job.id} | {job.type} | {job.status} | {job.progress} | {job.message or ''}"
+            for job in jobs
+        )
+
+    def storage_text(self) -> str:
+        return "\n".join(
+            f"- {item.category}: {item.size_bytes / (1024**3):.2f}GB | {item.path}"
+            for item in collect_disk_usage(self.config)
+        )
+
+    def start_benchmark_job(self, model_id: str) -> str:
+        if not model_id:
+            return "请选择模型。"
+
+        def handler(job, update, cancel):
+            update(0.05, "开始 Benchmark。")
+            bench = BenchmarkRunner(self.config, lambda mid: create_runner(mid, self.config))
+            bench.run(BenchmarkConfig(model_id=model_id))
+            update(1.0, "Benchmark 完成。")
+
+        job = self.job_queue.submit(JobType.BENCHMARK.value, {"model_id": model_id}, handler)
+        return f"已创建 Benchmark 任务: {job.id}"
 
     # ── Download Tab ────────────────────────────────────────────
 
@@ -60,7 +127,8 @@ class LLMStudioUI:
             lines.append(f"? {m['name']}  [{m['type']}]  {size_str}\n  路径: {m['path']}")
         return "\n\n".join(lines)
 
-    def download_registry_model(self, selection: str, progress=gr.Progress()):
+    def download_registry_model(self, selection: str, progress=None):
+        progress = progress or gr.Progress()
         if not selection:
             return "请选择一个模型", self.get_local_models_text()
         model_name = selection.split("  (")[0]
@@ -71,7 +139,8 @@ class LLMStudioUI:
         except Exception as e:
             return f"? 下载失败: {str(e)}", self.get_local_models_text()
 
-    def download_custom_model(self, repo_id: str, model_type: str, filename: str, progress=gr.Progress()):
+    def download_custom_model(self, repo_id: str, model_type: str, filename: str, progress=None):
+        progress = progress or gr.Progress()
         if not repo_id:
             return "请输入 HuggingFace Repo ID", self.get_local_models_text()
         try:
@@ -106,7 +175,8 @@ class LLMStudioUI:
         models = self.downloader.list_local_models()
         return [m["path"] for m in models]
 
-    def load_model(self, model_path: str, progress=gr.Progress()):
+    def load_model(self, model_path: str, progress=None):
+        progress = progress or gr.Progress()
         if not model_path:
             return "请选择或输入模型路径"
         try:
@@ -174,8 +244,9 @@ class LLMStudioUI:
         batch_size: int,
         max_seq_length: int,
         output_name: str,
-        progress=gr.Progress(),
+        progress=None,
     ):
+        progress = progress or gr.Progress()
         if not base_model:
             return "请选择基座模型"
         if dataset_file is None:
@@ -241,7 +312,8 @@ class LLMStudioUI:
                     models.append(str(item))
         return models
 
-    def upload_model(self, model_path: str, repo_id: str, private: bool, token: str, progress=gr.Progress()):
+    def upload_model(self, model_path: str, repo_id: str, private: bool, token: str, progress=None):
+        progress = progress or gr.Progress()
         if not model_path or not repo_id:
             return "请填写模型路径和目标 Repo ID"
         try:
@@ -258,7 +330,8 @@ class LLMStudioUI:
 
     # ── RAG Tab Handlers ───────────────────────────────────
 
-    def rag_ingest_files(self, files, progress=gr.Progress()):
+    def rag_ingest_files(self, files, progress=None):
+        progress = progress or gr.Progress()
         """Ingest uploaded files into the knowledge base."""
         if not files:
             return "请上传文件", self._rag_status_text()
@@ -274,10 +347,11 @@ class LLMStudioUI:
         self.rag.save()
         msg = f"? 处理完成，新增 {total} 个文本片段"
         if errors:
-            msg += f"\n\n?? 以下文件处理失败:\n" + "\n".join(errors)
+            msg += "\n\n?? 以下文件处理失败:\n" + "\n".join(errors)
         return msg, self._rag_status_text()
 
-    def rag_ingest_dir(self, dir_path: str, progress=gr.Progress()):
+    def rag_ingest_dir(self, dir_path: str, progress=None):
+        progress = progress or gr.Progress()
         if not dir_path:
             return "请输入目录路径", self._rag_status_text()
         try:
@@ -344,7 +418,8 @@ class LLMStudioUI:
 
     # ── Vision Tab Handlers ────────────────────────────────
 
-    def load_vision_model(self, model_path: str, progress=gr.Progress()):
+    def load_vision_model(self, model_path: str, progress=None):
+        progress = progress or gr.Progress()
         if not model_path:
             return "请输入视觉模型路径"
         try:
@@ -368,8 +443,9 @@ class LLMStudioUI:
                 img_path = image
             else:
                 # Save numpy array as temp image
-                from PIL import Image as PILImage
                 import tempfile
+
+                from PIL import Image as PILImage
                 pil_img = PILImage.fromarray(image)
                 tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
                 pil_img.save(tmp.name)
@@ -392,8 +468,9 @@ class LLMStudioUI:
             if isinstance(image, str):
                 img_path = image
             else:
-                from PIL import Image as PILImage
                 import tempfile
+
+                from PIL import Image as PILImage
                 pil_img = PILImage.fromarray(image)
                 tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
                 pil_img.save(tmp.name)
@@ -799,6 +876,68 @@ class LLMStudioUI:
                 btn_ocr.click(
                     self.ocr_image, inputs=[vision_image], outputs=[vision_output],
                 )
+
+            with gr.Tab("模型管理"):
+                with gr.Row():
+                    with gr.Column():
+                        gr.Markdown("### 本地模型")
+                        model_management_output = gr.Textbox(
+                            value=self.model_management_text(),
+                            label="模型索引",
+                            interactive=False,
+                            lines=12,
+                        )
+                        btn_model_refresh = gr.Button("刷新列表")
+                        btn_model_scan = gr.Button("后台扫描模型")
+                        model_scan_status = gr.Textbox(label="扫描任务", interactive=False)
+
+                    with gr.Column():
+                        gr.Markdown("### 下载与任务")
+                        jobs_output = gr.Textbox(
+                            value=self.jobs_text(),
+                            label="最近任务",
+                            interactive=False,
+                            lines=12,
+                        )
+                        btn_jobs_refresh = gr.Button("刷新任务")
+
+                with gr.Row():
+                    with gr.Column():
+                        gr.Markdown("### LoRA 适配器")
+                        adapters_output = gr.Textbox(
+                            value=self.adapters_text(),
+                            label="适配器",
+                            interactive=False,
+                            lines=10,
+                        )
+                        btn_adapters_refresh = gr.Button("刷新适配器")
+
+                    with gr.Column():
+                        gr.Markdown("### Benchmark")
+                        benchmark_model = gr.Dropdown(
+                            choices=self.get_local_model_choices(),
+                            label="选择模型",
+                            allow_custom_value=True,
+                            interactive=True,
+                        )
+                        btn_benchmark = gr.Button("启动 Benchmark")
+                        benchmark_status = gr.Textbox(label="Benchmark 任务", interactive=False)
+
+                gr.Markdown("### 存储占用")
+                storage_output = gr.Textbox(
+                    value=self.storage_text(),
+                    label="磁盘空间",
+                    interactive=False,
+                    lines=8,
+                )
+                btn_storage_refresh = gr.Button("刷新存储")
+
+                btn_model_refresh.click(self.model_management_text, outputs=[model_management_output])
+                btn_model_scan.click(self.scan_models_job, outputs=[model_scan_status])
+                btn_jobs_refresh.click(self.jobs_text, outputs=[jobs_output])
+                btn_adapters_refresh.click(self.adapters_text, outputs=[adapters_output])
+                btn_benchmark.click(self.start_benchmark_job, inputs=[benchmark_model], outputs=[benchmark_status])
+                btn_storage_refresh.click(self.storage_text, outputs=[storage_output])
 
             # ── Tab: API ──
             with gr.Tab("? API 服务"):

@@ -2,7 +2,12 @@ import time
 
 import pytest
 
-from llm_studio.generation import CancellationToken, GenerationCancelledError, GenerationTimeoutError, GenerationWorker
+from llm_studio.generation import (
+    CancellationToken,
+    GenerationCancelledError,
+    GenerationTimeoutError,
+    GenerationWorker,
+)
 from llm_studio.generation.exceptions import GenerationError
 
 

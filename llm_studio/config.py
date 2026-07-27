@@ -8,7 +8,6 @@ from typing import Any
 
 import yaml
 
-
 DEFAULT_CONFIG: dict[str, Any] = {
     "models_dir": "./models",
     "finetune_output_dir": "./finetuned_models",
@@ -88,6 +87,32 @@ DEFAULT_CONFIG: dict[str, Any] = {
     },
     "model_registry": [],
     "vision_model_registry": [],
+    "models": {
+        "root_dir": "./data/models",
+        "temp_dir": "./data/downloads",
+        "metadata_cache": "./data/model_index.json",
+        "adapters_dir": "./data/adapters",
+        "allow_external_paths": True,
+        "follow_symlinks": False,
+        "minimum_free_space_gb": 10,
+    },
+    "huggingface": {
+        "cache_dir": "./data/huggingface",
+        "use_global_cache": False,
+    },
+    "storage": {
+        "trash_dir": "./data/trash/models",
+        "benchmarks_dir": "./data/benchmarks",
+        "jobs_dir": "./data/jobs",
+        "diagnostics_dir": "./data/diagnostics",
+        "cleanup": {
+            "enabled": True,
+            "incomplete_download_days": 7,
+            "benchmark_retention_days": 90,
+            "trash_retention_days": 30,
+            "logs_retention_days": 30,
+        },
+    },
 }
 
 
@@ -166,7 +191,7 @@ class Config:
 
     def load(self):
         if self.config_path.exists():
-            with open(self.config_path, "r", encoding="utf-8") as f:
+            with open(self.config_path, encoding="utf-8") as f:
                 loaded = yaml.safe_load(f) or {}
                 if not isinstance(loaded, dict):
                     raise ValueError("配置文件必须是 YAML 对象。")
@@ -186,16 +211,50 @@ class Config:
             raise ValueError(f"runtime.quantization 无效: {quant}")
         if int(self._data.get("rag", {}).get("chunk_overlap", 0)) < 0:
             raise ValueError("rag.chunk_overlap 不能为负数。")
+        if int(self._data.get("models", {}).get("minimum_free_space_gb", 0)) < 0:
+            raise ValueError("models.minimum_free_space_gb 不能为负数。")
 
     def _resolve_paths(self):
         base = self.config_path.parent
+        is_template_config = "configs" in {part.lower() for part in self.config_path.parts}
+        if is_template_config:
+            while base.name.lower() in {"configs", "presets"}:
+                base = base.parent
         for key in ("models_dir", "finetune_output_dir", "datasets_dir"):
             val = self._data.get(key, f"./{key.replace('_dir', '')}")
             p = Path(val)
             if not p.is_absolute():
                 p = base / p
-            p.mkdir(parents=True, exist_ok=True)
+            if not is_template_config:
+                p.mkdir(parents=True, exist_ok=True)
             self._data[key] = str(p.resolve())
+        for section, keys in {
+            "models": ("root_dir", "temp_dir", "metadata_cache", "adapters_dir"),
+            "huggingface": ("cache_dir",),
+            "storage": ("trash_dir", "benchmarks_dir", "jobs_dir", "diagnostics_dir"),
+        }.items():
+            cfg = self._data.get(section, {})
+            for key in keys:
+                if key not in cfg:
+                    continue
+                p = Path(cfg[key])
+                if not p.is_absolute():
+                    p = base / p
+                if not is_template_config:
+                    if key in {
+                        "root_dir",
+                        "temp_dir",
+                        "adapters_dir",
+                        "cache_dir",
+                        "trash_dir",
+                        "benchmarks_dir",
+                        "jobs_dir",
+                        "diagnostics_dir",
+                    }:
+                        p.mkdir(parents=True, exist_ok=True)
+                    else:
+                        p.parent.mkdir(parents=True, exist_ok=True)
+                cfg[key] = str(p.resolve())
 
     @property
     def models_dir(self) -> Path:

@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import gc
+from collections.abc import Generator
 from pathlib import Path
-from typing import Any, Generator
+from typing import Any
 
+from .adapters import AdapterInfo, AdapterManager
 from .chat import ChatHistoryWindow, ChatMessage, PromptBuilder, normalize_messages
 from .config import Config
 from .generation import CancellationToken, GenerationConfig, GenerationResult, GenerationWorker
@@ -25,6 +27,7 @@ class BaseRunner:
         self.load_policy = None
         self.prompt_builder = PromptBuilder()
         self.history_window = ChatHistoryWindow(self.prompt_builder)
+        self.adapter_manager = AdapterManager(self)
 
     def load(self):
         raise NotImplementedError
@@ -57,6 +60,21 @@ class BaseRunner:
 
     def unload(self):
         raise NotImplementedError
+
+    def load_adapter(self, adapter: AdapterInfo, adapter_name: str | None = None) -> str:
+        return self.adapter_manager.load_adapter(adapter, adapter_name)
+
+    def activate_adapter(self, adapter_name: str) -> None:
+        self.adapter_manager.activate_adapter(adapter_name)
+
+    def deactivate_adapter(self) -> None:
+        self.adapter_manager.deactivate_adapter()
+
+    def unload_adapter(self, adapter_name: str) -> None:
+        self.adapter_manager.unload_adapter(adapter_name)
+
+    def list_loaded_adapters(self) -> tuple[str, ...]:
+        return self.adapter_manager.list_loaded_adapters()
 
 
 def _generation_config_from_kwargs(config: Config, kwargs: dict) -> GenerationConfig:

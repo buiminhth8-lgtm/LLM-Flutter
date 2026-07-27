@@ -1,14 +1,14 @@
 """CLI entry point for LLM Studio."""
 
-import sys
-import click
 from pathlib import Path
+
+import click
 from rich.console import Console
-from rich.table import Table
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.table import Table
 
-from .config import Config, get_platform_info, get_device
+from .config import Config, get_device, get_platform_info
 
 console = Console()
 
@@ -27,6 +27,20 @@ def cli(ctx, config):
 
 
 # ── System Info ──────────────────────────────────────────
+
+@cli.command()
+def version():
+    """Show LLM-Studio version and runtime details."""
+    from .version import get_version_info
+
+    info = get_version_info()
+    table = Table(title="LLM-Studio Version")
+    table.add_column("Item")
+    table.add_column("Value")
+    for key, value in info.items():
+        table.add_row(key, str(value))
+    console.print(table)
+
 
 @cli.command()
 def info():
@@ -285,7 +299,7 @@ def chat(ctx, model_path, temperature, max_tokens):
 @click.pass_context
 def finetune(ctx, model_path, dataset_path, method, output, epochs, batch_size, lr, lora_r, max_seq_len):
     """微调模型"""
-    from .finetuner import FineTuner, FineTuneArgs
+    from .finetuner import FineTuneArgs, FineTuner
 
     config = ctx.obj["config"]
     output_dir = output or str(config.finetune_output_dir / "cli_finetune")
@@ -324,7 +338,7 @@ def finetune(ctx, model_path, dataset_path, method, output, epochs, batch_size, 
         console.print(f"\n[green]? 微调完成！模型保存至: {final_path}[/green]")
     except Exception as e:
         console.print(f"\n[red]? 微调失败: {e}[/red]")
-        raise SystemExit(1)
+        raise SystemExit(1) from e
 
 
 # ── Upload ───────────────────────────────────────────────

@@ -1,6 +1,13 @@
 import pytest
 
-from llm_studio.chat import ChatHistoryWindow, ChatMessage, InvalidChatMessageError, PromptBuilder, build_model_input, truncate_messages
+from llm_studio.chat import (
+    ChatHistoryWindow,
+    ChatMessage,
+    InvalidChatMessageError,
+    PromptBuilder,
+    build_model_input,
+    truncate_messages,
+)
 
 
 class FakeTokenizer:

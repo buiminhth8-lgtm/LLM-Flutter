@@ -7,7 +7,6 @@ from typing import Any, Literal
 
 from .exceptions import InvalidChatMessageError
 
-
 ChatRole = Literal["system", "user", "assistant", "tool"]
 VALID_ROLES = {"system", "user", "assistant", "tool"}
 
@@ -30,7 +29,7 @@ class ChatMessage:
             raise InvalidChatMessageError("tool_call_id 必须是字符串。")
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "ChatMessage":
+    def from_dict(cls, data: dict[str, Any]) -> ChatMessage:
         if not isinstance(data, dict):
             raise InvalidChatMessageError("消息必须是对象。")
         role = data.get("role", "user")

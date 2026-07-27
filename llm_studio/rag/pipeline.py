@@ -7,6 +7,7 @@ from pathlib import Path
 
 from llm_studio.config import Config
 from llm_studio.document_loader import Document
+from llm_studio.models.storage import ensure_within
 
 from .chunker import ChineseTextChunker
 from .config import RAGConfig
@@ -44,6 +45,7 @@ class RAGPipeline:
         self.store_dir = Path(rag_config.index_path)
         if not self.store_dir.is_absolute():
             self.store_dir = config.config_path.parent / self.store_dir
+        self.store_dir = self.store_dir.resolve()
 
     def ingest_file(self, file_path: str) -> int:
         docs = self.doc_loader.load_file(file_path)
@@ -94,7 +96,10 @@ class RAGPipeline:
     def clear(self):
         self.vector_store.clear()
         if self.store_dir.exists():
-            shutil.rmtree(self.store_dir, ignore_errors=True)
+            if self.store_dir == self.store_dir.parent:
+                raise ValueError("????????????")
+            ensure_within(self.store_dir, self.store_dir.parent)
+            shutil.rmtree(self.store_dir)
 
     @property
     def document_count(self) -> int:

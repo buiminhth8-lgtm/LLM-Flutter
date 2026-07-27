@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable, Iterator
 from queue import Empty, Queue
 from threading import Thread
-from typing import Callable, Iterator
 
 from .cancellation import CancellationToken
 from .exceptions import (

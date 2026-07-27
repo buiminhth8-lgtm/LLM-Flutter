@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from ..config import Config
 from .capabilities import detect_runtime_capabilities
 from .device_info import bytes_to_gib
-from ..config import Config
 
 
 def main() -> int:

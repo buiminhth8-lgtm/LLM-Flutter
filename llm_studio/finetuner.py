@@ -7,7 +7,6 @@ import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 from .chat import build_model_input
 from .finetune.memory_estimator import estimate_training_memory
@@ -43,7 +42,7 @@ class FineTuneArgs:
     resume_from_checkpoint: str | bool | None = None
 
     @classmethod
-    def from_config(cls, config_dict: dict, **overrides) -> "FineTuneArgs":
+    def from_config(cls, config_dict: dict, **overrides) -> FineTuneArgs:
         """Create from config dict with optional overrides."""
         merged = {**config_dict, **overrides}
         valid_fields = {name for name in cls.__dataclass_fields__}
@@ -62,13 +61,13 @@ class DatasetProcessor:
 
         data = []
         if format == "jsonl":
-            with open(path, "r", encoding="utf-8") as file:
+            with open(path, encoding="utf-8") as file:
                 for line in file:
                     line = line.strip()
                     if line:
                         data.append(json.loads(line))
         elif format == "json":
-            with open(path, "r", encoding="utf-8") as file:
+            with open(path, encoding="utf-8") as file:
                 data = json.load(file)
             if isinstance(data, dict):
                 data = data.get("data", data.get("items", [data]))
@@ -282,7 +281,7 @@ class FineTuner:
     def train(
         self,
         dataset_path: str,
-        progress_callback: Optional[Callable] = None,
+        progress_callback: Callable | None = None,
         resume_from_checkpoint: str | bool | None = None,
     ) -> str:
         """Run the fine-tuning training loop."""

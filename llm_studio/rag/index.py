@@ -7,12 +7,11 @@ import shutil
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 
 from llm_studio.document_loader import Document
-
+from llm_studio.models.storage import ensure_within
 
 SCHEMA_VERSION = 2
 
@@ -25,7 +24,7 @@ class VectorStore:
     def __init__(self, embedding_model: str, embedding_dim: int | None = None):
         self.embedding_model = embedding_model
         self.embedding_dim = embedding_dim
-        self.embeddings: Optional[np.ndarray] = None
+        self.embeddings: np.ndarray | None = None
         self.documents: list[Document] = []
         self._hashes: set[str] = set()
 
@@ -84,6 +83,8 @@ class VectorStore:
             (tmp_dir / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             self._validate_directory(tmp_dir)
             backup = target.with_name(f"{target.name}.bak")
+            ensure_within(tmp_dir, target.parent)
+            ensure_within(backup, target.parent)
             if backup.exists():
                 shutil.rmtree(backup)
             if target.exists():

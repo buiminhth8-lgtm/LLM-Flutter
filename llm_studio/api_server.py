@@ -4,28 +4,16 @@ Provides OpenAI-compatible API endpoints for third-party integration.
 """
 
 import asyncio
-import os
+import json
 import secrets
 import time
 import uuid
-import json
-import base64
-from pathlib import Path
-from typing import Optional
 from contextlib import asynccontextmanager
+from pathlib import Path
+from typing import Annotated
 
-from .config import Config
-from .runner import create_runner, BaseRunner
-from .downloader import ModelDownloader
-from .rag import RAGPipeline
-from .vision import VisionRunner
+from .adapters import AdapterRepository
 from .admin import AdminManager
-from .chat import ChatMessage as CoreChatMessage
-from .chat import InvalidChatMessageError
-from .generation import CancellationToken
-from .generation.exceptions import CudaOutOfMemoryError, GenerationCancelledError, GenerationTimeoutError
-from .runtime.capabilities import detect_runtime_capabilities
-from .runtime.concurrency import ModelConcurrencyController, QueueFullError
 from .api.errors import (
     CUDA_OUT_OF_MEMORY,
     GENERATION_CANCELLED,
@@ -36,28 +24,63 @@ from .api.errors import (
     api_error,
     error_payload,
 )
-
+from .benchmarks import BenchmarkConfig, BenchmarkRunner
+from .chat import ChatMessage as CoreChatMessage
+from .chat import InvalidChatMessageError
+from .config import Config
+from .diagnostics import export_diagnostics
+from .downloader import ModelDownloader
+from .downloads import DownloadManager, DownloadRequest
+from .generation import CancellationToken
+from .generation.exceptions import (
+    CudaOutOfMemoryError,
+    GenerationCancelledError,
+    GenerationTimeoutError,
+)
+from .jobs import JobQueue, JobRepository, JobType
+from .jobs.exceptions import JobNotImplementedError
+from .models import LocalModelRepository
+from .models.storage import layout_from_config
+from .rag import RAGPipeline
+from .runner import BaseRunner, create_runner
+from .runtime.capabilities import detect_runtime_capabilities
+from .runtime.concurrency import ModelConcurrencyController, QueueFullError
+from .storage import CacheManager, collect_disk_usage
+from .vision import VisionRunner
 
 # Loaded model runners keyed by model_path
 _runners: dict[str, BaseRunner] = {}
 _vision_runners: dict[str, VisionRunner] = {}
-_rag_pipeline: Optional[RAGPipeline] = None
-_config: Optional[Config] = None
-_admin: Optional[AdminManager] = None
-_concurrency: Optional[ModelConcurrencyController] = None
+_rag_pipeline: RAGPipeline | None = None
+_config: Config | None = None
+_admin: AdminManager | None = None
+_concurrency: ModelConcurrencyController | None = None
+_model_repository: LocalModelRepository | None = None
+_job_repository: JobRepository | None = None
+_job_queue: JobQueue | None = None
+_download_manager: DownloadManager | None = None
+_adapter_repository: AdapterRepository | None = None
 
 
 def get_app(config: Config):
     """Create and return the FastAPI application."""
-    from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
+    from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import JSONResponse
-    from starlette.middleware.base import BaseHTTPMiddleware
     from pydantic import BaseModel, Field
+    from starlette.middleware.base import BaseHTTPMiddleware
 
     global _config, _rag_pipeline, _admin, _concurrency
+    global _model_repository, _job_repository, _job_queue, _download_manager, _adapter_repository
     _config = config
     _admin = AdminManager(config.models_dir.parent / "data")
+    layout = layout_from_config(config)
+    layout.ensure()
+    _model_repository = LocalModelRepository(config, layout)
+    _job_repository = JobRepository(layout.jobs_dir / "jobs.sqlite")
+    _job_queue = JobQueue(_job_repository)
+    _download_manager = DownloadManager(config, _job_queue, model_repository=_model_repository)
+    _adapter_repository = AdapterRepository(config)
     runtime_cfg = config.runtime
     _concurrency = ModelConcurrencyController(
         max_inference_concurrency=int(runtime_cfg.get("inference_concurrency", 1)),
@@ -82,6 +105,8 @@ def get_app(config: Config):
             runner.unload()
         for vr in _vision_runners.values():
             vr.unload()
+        if _job_queue is not None:
+            _job_queue.shutdown(wait=False)
 
     app = FastAPI(
         title="LLM Studio API",
@@ -180,8 +205,8 @@ def get_app(config: Config):
     class ChatMessageModel(BaseModel):
         role: str = "user"
         content: str
-        name: Optional[str] = None
-        tool_call_id: Optional[str] = None
+        name: str | None = None
+        tool_call_id: str | None = None
 
     class ChatRequest(BaseModel):
         model: str = Field(default="auto", description="模型路径，'auto' 自动选择")
@@ -219,14 +244,14 @@ def get_app(config: Config):
         data: list[ModelInfo]
 
     class RAGIngestRequest(BaseModel):
-        file_path: Optional[str] = None
-        directory_path: Optional[str] = None
+        file_path: str | None = None
+        directory_path: str | None = None
         recursive: bool = True
 
     class RAGQueryRequest(BaseModel):
         question: str
         top_k: int = 5
-        model: Optional[str] = None
+        model: str | None = None
         temperature: float = 0.7
         max_tokens: int = 2048
 
@@ -240,6 +265,33 @@ def get_app(config: Config):
     class LoadModelRequest(BaseModel):
         model: str = Field(..., description="模型路径")
         model_type: str = "text"  # "text" or "vision"
+
+    class RegisterModelRequest(BaseModel):
+        path: str
+
+    class DownloadModelRequest(BaseModel):
+        repo_id: str
+        revision: str | None = None
+        allow_patterns: list[str] | None = None
+        ignore_patterns: list[str] | None = None
+        local_name: str | None = None
+        local_files_only: bool = False
+
+    class AdapterPathRequest(BaseModel):
+        path: str
+
+    class AdapterActionRequest(BaseModel):
+        model: str = "auto"
+        adapter_name: str | None = None
+
+    class BenchmarkRequest(BaseModel):
+        model_id: str
+        adapter_id: str | None = None
+        prompt_set: str = "default"
+        warmup_runs: int = 1
+        measured_runs: int = 3
+        max_new_tokens: int = 128
+        context_lengths: list[int] = Field(default_factory=lambda: [512, 2048])
 
     # ── Helper Functions ───────────────────────────────────
 
@@ -262,10 +314,10 @@ def get_app(config: Config):
                         )
                 except HTTPException:
                     raise
-                except Exception:
+                except Exception as exc:
                     raise HTTPException(
                         status_code=400, detail="No models available."
-                    )
+                    ) from exc
 
         if model_path not in _runners:
             # Auto-load: compatible with LM Studio behavior
@@ -281,7 +333,7 @@ def get_app(config: Config):
                 raise HTTPException(
                     status_code=400,
                     detail=f"Failed to load model '{model_path}': {e}",
-                )
+                ) from e
         return _runners[model_path]
 
     def _get_vision_runner(model_path: str) -> VisionRunner:
@@ -294,30 +346,40 @@ def get_app(config: Config):
 
     # ── Endpoints: Models ──────────────────────────────────
 
-    @app.get("/v1/models", response_model=ModelListResponse)
+    @app.get("/v1/models")
     async def list_models():
         """列出所有可用模型（已加载 + 已下载未加载）"""
-        models = []
-        seen = set()
-
-        # 1) Already loaded models (marked as ready)
+        assert _model_repository is not None
+        models = [model.to_dict() for model in _model_repository.list_models(refresh=False)]
         for path in _runners:
-            models.append(ModelInfo(id=path, owned_by="local:loaded"))
-            seen.add(path)
+            models.append({"id": path, "path": path, "status": "loaded", "format": "runtime"})
         for path in _vision_runners:
-            models.append(ModelInfo(id=path, owned_by="local:vision:loaded"))
-            seen.add(path)
+            models.append({"id": path, "path": path, "status": "vision-loaded", "format": "runtime"})
+        return {"object": "list", "data": models}
 
-        # 2) Downloaded but not yet loaded models
-        try:
-            dl = ModelDownloader(config)
-            for m in dl.list_local_models():
-                if m["path"] not in seen:
-                    models.append(ModelInfo(id=m["path"], owned_by="local:available"))
-        except Exception:
-            pass
+    @app.post("/v1/models/scan")
+    async def scan_models():
+        assert _job_queue is not None and _model_repository is not None
 
-        return ModelListResponse(data=models)
+        def handler(job, update, cancel):
+            update(0.1, "开始扫描本地模型。")
+            models = _model_repository.scan()
+            update(1.0, f"扫描完成: {len(models)} 个模型。")
+
+        job = _job_queue.submit(JobType.MODEL_SCAN.value, {}, handler)
+        return {"job_id": job.id}
+
+    @app.post("/v1/models/register")
+    async def register_model(req: RegisterModelRequest):
+        assert _model_repository is not None
+        model = _model_repository.register_external(req.path)
+        return {"status": "ok", "model": model.to_dict()}
+
+    @app.delete("/v1/models/{model_id}")
+    async def delete_model(model_id: str, confirm: bool = False):
+        assert _model_repository is not None
+        target = _model_repository.move_to_trash(model_id, confirm=confirm)
+        return {"status": "moved_to_trash", "trash_path": str(target)}
 
     @app.post("/v1/models/load")
     async def load_model(req: LoadModelRequest):
@@ -330,8 +392,8 @@ def get_app(config: Config):
             return {"status": "ok", "model": req.model, "type": "vision"}
         else:
             if req.model not in _runners:
-                assert _model_load_lock is not None
-                async with _model_load_lock:
+                assert _concurrency is not None
+                async with _concurrency.model_load():
                     if req.model not in _runners:
                         runner = create_runner(req.model, config)
                         await asyncio.to_thread(runner.load)
@@ -349,13 +411,155 @@ def get_app(config: Config):
             del _runners[req.model]
         return {"status": "ok", "model": req.model}
 
+    @app.post("/v1/downloads")
+    async def create_download(req: DownloadModelRequest):
+        assert _download_manager is not None
+        job = _download_manager.create_download(
+            DownloadRequest(
+                repo_id=req.repo_id,
+                revision=req.revision,
+                allow_patterns=tuple(req.allow_patterns) if req.allow_patterns else None,
+                ignore_patterns=tuple(req.ignore_patterns) if req.ignore_patterns else None,
+                local_name=req.local_name,
+                token=None,
+                local_files_only=req.local_files_only,
+            )
+        )
+        return {"job_id": job.id}
+
+    @app.get("/v1/downloads")
+    async def list_downloads():
+        assert _job_repository is not None
+        return {
+            "data": [
+                job.to_dict()
+                for job in _job_repository.list(limit=100)
+                if job.type == JobType.MODEL_DOWNLOAD.value
+            ]
+        }
+
+    @app.post("/v1/downloads/{job_id}/cancel")
+    async def cancel_download(job_id: str):
+        assert _download_manager is not None
+        return _download_manager.cancel_job(job_id).to_dict()
+
+    @app.post("/v1/downloads/{job_id}/retry")
+    async def retry_download(job_id: str):
+        assert _download_manager is not None and _job_repository is not None
+        return {"job_id": _download_manager.retry_interrupted(_job_repository.get(job_id)).id}
+
+    @app.get("/v1/jobs")
+    async def list_jobs(limit: int = 50, offset: int = 0):
+        assert _job_repository is not None
+        return {"data": [job.to_dict() for job in _job_repository.list(limit=limit, offset=offset)]}
+
+    @app.get("/v1/jobs/{job_id}")
+    async def get_job(job_id: str):
+        assert _job_repository is not None
+        return _job_repository.get(job_id).to_dict()
+
+    @app.post("/v1/jobs/{job_id}/cancel")
+    async def cancel_job(job_id: str):
+        assert _job_queue is not None
+        return _job_queue.cancel(job_id).to_dict()
+
+    @app.get("/v1/adapters")
+    async def list_adapters():
+        assert _adapter_repository is not None
+        return {"data": [adapter.to_dict() for adapter in _adapter_repository.list()]}
+
+    @app.post("/v1/adapters/register")
+    async def register_adapter(req: AdapterPathRequest):
+        assert _adapter_repository is not None
+        return _adapter_repository.register_path(req.path).to_dict()
+
+    @app.post("/v1/adapters/{adapter_id}/load")
+    async def load_adapter(adapter_id: str, req: AdapterActionRequest):
+        assert _adapter_repository is not None
+        runner = await _get_or_load_runner(req.model)
+        adapter = _adapter_repository.get(adapter_id)
+        name = await asyncio.to_thread(runner.load_adapter, adapter, req.adapter_name)
+        return {"status": "ok", "adapter_name": name, "loaded_adapters": runner.list_loaded_adapters()}
+
+    @app.post("/v1/adapters/{adapter_id}/activate")
+    async def activate_adapter(adapter_id: str, req: AdapterActionRequest):
+        assert _adapter_repository is not None
+        runner = await _get_or_load_runner(req.model)
+        adapter = _adapter_repository.get(adapter_id)
+        runner.activate_adapter(req.adapter_name or adapter.name)
+        return {"status": "ok", "active_adapter": req.adapter_name or adapter.name}
+
+    @app.post("/v1/adapters/{adapter_id}/merge")
+    async def merge_adapter(adapter_id: str, req: AdapterActionRequest):
+        assert _job_queue is not None
+        job = _job_queue.submit(
+            JobType.LORA_MERGE.value,
+            {"adapter_id": adapter_id, "model": req.model, "adapter_name": req.adapter_name},
+            lambda job, update, cancel: (_ for _ in ()).throw(
+                JobNotImplementedError("LoRA 合并后台执行器尚未实现，未修改基础模型。")
+            ),
+        )
+        return {"job_id": job.id}
+
+    @app.post("/v1/benchmarks")
+    async def create_benchmark(req: BenchmarkRequest):
+        assert _job_queue is not None
+
+        def handler(job, update, cancel):
+            update(0.05, "开始 Benchmark。")
+            bench = BenchmarkRunner(config, lambda model_id: create_runner(model_id, config))
+            bench.run(
+                BenchmarkConfig(
+                    model_id=req.model_id,
+                    adapter_id=req.adapter_id,
+                    prompt_set=req.prompt_set,
+                    warmup_runs=req.warmup_runs,
+                    measured_runs=req.measured_runs,
+                    max_new_tokens=req.max_new_tokens,
+                    context_lengths=tuple(req.context_lengths),
+                )
+            )
+            update(1.0, "Benchmark 完成。")
+
+        payload = req.model_dump() if hasattr(req, "model_dump") else req.dict()
+        job = _job_queue.submit(JobType.BENCHMARK.value, payload, handler)
+        return {"job_id": job.id}
+
+    @app.get("/v1/benchmarks")
+    async def list_benchmarks():
+        from .benchmarks.repository import BenchmarkRepository
+
+        return {"data": BenchmarkRepository(config).list()}
+
+    @app.get("/v1/benchmarks/{benchmark_id}")
+    async def get_benchmark(benchmark_id: str):
+        from .benchmarks.repository import BenchmarkRepository
+
+        return BenchmarkRepository(config).get(benchmark_id)
+
+    @app.get("/v1/storage")
+    async def storage_status():
+        return {"data": [item.to_dict() for item in collect_disk_usage(config)]}
+
+    @app.post("/v1/storage/cleanup")
+    async def cleanup_storage():
+        manager = CacheManager(config)
+        return {
+            "incomplete_downloads_removed": manager.cleanup_incomplete_downloads(),
+            "old_benchmark_files_removed": manager.cleanup_old_benchmarks(),
+        }
+
+    @app.post("/v1/diagnostics/export")
+    async def diagnostics_export():
+        path = export_diagnostics(config)
+        return {"status": "ok", "path": str(path)}
+
     # ── Endpoints: Chat (OpenAI-compatible) ────────────────
 
     @app.post("/v1/chat/completions")
-    async def chat_completions(req: ChatRequest):
+    async def chat_completions(req: ChatRequest, request: Request):
         """OpenAI 兼容的聊天补全接口（支持 stream 模式）"""
         request_id = f"req-{uuid.uuid4().hex[:12]}"
-        runner = await _get_or_load_runner(req.model)
         raw_messages = [
             msg.model_dump() if hasattr(msg, "model_dump") else msg.dict()
             for msg in req.messages
@@ -372,6 +576,8 @@ def get_app(config: Config):
             raise api_error(400, INVALID_MESSAGES, "最后一条消息通常应为 user 或 tool。", request_id)
 
         # ── Streaming mode (SSE) ──
+        runner = await _get_or_load_runner(req.model)
+
         if req.stream:
             from fastapi.responses import StreamingResponse
 
@@ -505,7 +711,7 @@ def get_app(config: Config):
         }
 
     @app.post("/v1/rag/ingest/upload")
-    async def rag_ingest_upload(file: UploadFile = File(...)):
+    async def rag_ingest_upload(file: Annotated[UploadFile, File(...)]):
         """上传文件到知识库"""
         if _rag_pipeline is None:
             raise HTTPException(status_code=500, detail="RAG pipeline not initialized")
@@ -601,14 +807,14 @@ def get_app(config: Config):
                 "response": response,
             }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(status_code=500, detail=str(e)) from e
 
     @app.post("/v1/vision/analyze/upload")
     async def vision_analyze_upload(
-        model: str = Form(...),
-        prompt: str = Form("请详细描述这张图片的内容。"),
-        max_tokens: int = Form(1024),
-        file: UploadFile = File(...),
+        file: Annotated[UploadFile, File(...)],
+        model: Annotated[str, Form(...)],
+        prompt: Annotated[str, Form()] = "?????????????",
+        max_tokens: Annotated[int, Form()] = 1024,
     ):
         """上传图片进行识别"""
         vr = _get_vision_runner(model)
@@ -632,12 +838,12 @@ def get_app(config: Config):
                 "response": response,
             }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(status_code=500, detail=str(e)) from e
 
     @app.post("/v1/vision/ocr")
     async def vision_ocr(
-        model: str = Form(...),
-        file: UploadFile = File(...),
+        file: Annotated[UploadFile, File(...)],
+        model: Annotated[str, Form(...)],
     ):
         """图片 OCR 文字识别"""
         vr = _get_vision_runner(model)
@@ -654,7 +860,7 @@ def get_app(config: Config):
             text = vr.ocr_image(str(file_path))
             return {"filename": file.filename, "text": text}
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(status_code=500, detail=str(e)) from e
 
     # ── Health Check ───────────────────────────────────────
 
@@ -711,8 +917,8 @@ def get_app(config: Config):
         note: str = ""
 
     class AdminUpdateUserRequest(BaseModel):
-        role: Optional[str] = None
-        note: Optional[str] = None
+        role: str | None = None
+        note: str | None = None
 
     class AdminChangePasswordRequest(BaseModel):
         old_password: str
@@ -761,7 +967,7 @@ def get_app(config: Config):
             user = _admin.create_user(req.user_id, role=req.role, note=req.note)
             return {"status": "ok", "user": user.to_dict(include_secret=True)}
         except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            raise HTTPException(status_code=400, detail=str(e)) from e
 
     @app.delete("/admin/api/users/{user_id}")
     async def admin_delete_user(request: Request, user_id: str):
@@ -822,7 +1028,6 @@ def get_app(config: Config):
     # ── /api/v1 alias (RemoteAssistant compatibility) ──────
     # RemoteAssistant llmstudio preset uses /api/v1/* paths
     from fastapi import APIRouter
-    from starlette.routing import Mount
 
     api_v1_router = APIRouter(prefix="/api/v1")
 
@@ -839,8 +1044,8 @@ def get_app(config: Config):
         return await unload_model(req)
 
     @api_v1_router.post("/chat/completions")
-    async def api_v1_chat(req: ChatRequest):
-        return await chat_completions(req)
+    async def api_v1_chat(req: ChatRequest, request: Request):
+        return await chat_completions(req, request)
 
     app.include_router(api_v1_router)
 

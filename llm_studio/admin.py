@@ -7,9 +7,9 @@ import os
 import secrets
 import time
 from pathlib import Path
-from typing import Optional
 
 from .security import hash_api_key, redact_secret
+
 
 def generate_api_key(prefix: str = "sk-llmstudio") -> str:
     """Generate a secure random API key."""
@@ -78,7 +78,7 @@ class UserRecord:
         return data
 
     @classmethod
-    def from_dict(cls, data: dict) -> "UserRecord":
+    def from_dict(cls, data: dict) -> UserRecord:
         legacy_key = data.get("api_key")
         api_key_hash = data.get("api_key_hash")
         api_key_masked = data.get("api_key_masked")
@@ -113,7 +113,7 @@ class AdminManager:
     def load(self):
         """Load users from JSON file."""
         if self._db_path.exists():
-            with open(self._db_path, "r", encoding="utf-8") as f:
+            with open(self._db_path, encoding="utf-8") as f:
                 data = json.load(f)
             stored_password = data.get("admin_password_hash") or data.get("admin_password", "")
             if stored_password and not stored_password.startswith("$argon2"):
@@ -172,7 +172,7 @@ class AdminManager:
         self.save()
         return True
 
-    def authenticate(self, user_id: str, api_key: str) -> Optional[UserRecord]:
+    def authenticate(self, user_id: str, api_key: str) -> UserRecord | None:
         """Authenticate an API request. Returns user record or None."""
         user = self._users.get(user_id)
         if user and user.enabled and secrets.compare_digest(hash_api_key(api_key), user.api_key_hash):
@@ -200,7 +200,7 @@ class AdminManager:
         """List all users without full API keys."""
         return [u.to_dict() for u in self._users.values()]
 
-    def get_user(self, user_id: str) -> Optional[UserRecord]:
+    def get_user(self, user_id: str) -> UserRecord | None:
         return self._users.get(user_id)
 
     def delete_user(self, user_id: str) -> bool:
@@ -210,7 +210,7 @@ class AdminManager:
             return True
         return False
 
-    def toggle_user(self, user_id: str) -> Optional[bool]:
+    def toggle_user(self, user_id: str) -> bool | None:
         """Enable/disable a user. Returns new enabled state or None."""
         user = self._users.get(user_id)
         if user:
@@ -219,7 +219,7 @@ class AdminManager:
             return user.enabled
         return None
 
-    def regenerate_key(self, user_id: str) -> Optional[str]:
+    def regenerate_key(self, user_id: str) -> str | None:
         """Regenerate API key for a user. Returns new key once or None."""
         user = self._users.get(user_id)
         if user:
@@ -242,7 +242,7 @@ class AdminManager:
         self.save()
         return True
 
-    def get_full_key(self, user_id: str) -> Optional[str]:
+    def get_full_key(self, user_id: str) -> str | None:
         """Full keys are no longer recoverable after creation."""
         user = self._users.get(user_id)
         return user.plain_api_key if user else None

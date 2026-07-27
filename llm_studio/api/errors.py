@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from fastapi import HTTPException
 
-
 MODEL_NOT_LOADED = "MODEL_NOT_LOADED"
 MODEL_LOADING = "MODEL_LOADING"
 QUEUE_FULL = "QUEUE_FULL"

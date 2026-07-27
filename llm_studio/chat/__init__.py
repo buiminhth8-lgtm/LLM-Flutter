@@ -9,7 +9,6 @@ from .history_window import ChatHistoryWindow
 from .message import ChatMessage, ChatRole, normalize_messages
 from .prompt_builder import PromptBuilder
 
-
 Message = ChatMessage
 
 

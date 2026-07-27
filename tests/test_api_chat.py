@@ -35,6 +35,7 @@ def test_api_rejects_empty_messages(tmp_path):
 def test_api_rejects_invalid_role(tmp_path):
     pytest.importorskip("fastapi")
     from fastapi.testclient import TestClient
+
     import llm_studio.api_server as api_server
 
     cfg_path = tmp_path / "config.yaml"
@@ -54,6 +55,7 @@ def test_api_rejects_invalid_role(tmp_path):
 def test_api_preserves_multi_turn_messages(tmp_path):
     pytest.importorskip("fastapi")
     from fastapi.testclient import TestClient
+
     import llm_studio.api_server as api_server
 
     cfg_path = tmp_path / "config.yaml"
