@@ -263,7 +263,8 @@ class Config:
 
     @property
     def models_dir(self) -> Path:
-        return Path(self._data["models_dir"])
+        models_cfg = self._data.get("models", {})
+        return Path(models_cfg.get("root_dir") or self._data["models_dir"])
 
     @property
     def finetune_output_dir(self) -> Path:

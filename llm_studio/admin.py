@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import json
-import os
 import secrets
 import time
 from pathlib import Path
 
 from .security import hash_api_key, redact_secret
+
+WEAK_PASSWORDS = {"admin", "123456", "password", "admin123", "12345678", "qwerty"}
 
 
 def generate_api_key(prefix: str = "sk-llmstudio") -> str:
@@ -125,7 +126,8 @@ class AdminManager:
                 self._users[rec.user_id] = rec
             self.save()
         else:
-            self._create_default_admin()
+            self._users = {}
+            self._admin_password_hash = ""
 
     def save(self):
         """Persist users to JSON file."""
@@ -136,16 +138,20 @@ class AdminManager:
         with open(self._db_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
-    def _create_default_admin(self):
-        """Create the first admin user without storing plaintext secrets."""
-        password = os.environ.get("LLM_STUDIO_INITIAL_ADMIN_PASSWORD") or secrets.token_urlsafe(18)
-        if "LLM_STUDIO_INITIAL_ADMIN_PASSWORD" not in os.environ:
-            self.initial_admin_password = password
-            print(
-                "[Admin] LLM_STUDIO_INITIAL_ADMIN_PASSWORD 未设置；"
-                "已生成一次性初始密码，仅建议绑定 127.0.0.1 时使用。"
-            )
-            print(f"[Admin] Initial admin password: {redact_secret(password)}")
+    @property
+    def initialized(self) -> bool:
+        return bool(self._admin_password_hash and self._users)
+
+    def initialize(self, admin_password: str, display_name: str = "Admin") -> UserRecord:
+        """Initialize the local admin account and return the first API key once."""
+        if self.initialized:
+            raise ValueError("LLM Studio ?????????????")
+        password = (admin_password or "").strip()
+        if not password:
+            raise ValueError("??????????")
+        if password.lower() in WEAK_PASSWORDS or len(password) < 8:
+            raise ValueError("????????????? 8 ?????????")
+
         self._admin_password_hash = _hash_secret(password)
         api_key = generate_api_key()
         admin = UserRecord(
@@ -153,12 +159,13 @@ class AdminManager:
             api_key_hash=hash_api_key(api_key),
             api_key_masked=_mask_key(api_key),
             role="admin",
-            note="Default admin user created on first startup.",
+            note=display_name or "Admin",
         )
         admin.plain_api_key = api_key
         self._users["admin"] = admin
         self.save()
-        print(f"[Admin] Initial admin API key: {redact_secret(api_key)}")
+        print(f"[Admin] Initialized admin API key: {redact_secret(api_key)}")
+        return admin
 
     def verify_admin_password(self, password: str) -> bool:
         """Verify admin dashboard login password."""

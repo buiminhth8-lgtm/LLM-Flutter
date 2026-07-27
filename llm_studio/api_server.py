@@ -18,6 +18,7 @@ from .api.errors import (
     GENERATION_CANCELLED,
     GENERATION_TIMEOUT,
     INVALID_MESSAGES,
+    MODEL_NOT_FOUND,
     QUEUE_FULL,
     UNAUTHORIZED,
     api_error,
@@ -28,7 +29,6 @@ from .chat import ChatMessage as CoreChatMessage
 from .chat import InvalidChatMessageError
 from .config import Config
 from .diagnostics import export_diagnostics
-from .downloader import ModelDownloader
 from .downloads import DownloadManager, DownloadRequest
 from .generation import CancellationToken
 from .generation.exceptions import (
@@ -39,6 +39,7 @@ from .generation.exceptions import (
 from .jobs import JobQueue, JobRepository, JobType
 from .jobs.exceptions import JobNotImplementedError
 from .models import LocalModelRepository
+from .models.selection import ModelSelectionError, select_model_for_chat
 from .models.storage import layout_from_config
 from .rag import RAGPipeline
 from .runner import BaseRunner, create_runner
@@ -59,6 +60,8 @@ _job_repository: JobRepository | None = None
 _job_queue: JobQueue | None = None
 _download_manager: DownloadManager | None = None
 _adapter_repository: AdapterRepository | None = None
+_current_model_id: str | None = None
+_runner_model_ids: dict[str, str] = {}
 
 
 def get_app(config: Config):
@@ -72,9 +75,9 @@ def get_app(config: Config):
     global _config, _rag_pipeline, _admin, _concurrency
     global _model_repository, _job_repository, _job_queue, _download_manager, _adapter_repository
     _config = config
-    _admin = AdminManager(config.models_dir.parent / "data")
     layout = layout_from_config(config)
     layout.ensure()
+    _admin = AdminManager(layout.root_dir.parent)
     _model_repository = LocalModelRepository(config, layout)
     _job_repository = JobRepository(layout.jobs_dir / "jobs.sqlite")
     _job_queue = JobQueue(_job_repository)
@@ -150,7 +153,15 @@ def get_app(config: Config):
     auth_enabled = auth_config.get("enabled", False)
 
     # Paths that skip authentication
-    _public_paths = {"/health", "/ready", "/docs", "/openapi.json", "/redoc"}
+    _public_paths = {
+        "/health",
+        "/ready",
+        "/docs",
+        "/openapi.json",
+        "/redoc",
+        "/v1/setup/status",
+        "/v1/setup/initialize",
+    }
     _admin_paths_prefix = "/admin"
 
     class AuthMiddleware(BaseHTTPMiddleware):
@@ -233,6 +244,10 @@ def get_app(config: Config):
         choices: list[ChatChoice]
         usage: Usage
 
+    class SetupInitializeRequest(BaseModel):
+        admin_password: str
+        display_name: str = "Admin"
+
     class ModelInfo(BaseModel):
         id: str
         object: str = "model"
@@ -264,6 +279,7 @@ def get_app(config: Config):
     class LoadModelRequest(BaseModel):
         model: str = Field(..., description="模型路径")
         model_type: str = "text"  # "text" or "vision"
+        strategy: str = "auto"
 
     class RegisterModelRequest(BaseModel):
         path: str
@@ -294,29 +310,19 @@ def get_app(config: Config):
 
     # ── Helper Functions ───────────────────────────────────
 
-    async def _get_or_load_runner(model_path: str) -> BaseRunner:
-        """Get runner, auto-loading the model if not yet loaded."""
-        # Support 'auto': pick first loaded model, or first local model
-        if model_path == "auto" or not model_path:
-            if _runners:
-                model_path = next(iter(_runners))
-            else:
-                try:
-                    dl = ModelDownloader(config)
-                    local = dl.list_local_models()
-                    if local:
-                        model_path = local[0]["path"]
-                    else:
-                        raise HTTPException(
-                            status_code=400,
-                            detail="No models available. Download a model first.",
-                        )
-                except HTTPException:
-                    raise
-                except Exception as exc:
-                    raise HTTPException(
-                        status_code=400, detail="No models available."
-                    ) from exc
+    def _select_repository_model(model: str | None, request_id: str):
+        assert _model_repository is not None
+        caps = detect_runtime_capabilities(run_bnb_probe=False)
+        try:
+            return select_model_for_chat(model, _model_repository, caps)
+        except ModelSelectionError as exc:
+            raise api_error(404, MODEL_NOT_FOUND, str(exc), request_id) from exc
+
+    async def _get_or_load_runner(model_id: str | None, request_id: str) -> tuple[str, BaseRunner]:
+        """Get runner through LocalModelRepository, auto-loading when needed."""
+        global _current_model_id
+        selected = _select_repository_model(model_id, request_id)
+        model_path = str(selected.path)
 
         if model_path not in _runners:
             # Auto-load: compatible with LM Studio behavior
@@ -324,16 +330,23 @@ def get_app(config: Config):
                 assert _concurrency is not None
                 async with _concurrency.model_load():
                     if model_path in _runners:
-                        return _runners[model_path]
+                        _current_model_id = selected.id
+                        _runner_model_ids[model_path] = selected.id
+                        return selected.id, _runners[model_path]
                     runner = create_runner(model_path, config)
                     await asyncio.to_thread(runner.load)
                     _runners[model_path] = runner
+                    _runner_model_ids[model_path] = selected.id
+                    _current_model_id = selected.id
             except Exception as e:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Failed to load model '{model_path}': {e}",
+                    detail=f"Failed to load model '{selected.display_name}': {e}",
                 ) from e
-        return _runners[model_path]
+        else:
+            _runner_model_ids[model_path] = selected.id
+            _current_model_id = selected.id
+        return selected.id, _runners[model_path]
 
     def _get_vision_runner(model_path: str) -> VisionRunner:
         if model_path not in _vision_runners:
@@ -342,6 +355,29 @@ def get_app(config: Config):
                 detail=f"Vision model not loaded: {model_path}. Call POST /v1/models/load first.",
             )
         return _vision_runners[model_path]
+
+    async def _load_text_model(model_id: str, request_id: str) -> dict:
+        global _current_model_id
+        selected = _select_repository_model(model_id, request_id)
+        model_path = str(selected.path)
+        if model_path not in _runners:
+            assert _concurrency is not None
+            async with _concurrency.model_load():
+                if model_path not in _runners:
+                    runner = create_runner(model_path, config)
+                    await asyncio.to_thread(runner.load)
+                    _runners[model_path] = runner
+        _runner_model_ids[model_path] = selected.id
+        _current_model_id = selected.id
+        runner = _runners[model_path]
+        policy = getattr(runner, "load_policy", None)
+        return {
+            "model_id": selected.id,
+            "status": "loaded",
+            "backend": type(runner).__name__,
+            "dtype": getattr(policy, "dtype", None),
+            "quantization": getattr(policy, "quantization", None),
+        }
 
     # ── Endpoints: Models ──────────────────────────────────
 
@@ -382,32 +418,64 @@ def get_app(config: Config):
 
     @app.post("/v1/models/load")
     async def load_model(req: LoadModelRequest):
-        """加载模型到内存"""
+        """Load a model by repository id, preserving the legacy body endpoint."""
+        request_id = f"req-{uuid.uuid4().hex[:12]}"
         if req.model_type == "vision":
             if req.model not in _vision_runners:
                 vr = VisionRunner(req.model, config)
                 vr.load()
                 _vision_runners[req.model] = vr
             return {"status": "ok", "model": req.model, "type": "vision"}
-        else:
-            if req.model not in _runners:
-                assert _concurrency is not None
-                async with _concurrency.model_load():
-                    if req.model not in _runners:
-                        runner = create_runner(req.model, config)
-                        await asyncio.to_thread(runner.load)
-                        _runners[req.model] = runner
-            return {"status": "ok", "model": req.model, "type": "text"}
+        return await _load_text_model(req.model, request_id)
+
+    @app.post("/v1/models/{model_id}/load")
+    async def load_model_by_id(model_id: str):
+        request_id = f"req-{uuid.uuid4().hex[:12]}"
+        return await _load_text_model(model_id, request_id)
+
+    @app.get("/v1/models/current")
+    async def current_model():
+        if not _current_model_id:
+            return {"loaded": False}
+        assert _model_repository is not None
+        try:
+            model = _model_repository.get(_current_model_id)
+        except Exception:
+            return {"loaded": False}
+        model_path = str(model.path)
+        runner = _runners.get(model_path)
+        policy = getattr(runner, "load_policy", None) if runner else None
+        return {
+            "loaded": runner is not None,
+            "model_id": model.id,
+            "display_name": model.display_name,
+            "backend": type(runner).__name__ if runner else None,
+            "dtype": getattr(policy, "dtype", None),
+            "quantization": getattr(policy, "quantization", None),
+        }
 
     @app.post("/v1/models/unload")
     async def unload_model(req: LoadModelRequest):
-        """卸载模型释放内存"""
+        """Unload the current or requested model."""
+        global _current_model_id
         if req.model_type == "vision" and req.model in _vision_runners:
             _vision_runners[req.model].unload()
             del _vision_runners[req.model]
-        elif req.model in _runners:
-            _runners[req.model].unload()
-            del _runners[req.model]
+        else:
+            model_path = req.model
+            selected_id = req.model
+            try:
+                selected = _select_repository_model(req.model, f"req-{uuid.uuid4().hex[:12]}")
+                model_path = str(selected.path)
+                selected_id = selected.id
+            except Exception:
+                pass
+            if model_path in _runners:
+                _runners[model_path].unload()
+                del _runners[model_path]
+                _runner_model_ids.pop(model_path, None)
+            if _current_model_id == selected_id or not _runners:
+                _current_model_id = None
         return {"status": "ok", "model": req.model}
 
     @app.post("/v1/downloads")
@@ -475,7 +543,7 @@ def get_app(config: Config):
     @app.post("/v1/adapters/{adapter_id}/load")
     async def load_adapter(adapter_id: str, req: AdapterActionRequest):
         assert _adapter_repository is not None
-        runner = await _get_or_load_runner(req.model)
+        _, runner = await _get_or_load_runner(req.model, f"req-{uuid.uuid4().hex[:12]}")
         adapter = _adapter_repository.get(adapter_id)
         name = await asyncio.to_thread(runner.load_adapter, adapter, req.adapter_name)
         return {"status": "ok", "adapter_name": name, "loaded_adapters": runner.list_loaded_adapters()}
@@ -483,7 +551,7 @@ def get_app(config: Config):
     @app.post("/v1/adapters/{adapter_id}/activate")
     async def activate_adapter(adapter_id: str, req: AdapterActionRequest):
         assert _adapter_repository is not None
-        runner = await _get_or_load_runner(req.model)
+        _, runner = await _get_or_load_runner(req.model, f"req-{uuid.uuid4().hex[:12]}")
         adapter = _adapter_repository.get(adapter_id)
         runner.activate_adapter(req.adapter_name or adapter.name)
         return {"status": "ok", "active_adapter": req.adapter_name or adapter.name}
@@ -575,7 +643,7 @@ def get_app(config: Config):
             raise api_error(400, INVALID_MESSAGES, "最后一条消息通常应为 user 或 tool。", request_id)
 
         # ── Streaming mode (SSE) ──
-        runner = await _get_or_load_runner(req.model)
+        resolved_model_id, runner = await _get_or_load_runner(req.model, request_id)
 
         if req.stream:
             from fastapi.responses import StreamingResponse
@@ -603,7 +671,7 @@ def get_app(config: Config):
                                 "id": chat_id,
                                 "object": "chat.completion.chunk",
                                 "created": created,
-                                "model": req.model,
+                                "model": resolved_model_id,
                                 "choices": [{
                                     "index": 0,
                                     "delta": {"content": chunk_text},
@@ -633,7 +701,7 @@ def get_app(config: Config):
                     "id": chat_id,
                     "object": "chat.completion.chunk",
                     "created": created,
-                    "model": req.model,
+                    "model": resolved_model_id,
                     "choices": [{
                         "index": 0,
                         "delta": {},
@@ -676,7 +744,7 @@ def get_app(config: Config):
         return ChatResponse(
             id=f"chatcmpl-{uuid.uuid4().hex[:8]}",
             created=int(time.time()),
-            model=req.model,
+            model=resolved_model_id,
             choices=[
                 ChatChoice(
                     message=ChatMessageModel(role="assistant", content=response_text)
@@ -879,11 +947,35 @@ def get_app(config: Config):
             "rag_documents": _rag_pipeline.document_count if _rag_pipeline else 0,
         }
 
+    @app.get("/v1/setup/status")
+    async def setup_status():
+        assert _admin is not None
+        return {
+            "initialized": _admin.initialized,
+            "auth_enabled": bool(auth_enabled),
+            "requires_setup": bool(auth_enabled and not _admin.initialized),
+        }
+
+    @app.post("/v1/setup/initialize")
+    async def setup_initialize(req: SetupInitializeRequest):
+        assert _admin is not None
+        if _admin.initialized:
+            raise HTTPException(status_code=409, detail="LLM Studio 已初始化。")
+        try:
+            admin = _admin.initialize(req.admin_password, req.display_name)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return {"user_id": admin.user_id, "api_key": admin.plain_api_key}
+
     @app.get("/v1/runtime")
     async def runtime_status():
         caps = detect_runtime_capabilities(run_bnb_probe=False)
-        current_model = next(iter(_runners), None)
-        runner = _runners.get(current_model) if current_model else None
+        current_path = None
+        for path, model_id in _runner_model_ids.items():
+            if model_id == _current_model_id:
+                current_path = path
+                break
+        runner = _runners.get(current_path) if current_path else None
         policy = getattr(runner, "load_policy", None) if runner else None
         return {
             "python_version": caps.python_version,
@@ -893,7 +985,7 @@ def get_app(config: Config):
             "gpu_name": caps.gpu_name,
             "total_vram_bytes": caps.total_vram_bytes,
             "bf16_supported": caps.bf16_supported,
-            "current_model": current_model,
+            "current_model": _current_model_id,
             "backend": type(runner).__name__ if runner else None,
             "quantization": getattr(policy, "quantization", None),
             "queue_length": _concurrency.queue_size if _concurrency else 0,

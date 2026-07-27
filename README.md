@@ -1,5 +1,76 @@
 # LLM-Studio
 
+## Current Desktop Architecture
+
+LLM-Studio now uses a Flutter Windows desktop client plus a local Python FastAPI backend.
+Start the desktop app with:
+
+```powershell
+.\scripts\start_desktop.ps1
+```
+
+For direct Flutter development:
+
+```powershell
+cd apps\flutter_studio
+flutter run -d windows --dart-define="LLM_STUDIO_ROOT=D:\develop\LLM-Studio\LLM-Studio"
+```
+
+The Flutter app starts the backend when `/health` is not already available. The backend is launched from the project root with `.venv\Scripts\python.exe -m llm_studio.cli serve`.
+
+## First-Run Authentication
+
+On first launch, `/v1/setup/status` is public and reports whether local setup is required. If setup is required, Flutter shows an initialization page where the user creates the local administrator password. The backend stores only an Argon2id password hash and returns the first API Key exactly once from `/v1/setup/initialize`.
+
+Flutter persists these desktop settings with `shared_preferences`:
+
+- `llm_studio.api_base_url`
+- `llm_studio.user_id`
+- `llm_studio.api_key`
+- `llm_studio.selected_model_id`
+
+`shared_preferences` is enough for the current local desktop loop, but it is not a high-security key vault on Windows. A future hardening step should move API keys to Windows Credential Manager or `flutter_secure_storage`.
+
+## Unified Model Workflow
+
+Model scanning, listing, loading, unloading, and chat selection now use the unified local model repository rooted at:
+
+```text
+models.root_dir: ./data/models
+```
+
+The legacy `models_dir: ./models` setting is still accepted for old configuration files, but it is not the chat default when `models.root_dir` is present. Chat requests resolve `model` through `LocalModelRepository`; `model=auto` picks a ready compatible model from the repository and returns `MODEL_NOT_FOUND` when none exists.
+
+Flutter model flow:
+
+1. Open Models.
+2. Scan or refresh local models.
+3. Load a `ready` model.
+4. Chat uses the selected/current model ID instead of always sending `auto`.
+5. Unload clears the current model and disables chat until another model is loaded.
+
+## Current Feature Status
+
+Supported:
+
+- First-run setup from Flutter.
+- API Key persistence and authenticated API calls.
+- Backend stdout/stderr capture with secret redaction.
+- Local model scan/list through the unified repository.
+- Model load, current model status, unload.
+- Non-streaming multi-turn chat bound to the selected loaded model.
+
+Experimental or not complete:
+
+- Full download task UI.
+- LoRA merge UI.
+- Strict benchmark comparison UI.
+- Multi-platform Flutter packaging beyond Windows desktop.
+- Installer validation on a clean Windows VM.
+
+---
+
+
 > This README is the single source of project documentation. The former `docs/` documents were merged here.
 
 ## Flutter Desktop 启动说明
