@@ -64,7 +64,14 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "api": {
         "host": "127.0.0.1",
         "port": 8000,
-        "allowed_origins": ["http://127.0.0.1:7860", "http://localhost:7860"],
+        "allowed_origins": [
+            "http://127.0.0.1:7860",
+            "http://localhost:7860",
+            "http://127.0.0.1:5000",
+            "http://localhost:5000",
+            "http://127.0.0.1:8080",
+            "http://localhost:8080",
+        ],
     },
     "auth": {"enabled": True},
     "finetune": {
