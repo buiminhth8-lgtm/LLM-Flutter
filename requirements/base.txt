@@ -1,0 +1,12 @@
+huggingface_hub>=0.23,<1.0
+transformers>=4.44,<5
+accelerate>=0.30,<2
+safetensors>=0.4,<1
+numpy>=1.26,<3
+psutil>=5.9,<8
+pyyaml>=6,<7
+requests>=2.31,<3
+tqdm>=4.66,<5
+rich>=13.7,<15
+click>=8.1,<9
+typer>=0.12,<1

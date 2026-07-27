@@ -1,0 +1,2 @@
+# Project-wide guard rails. CUDA PyTorch is installed by scripts/install_windows_cuda.ps1.
+# Do not add torch/torchvision/torchaudio here or to ordinary requirement files.

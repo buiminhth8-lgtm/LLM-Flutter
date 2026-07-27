@@ -1,0 +1,48 @@
+runtime:
+  backend: auto
+  device: cuda
+  dtype: auto
+  quantization: auto
+  attention_backend: sdpa
+  max_gpu_memory: 7GiB
+  max_cpu_memory: auto
+  cpu_offload: true
+  offload_folder: ./cache/offload
+  trust_remote_code: false
+  inference_concurrency: 1
+  queue_limit: 8
+  request_timeout_seconds: 300
+
+generation:
+  max_new_tokens: 512
+  temperature: 0.7
+  top_p: 0.9
+  top_k: 40
+  repetition_penalty: 1.05
+  do_sample: true
+  max_context_tokens: 4096
+
+llama_cpp:
+  n_ctx: 4096
+  n_gpu_layers: -1
+  n_batch: 256
+  n_ubatch: 128
+  n_threads: 0
+  flash_attn: true
+  offload_kqv: true
+
+rag:
+  device: cpu
+  embedding_model: BAAI/bge-small-zh-v1.5
+  chunk_size: 500
+  chunk_overlap: 50
+
+finetune:
+  method: qlora
+  per_device_train_batch_size: 1
+  batch_size: 1
+  gradient_accumulation_steps: 16
+  max_seq_length: 1024
+  gradient_checkpointing: true
+  precision: auto
+  target_modules: all-linear

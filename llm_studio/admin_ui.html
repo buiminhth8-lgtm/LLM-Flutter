@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Studio - API 密钥管理</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #0f172a; color: #e2e8f0; min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            padding: 20px 32px; display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid #334155;
+        }
+        .header h1 { font-size: 20px; font-weight: 600; }
+        .header h1 span { color: #60a5fa; }
+        .header-actions { display: flex; gap: 12px; align-items: center; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+        /* Login */
+        .login-wrap {
+            display: flex; align-items: center; justify-content: center;
+            min-height: 80vh;
+        }
+        .login-card {
+            background: #1e293b; border-radius: 12px; padding: 40px;
+            width: 400px; border: 1px solid #334155;
+        }
+        .login-card h2 { text-align: center; margin-bottom: 24px; color: #60a5fa; }
+
+        /* Forms */
+        input, select {
+            background: #0f172a; border: 1px solid #475569; border-radius: 8px;
+            color: #e2e8f0; padding: 10px 14px; font-size: 14px; width: 100%;
+            outline: none; transition: border-color 0.2s;
+        }
+        input:focus, select:focus { border-color: #60a5fa; }
+        input::placeholder { color: #64748b; }
+        label { display: block; margin-bottom: 6px; font-size: 13px; color: #94a3b8; }
+        .form-group { margin-bottom: 16px; }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px; border: none; border-radius: 8px; font-size: 14px;
+            cursor: pointer; font-weight: 500; transition: all 0.2s; display: inline-flex;
+            align-items: center; gap: 6px;
+        }
+        .btn-primary { background: #3b82f6; color: #fff; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-success { background: #22c55e; color: #fff; }
+        .btn-success:hover { background: #16a34a; }
+        .btn-danger { background: #ef4444; color: #fff; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-ghost { background: transparent; color: #94a3b8; border: 1px solid #475569; }
+        .btn-ghost:hover { background: #1e293b; color: #e2e8f0; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+        .btn-block { width: 100%; justify-content: center; }
+
+        /* Table */
+        .card {
+            background: #1e293b; border-radius: 12px; border: 1px solid #334155;
+            overflow: hidden;
+        }
+        .card-header {
+            padding: 20px 24px; display: flex; align-items: center;
+            justify-content: space-between; border-bottom: 1px solid #334155;
+        }
+        .card-header h2 { font-size: 16px; }
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            text-align: left; padding: 12px 16px; font-size: 12px;
+            text-transform: uppercase; color: #64748b; font-weight: 600;
+            border-bottom: 1px solid #334155; letter-spacing: 0.5px;
+        }
+        td {
+            padding: 14px 16px; font-size: 14px;
+            border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+        }
+        tr:hover td { background: rgba(51, 65, 85, 0.3); }
+        .badge {
+            display: inline-block; padding: 3px 10px; border-radius: 12px;
+            font-size: 12px; font-weight: 500;
+        }
+        .badge-admin { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+        .badge-user { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+        .badge-on { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+        .badge-off { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+
+        .key-text {
+            font-family: "Cascadia Code", "Fira Code", monospace;
+            font-size: 13px; color: #94a3b8; cursor: pointer;
+        }
+        .key-text:hover { color: #60a5fa; }
+        .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal {
+            background: #1e293b; border-radius: 12px; padding: 32px;
+            width: 440px; border: 1px solid #334155;
+        }
+        .modal h3 { margin-bottom: 20px; font-size: 18px; }
+        .modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; }
+
+        /* Toast */
+        .toast {
+            position: fixed; top: 20px; right: 20px; padding: 12px 20px;
+            border-radius: 8px; font-size: 14px; z-index: 200;
+            transform: translateX(120%); transition: transform 0.3s;
+        }
+        .toast.show { transform: translateX(0); }
+        .toast-success { background: #166534; color: #bbf7d0; }
+        .toast-error { background: #991b1b; color: #fecaca; }
+
+        .stats {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px; margin-bottom: 24px;
+        }
+        .stat-card {
+            background: #1e293b; border-radius: 12px; padding: 20px;
+            border: 1px solid #334155;
+        }
+        .stat-card .label { font-size: 13px; color: #64748b; margin-bottom: 4px; }
+        .stat-card .value { font-size: 28px; font-weight: 700; color: #60a5fa; }
+
+        .copy-hint {
+            font-size: 11px; color: #64748b; margin-top: 4px;
+        }
+        .key-display {
+            background: #0f172a; border: 1px solid #475569; border-radius: 8px;
+            padding: 12px 14px; font-family: monospace; font-size: 13px;
+            word-break: break-all; color: #22c55e; margin-top: 8px;
+            cursor: pointer; position: relative;
+        }
+        .key-display:hover::after {
+            content: '点击复制'; position: absolute; right: 8px; top: 50%;
+            transform: translateY(-50%); font-size: 11px; color: #64748b;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<!-- Login Page -->
+<div id="loginPage" style="display:none;">
+    <div class="login-wrap">
+        <div class="login-card">
+            <h2>? LLM Studio 管理后台</h2>
+            <div class="form-group">
+                <label>管理员密码</label>
+                <input type="password" id="loginPassword" placeholder="请输入管理员密码" 
+                       onkeydown="if(event.key==='Enter')doLogin()">
+            </div>
+            <button class="btn btn-primary btn-block" onclick="doLogin()">登 录</button>
+            <p style="text-align:center;margin-top:16px;font-size:12px;color:#64748b;">
+                默认密码: admin（请登录后修改）
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Main Page -->
+<div id="mainPage" style="display:none;">
+    <div class="header">
+        <h1>? <span>LLM Studio</span> API 密钥管理</h1>
+        <div class="header-actions">
+            <button class="btn btn-ghost btn-sm" onclick="showChangePassword()">修改密码</button>
+            <button class="btn btn-ghost btn-sm" onclick="doLogout()">退出登录</button>
+        </div>
+    </div>
+    <div class="container">
+        <div class="stats">
+            <div class="stat-card">
+                <div class="label">用户总数</div>
+                <div class="value" id="statTotal">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">已启用</div>
+                <div class="value" id="statEnabled">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">管理员</div>
+                <div class="value" id="statAdmin">0</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>API 用户列表</h2>
+                <button class="btn btn-success btn-sm" onclick="showCreateUser()">+ 新建用户</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>User ID</th>
+                        <th>API Key</th>
+                        <th>角色</th>
+                        <th>状态</th>
+                        <th>备注</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="userTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Create User Modal -->
+<div id="createModal" class="modal-overlay" onclick="if(event.target===this)closeModal('createModal')">
+    <div class="modal">
+        <h3>新建 API 用户</h3>
+        <div class="form-group">
+            <label>User ID（唯一标识）</label>
+            <input type="text" id="newUserId" placeholder="例如: app1, client-mobile">
+        </div>
+        <div class="form-group">
+            <label>角色</label>
+            <select id="newUserRole">
+                <option value="user">user - 普通用户</option>
+                <option value="admin">admin - 管理员</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>备注</label>
+            <input type="text" id="newUserNote" placeholder="可选: 用途说明">
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-ghost" onclick="closeModal('createModal')">取消</button>
+            <button class="btn btn-primary" onclick="doCreateUser()">创建</button>
+        </div>
+    </div>
+</div>
+
+<!-- Show Key Modal -->
+<div id="keyModal" class="modal-overlay" onclick="if(event.target===this)closeModal('keyModal')">
+    <div class="modal">
+        <h3>? API 密钥</h3>
+        <div class="form-group">
+            <label>User ID</label>
+            <input type="text" id="keyModalUserId" readonly>
+        </div>
+        <div class="form-group">
+            <label>X-User-ID 请求头</label>
+            <div class="key-display" id="keyModalHeader" onclick="copyText(this.textContent)"></div>
+        </div>
+        <div class="form-group">
+            <label>X-API-Key 请求头</label>
+            <div class="key-display" id="keyModalKey" onclick="copyText(this.textContent)"></div>
+            <p class="copy-hint">点击密钥可复制到剪贴板</p>
+        </div>
+        <div class="form-group" style="background:#0f172a;border-radius:8px;padding:12px;margin-top:12px;">
+            <label style="margin-bottom:8px;">cURL 示例</label>
+            <div style="font-family:monospace;font-size:12px;color:#94a3b8;word-break:break-all;cursor:pointer;"
+                 id="keyModalCurl" onclick="copyText(this.textContent)"></div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-primary" onclick="closeModal('keyModal')">关闭</button>
+        </div>
+    </div>
+</div>
+
+<!-- Change Password Modal -->
+<div id="pwdModal" class="modal-overlay" onclick="if(event.target===this)closeModal('pwdModal')">
+    <div class="modal">
+        <h3>修改管理员密码</h3>
+        <div class="form-group">
+            <label>当前密码</label>
+            <input type="password" id="oldPwd" placeholder="输入当前密码">
+        </div>
+        <div class="form-group">
+            <label>新密码</label>
+            <input type="password" id="newPwd" placeholder="输入新密码">
+        </div>
+        <div class="form-group">
+            <label>确认新密码</label>
+            <input type="password" id="newPwd2" placeholder="再次输入新密码">
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-ghost" onclick="closeModal('pwdModal')">取消</button>
+            <button class="btn btn-primary" onclick="doChangePassword()">确认修改</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const API = '';
+
+// ── Toast ──
+function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast toast-${type} show`;
+    setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── Modal ──
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+function openModal(id) { document.getElementById(id).classList.add('active'); }
+
+// ── Copy ──
+async function copyText(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+        showToast('已复制到剪贴板');
+    } catch { showToast('复制失败', 'error'); }
+}
+
+// ── Auth ──
+async function doLogin() {
+    const pwd = document.getElementById('loginPassword').value;
+    if (!pwd) return;
+    try {
+        const r = await fetch(`${API}/admin/api/login`, {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({password: pwd}),
+        });
+        if (!r.ok) { showToast('密码错误', 'error'); return; }
+        document.getElementById('loginPage').style.display = 'none';
+        document.getElementById('mainPage').style.display = 'block';
+        loadUsers();
+    } catch (e) { showToast('连接失败: ' + e.message, 'error'); }
+}
+
+async function doLogout() {
+    await fetch(`${API}/admin/api/logout`, {method: 'POST'});
+    document.getElementById('mainPage').style.display = 'none';
+    document.getElementById('loginPage').style.display = 'block';
+    document.getElementById('loginPassword').value = '';
+}
+
+// ── Users ──
+let usersCache = [];
+
+async function loadUsers() {
+    try {
+        const r = await fetch(`${API}/admin/api/users`);
+        if (r.status === 401) { doLogout(); return; }
+        const data = await r.json();
+        usersCache = data.users || [];
+        renderUsers();
+    } catch (e) { showToast('加载用户失败', 'error'); }
+}
+
+function renderUsers() {
+    const tbody = document.getElementById('userTable');
+    let total = usersCache.length;
+    let enabled = usersCache.filter(u => u.enabled).length;
+    let admins = usersCache.filter(u => u.role === 'admin').length;
+    document.getElementById('statTotal').textContent = total;
+    document.getElementById('statEnabled').textContent = enabled;
+    document.getElementById('statAdmin').textContent = admins;
+
+    tbody.innerHTML = usersCache.map(u => `
+        <tr>
+            <td><strong>${esc(u.user_id)}</strong></td>
+            <td>
+                <span class="key-text" onclick="showKey('${esc(u.user_id)}')" title="点击查看完整密钥">
+                    ${esc(u.api_key_masked || '***')}
+                </span>
+            </td>
+            <td><span class="badge ${u.role==='admin'?'badge-admin':'badge-user'}">${esc(u.role)}</span></td>
+            <td><span class="badge ${u.enabled?'badge-on':'badge-off'}">${u.enabled?'启用':'禁用'}</span></td>
+            <td style="color:#94a3b8;max-width:160px;overflow:hidden;text-overflow:ellipsis;">${esc(u.note||'-')}</td>
+            <td style="color:#64748b;font-size:12px;">${formatTime(u.created_at)}</td>
+            <td>
+                <div class="actions">
+                    <button class="btn btn-ghost btn-sm" onclick="showKey('${esc(u.user_id)}')">查看</button>
+                    <button class="btn btn-ghost btn-sm" onclick="toggleUser('${esc(u.user_id)}')">${u.enabled?'禁用':'启用'}</button>
+                    <button class="btn btn-ghost btn-sm" onclick="regenKey('${esc(u.user_id)}')">重置</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteUser('${esc(u.user_id)}')">删除</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function formatTime(ts) {
+    if (!ts) return '-';
+    return new Date(ts * 1000).toLocaleString('zh-CN');
+}
+
+function showCreateUser() {
+    document.getElementById('newUserId').value = '';
+    document.getElementById('newUserRole').value = 'user';
+    document.getElementById('newUserNote').value = '';
+    openModal('createModal');
+}
+
+async function doCreateUser() {
+    const uid = document.getElementById('newUserId').value.trim();
+    if (!uid) { showToast('请输入 User ID', 'error'); return; }
+    const role = document.getElementById('newUserRole').value;
+    const note = document.getElementById('newUserNote').value.trim();
+    try {
+        const r = await fetch(`${API}/admin/api/users`, {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({user_id: uid, role, note}),
+        });
+        if (!r.ok) {
+            const d = await r.json();
+            showToast(d.detail || '创建失败', 'error');
+            return;
+        }
+        const data = await r.json();
+        closeModal('createModal');
+        showToast('用户创建成功');
+        await loadUsers();
+        // Show the new key immediately
+        showKeyDirect(data.user.user_id, data.user.api_key);
+    } catch (e) { showToast('创建失败: ' + e.message, 'error'); }
+}
+
+async function showKey(userId) {
+    try {
+        const r = await fetch(`${API}/admin/api/users/${encodeURIComponent(userId)}/key`);
+        if (!r.ok) return;
+        const data = await r.json();
+        showKeyDirect(userId, data.api_key);
+    } catch (e) { showToast('获取密钥失败', 'error'); }
+}
+
+function showKeyDirect(userId, apiKey) {
+    document.getElementById('keyModalUserId').value = userId;
+    document.getElementById('keyModalHeader').textContent = userId;
+    document.getElementById('keyModalKey').textContent = apiKey;
+    document.getElementById('keyModalCurl').textContent =
+        `curl -H "X-User-ID: ${userId}" -H "X-API-Key: ${apiKey}" http://localhost:8000/v1/models`;
+    openModal('keyModal');
+}
+
+async function toggleUser(userId) {
+    try {
+        const r = await fetch(`${API}/admin/api/users/${encodeURIComponent(userId)}/toggle`, {method:'POST'});
+        if (r.ok) { await loadUsers(); showToast('状态已更新'); }
+    } catch (e) { showToast('操作失败', 'error'); }
+}
+
+async function regenKey(userId) {
+    if (!confirm(`确定要重置 ${userId} 的 API Key 吗？\n原有的 Key 将立即失效。`)) return;
+    try {
+        const r = await fetch(`${API}/admin/api/users/${encodeURIComponent(userId)}/regenerate`, {method:'POST'});
+        if (r.ok) {
+            const data = await r.json();
+            showToast('密钥已重置');
+            await loadUsers();
+            showKeyDirect(userId, data.api_key);
+        }
+    } catch (e) { showToast('操作失败', 'error'); }
+}
+
+async function deleteUser(userId) {
+    if (!confirm(`确定要删除用户 ${userId} 吗？\n此操作不可撤销。`)) return;
+    try {
+        const r = await fetch(`${API}/admin/api/users/${encodeURIComponent(userId)}`, {method:'DELETE'});
+        if (r.ok) { await loadUsers(); showToast('用户已删除'); }
+    } catch (e) { showToast('操作失败', 'error'); }
+}
+
+// ── Password ──
+function showChangePassword() {
+    document.getElementById('oldPwd').value = '';
+    document.getElementById('newPwd').value = '';
+    document.getElementById('newPwd2').value = '';
+    openModal('pwdModal');
+}
+
+async function doChangePassword() {
+    const old = document.getElementById('oldPwd').value;
+    const np = document.getElementById('newPwd').value;
+    const np2 = document.getElementById('newPwd2').value;
+    if (!old || !np) { showToast('请填写完整', 'error'); return; }
+    if (np !== np2) { showToast('两次密码不一致', 'error'); return; }
+    if (np.length < 4) { showToast('密码至少4个字符', 'error'); return; }
+    try {
+        const r = await fetch(`${API}/admin/api/change-password`, {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({old_password: old, new_password: np}),
+        });
+        if (!r.ok) { showToast('原密码错误', 'error'); return; }
+        closeModal('pwdModal');
+        showToast('密码已修改');
+    } catch (e) { showToast('修改失败', 'error'); }
+}
+
+// ── Init ──
+document.getElementById('loginPage').style.display = 'block';
+</script>
+</body>
+</html>

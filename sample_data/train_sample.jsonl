@@ -1,0 +1,6 @@
+# Sample Alpaca-format training data for testing fine-tune
+{"instruction": "翻译以下句子为英文", "input": "今天天气真好", "output": "The weather is really nice today."}
+{"instruction": "对以下文本进行摘要", "input": "人工智能（AI）是计算机科学的一个分支，它试图了解智能的实质，并生产出一种新的能以人类智能相似的方式做出反应的智能机器。人工智能的研究包括机器人、语言识别、图像识别、自然语言处理和专家系统等。", "output": "人工智能是计算机科学分支，研究领域包括机器人、语言识别、图像识别、自然语言处理等。"}
+{"instruction": "写一首五言绝句，主题是春天", "input": "", "output": "春风拂面来，花开满园栽。蝶舞蜂飞去，处处好景开。"}
+{"instruction": "解释什么是机器学习", "input": "", "output": "机器学习是人工智能的一个子领域，它使计算机系统能够从数据中学习和改进，而无需进行明确编程。通过算法分析数据、识别模式，并据此做出决策或预测。"}
+{"instruction": "将以下Python代码解释清楚", "input": "def fibonacci(n):\n    if n <= 1:\n        return n\n    return fibonacci(n-1) + fibonacci(n-2)", "output": "这是一个递归实现的斐波那契数列函数。当n小于等于1时直接返回n作为基准情况；否则返回前两个斐波那契数之和，即f(n-1)+f(n-2)。"}

@@ -1,0 +1,274 @@
+{
+  "generated_at": "2026-07-24T09:46:41.160516+00:00",
+  "root": "D:\\develop\\LLM-Studio\\LLM-Studio",
+  "files": [
+    {
+      "path": "config.yaml",
+      "encoding": "gb18030",
+      "size": 3257,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "docs/API接口说明.md",
+      "encoding": "gb18030",
+      "size": 17333,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "docs/功能说明.md",
+      "encoding": "gb18030",
+      "size": 14146,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "docs/环境安装说明.md",
+      "encoding": "gb18030",
+      "size": 9396,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "docs/编译说明.md",
+      "encoding": "gb18030",
+      "size": 8303,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "llm_studio/__init__.py",
+      "encoding": "utf-8",
+      "size": 101,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "llm_studio/admin.py",
+      "encoding": "gb18030",
+      "size": 6583,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "llm_studio/admin_ui.html",
+      "encoding": "gb18030",
+      "size": 20817,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "llm_studio/api_server.py",
+      "encoding": "gb18030",
+      "size": 25921,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "llm_studio/cli.py",
+      "encoding": "gb18030",
+      "size": 14312,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "llm_studio/config.py",
+      "encoding": "utf-8",
+      "size": 3197,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "llm_studio/document_loader.py",
+      "encoding": "gb18030",
+      "size": 10246,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "llm_studio/downloader.py",
+      "encoding": "utf-8",
+      "size": 5369,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "llm_studio/exporter.py",
+      "encoding": "utf-8",
+      "size": 3161,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "llm_studio/finetuner.py",
+      "encoding": "utf-8",
+      "size": 10620,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "llm_studio/rag.py",
+      "encoding": "gb18030",
+      "size": 7413,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "llm_studio/runner.py",
+      "encoding": "utf-8",
+      "size": 8297,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "llm_studio/vision.py",
+      "encoding": "gb18030",
+      "size": 6537,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "llm_studio/web_ui.py",
+      "encoding": "gb18030",
+      "size": 38700,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "pyproject.toml",
+      "encoding": "utf-8",
+      "size": 421,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "README.md",
+      "encoding": "gb18030",
+      "size": 8909,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "requirements.txt",
+      "encoding": "utf-8",
+      "size": 767,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "tools/convert_repository_to_utf8.py",
+      "encoding": "utf-8",
+      "size": 4555,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "tools/encoding_conversion_report.json",
+      "encoding": "utf-8",
+      "size": 5553,
+      "error": null,
+      "converted": false
+    }
+  ],
+  "non_utf8": [
+    {
+      "path": "config.yaml",
+      "encoding": "gb18030",
+      "size": 3257,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "docs/API接口说明.md",
+      "encoding": "gb18030",
+      "size": 17333,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "docs/功能说明.md",
+      "encoding": "gb18030",
+      "size": 14146,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "docs/环境安装说明.md",
+      "encoding": "gb18030",
+      "size": 9396,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "docs/编译说明.md",
+      "encoding": "gb18030",
+      "size": 8303,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "llm_studio/admin.py",
+      "encoding": "gb18030",
+      "size": 6583,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "llm_studio/admin_ui.html",
+      "encoding": "gb18030",
+      "size": 20817,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "llm_studio/api_server.py",
+      "encoding": "gb18030",
+      "size": 25921,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "llm_studio/cli.py",
+      "encoding": "gb18030",
+      "size": 14312,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "llm_studio/document_loader.py",
+      "encoding": "gb18030",
+      "size": 10246,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "llm_studio/rag.py",
+      "encoding": "gb18030",
+      "size": 7413,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "llm_studio/vision.py",
+      "encoding": "gb18030",
+      "size": 6537,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "llm_studio/web_ui.py",
+      "encoding": "gb18030",
+      "size": 38700,
+      "error": null,
+      "converted": false
+    },
+    {
+      "path": "README.md",
+      "encoding": "gb18030",
+      "size": 8909,
+      "error": null,
+      "converted": false
+    }
+  ]
+}
