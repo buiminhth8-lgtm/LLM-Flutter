@@ -1,5 +1,17 @@
 # ? LLM Studio
 
+## 第三阶段：模型管理与发布能力
+
+- 新增本地模型仓库扫描：Transformers、GGUF、GPTQ、AWQ。
+- 新增后台任务队列：模型扫描、下载、Benchmark、LoRA 合并、缓存清理等长任务返回 Job ID。
+- Hugging Face 下载先进入临时目录，校验后再注册到正式模型目录；Token 不写入任务数据库。
+- 新增 LoRA adapter 扫描和运行时加载/激活/停用/卸载接口。
+- 新增 Benchmark 报告，区分加载时间、TTFT、Token/s 和 CUDA 峰值显存。
+- 新增存储治理、回收站、配置导入导出和脱敏诊断包。
+- 新增 Windows Web/API/doctor 启动脚本和便携版打包脚手架。
+
+更多细节见 `docs/MODEL_MANAGEMENT_RELEASE_GUIDE.md`。
+
 **跨平台大语言模型一站式管理平台** — 下载、推理、微调、知识库问答、图像识别、API 服务，一个工具全搞定。
 
 [![Python 3.10-3.12](https://img.shields.io/badge/Python-3.10--3.12-blue.svg)](https://www.python.org/downloads/)
