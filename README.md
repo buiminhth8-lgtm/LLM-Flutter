@@ -341,6 +341,36 @@ curl -N -X POST http://127.0.0.1:8000/v1/chat/completions `
   }'
 ```
 
+RAG 查询使用 `question` 字段，`top_k` 默认 5：
+
+```powershell
+curl -X POST http://127.0.0.1:8000/v1/rag/query `
+  -H "Content-Type: application/json" `
+  -H "Authorization: Bearer <api_key>" `
+  -d '{
+    "question": "这个知识库里提到了什么？",
+    "top_k": 5
+  }'
+```
+
+Adapter 操作需要当前基础模型上下文；如果后端已有已加载模型，可以省略 `model`，否则必须传入模型 ID：
+
+```powershell
+curl -X POST http://127.0.0.1:8000/v1/adapters/<adapter_id>/load `
+  -H "Content-Type: application/json" `
+  -H "Authorization: Bearer <api_key>" `
+  -d '{
+    "model": "<model_id>"
+  }'
+```
+
+删除模型默认是移入回收站，必须显式二次确认：
+
+```powershell
+curl -X DELETE "http://127.0.0.1:8000/v1/models/<model_id>?confirm=true" `
+  -H "Authorization: Bearer <api_key>"
+```
+
 任务列表：
 
 ```powershell
@@ -583,20 +613,21 @@ C:\Users\zkjr\...
 | `model_scan` | available | yes | 使用统一模型仓库，不加载权重 |
 | `model_load` | available | yes | 经过 runtime policy 和 GPU scheduler |
 | `model_unload` | available | yes | 释放 runtime 状态 |
-| `model_download` | backend_only | partial | 后端任务存在，Flutter 有最小任务页 |
+| `model_download` | backend_only | partial | 后端任务存在，Flutter 可查看任务状态 |
 | `model_download_cancel` | partial | yes | 协作式取消，不声明严格暂停 |
 | `model_download_resume` | partial | partial | retry 复用 Hugging Face cache |
-| `rag_query` | backend_only / partial | partial | Flutter 有最小查询页面；本地路径导入默认禁用并仅限管理员 allowlist |
-| `rag_import` | backend_only | partial | 后台任务导入 |
+| `rag_query` | partial | yes | Flutter 有最小查询页面；本地路径导入默认禁用并仅限管理员 allowlist |
+| `rag_import` | backend_only | no | 后台任务导入，Flutter 暂未暴露完整导入控件 |
 | `vision_ocr` | backend_only | no | 后端受 GPU scheduler 保护 |
-| `lora_scan` | backend_only / partial | partial | Flutter 有 Adapter 页面 |
-| `lora_load` | backend_only / partial | partial | 依赖 PEFT 和当前模型兼容性 |
-| `lora_activate` | backend_only / partial | partial | 支持激活/停用 |
-| `lora_unload` | backend_only / partial | partial | 支持卸载 |
-| `lora_merge` | not_implemented / experimental | no | 不默认暴露，不修改基础模型 |
-| `benchmark` | experimental | partial | 仅供本机开发参考 |
-| `storage_cleanup` | partial | partial | preview 优先，只删允许目录 |
-| `diagnostics_export` | backend_only / partial | partial | 脱敏导出 |
+| `lora_scan` | partial | yes | Flutter 有 Adapter 页面 |
+| `lora_load` | partial | yes | 依赖 PEFT、当前基础模型和兼容性校验 |
+| `lora_activate` | partial | yes | 支持激活/停用，默认同一时间一个 Adapter |
+| `lora_unload` | partial | partial | 后端支持卸载；Flutter 当前暴露扫描、加载、激活、停用 |
+| `lora_merge` | not_implemented | no | 不默认暴露，不修改基础模型 |
+| `benchmark` | experimental | partial | 仅供本机开发参考，Flutter 仅启动当前模型测试 |
+| `benchmark_with_adapter` | not_implemented | no | 当前不展示 Adapter 选择，避免误导 |
+| `storage_cleanup` | partial | yes | preview 优先，只删允许目录 |
+| `diagnostics_export` | partial | yes | 脱敏导出，不包含权重、正文或密钥 |
 | `flutter_windows` | available | yes | 当前第一平台 |
 | `flutter_android` | not_implemented | no | Planned |
 | `flutter_linux` | not_implemented | no | Planned |
@@ -608,6 +639,12 @@ C:\Users\zkjr\...
 后端：
 
 ```powershell
+.\scripts\test_backend.ps1
+```
+
+等价核心命令：
+
+```powershell
 python -m compileall llm_studio
 python -m pytest --basetemp .tmp\pytest
 python -m ruff check llm_studio tests
@@ -616,6 +653,12 @@ python -m llm_studio.server --help
 ```
 
 Flutter：
+
+```powershell
+.\scripts\test_flutter.ps1
+```
+
+等价核心命令：
 
 ```powershell
 cd apps\flutter_studio

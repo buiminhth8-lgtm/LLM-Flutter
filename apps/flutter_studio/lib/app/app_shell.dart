@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
@@ -7,18 +6,28 @@ import '../core/api/api_client.dart';
 import '../core/api/api_exception.dart';
 import '../core/backend/backend_service.dart';
 import '../core/config/app_settings_store.dart';
+import '../features/adapters/adapter_controller.dart';
 import '../features/adapters/adapters_page.dart';
+import '../features/benchmarks/benchmark_controller.dart';
 import '../features/benchmarks/benchmarks_page.dart';
 import '../features/chat/chat_controller.dart';
 import '../features/chat/chat_page.dart';
+import '../features/diagnostics/diagnostics_controller.dart';
 import '../features/diagnostics/diagnostics_page.dart';
+import '../features/downloads/download_controller.dart';
 import '../features/downloads/downloads_page.dart';
+import '../features/jobs/job_controller.dart';
+import '../features/models/model_controller.dart';
 import '../features/models/models_page.dart';
+import '../features/rag/rag_controller.dart';
 import '../features/rag/rag_page.dart';
 import '../features/settings/settings_page.dart';
 import '../features/setup/setup_page.dart';
+import '../features/status/status_controller.dart';
 import '../features/status/status_page.dart';
+import '../features/storage/storage_controller.dart';
 import '../features/storage/storage_page.dart';
+import 'app_shell_widgets.dart';
 
 class StudioShell extends StatefulWidget {
   const StudioShell({
@@ -44,7 +53,6 @@ class _StudioShellState extends State<StudioShell> {
   final _downloadRevisionController = TextEditingController();
   final _localPythonController = TextEditingController();
   final _localBackendRootController = TextEditingController();
-  final _ragQueryController = TextEditingController();
   final _setupPasswordController = TextEditingController();
   final _setupConfirmController = TextEditingController();
   final _systemController = TextEditingController(
@@ -53,6 +61,15 @@ class _StudioShellState extends State<StudioShell> {
   final _client = LlmStudioClient(defaultApiBase);
   final BackendService _backend = createBackendService();
   late final ChatController _chat = ChatController(_client);
+  late final ModelController _models = ModelController(_client);
+  late final StatusController _status = StatusController(_client);
+  late final JobController _jobs = JobController(_client);
+  late final DownloadController _downloads = DownloadController(_client);
+  late final RagController _rag = RagController(_client);
+  late final AdapterController _adapters = AdapterController(_client);
+  late final BenchmarkController _benchmarks = BenchmarkController(_client);
+  late final StorageController _storage = StorageController(_client);
+  late final DiagnosticsController _diagnostics = DiagnosticsController(_client);
 
   int _pageIndex = 0;
   bool _loading = false;
@@ -64,27 +81,15 @@ class _StudioShellState extends State<StudioShell> {
   String _backendMode = 'local';
   String? _error;
   String _backendStatus = 'Backend has not started yet.';
-  String? _selectedModelId;
-  String? _ragResult;
-  String? _diagnosticsResult;
-  Map<String, dynamic>? _runtime;
-  Map<String, dynamic>? _currentModel;
-  Map<String, dynamic>? _gpuScheduler;
-  Map<String, dynamic>? _storage;
-  Map<String, dynamic>? _cleanupPreview;
-  List<dynamic> _models = const [];
-  List<dynamic> _jobs = const [];
-  List<dynamic> _downloads = const [];
-  List<dynamic> _adapters = const [];
-  List<dynamic> _benchmarks = const [];
-  List<dynamic> _capabilities = const [];
 
   @override
   void initState() {
     super.initState();
     _initialSetupCheckDone = widget.initialRequiresSetup || !widget.autoRefresh;
     _requiresSetup = widget.initialRequiresSetup;
-    _chat.addListener(_onChatChanged);
+    for (final controller in _featureControllers) {
+      controller.addListener(_onFeatureChanged);
+    }
     if (widget.autoRefresh) {
       unawaited(_bootstrap());
     }
@@ -92,8 +97,10 @@ class _StudioShellState extends State<StudioShell> {
 
   @override
   void dispose() {
-    _chat.removeListener(_onChatChanged);
-    _chat.dispose();
+    for (final controller in _featureControllers) {
+      controller.removeListener(_onFeatureChanged);
+      controller.dispose();
+    }
     if (_closeBackendOnExit) {
       unawaited(_backend.stop());
     }
@@ -105,14 +112,26 @@ class _StudioShellState extends State<StudioShell> {
     _downloadRevisionController.dispose();
     _localPythonController.dispose();
     _localBackendRootController.dispose();
-    _ragQueryController.dispose();
     _systemController.dispose();
     _setupPasswordController.dispose();
     _setupConfirmController.dispose();
     super.dispose();
   }
 
-  void _onChatChanged() {
+  List<ChangeNotifier> get _featureControllers => [
+        _chat,
+        _models,
+        _status,
+        _jobs,
+        _downloads,
+        _rag,
+        _adapters,
+        _benchmarks,
+        _storage,
+        _diagnostics,
+      ];
+
+  void _onFeatureChanged() {
     if (mounted) {
       setState(() {});
     }
@@ -128,7 +147,7 @@ class _StudioShellState extends State<StudioShell> {
     _apiBaseController.text = settings.apiBaseUrl;
     _userIdController.text = settings.userId;
     _apiKeyController.text = settings.apiKey;
-    _selectedModelId = settings.selectedModelId;
+    _models.restoreSelectedModel(settings.selectedModelId);
     _autoStartBackend = settings.autoStartBackend;
     _closeBackendOnExit = settings.closeBackendOnExit;
     _backendMode = settings.backendMode;
@@ -144,7 +163,7 @@ class _StudioShellState extends State<StudioShell> {
         apiBaseUrl: _apiBaseController.text.trim(),
         userId: _userIdController.text.trim(),
         apiKey: _apiKeyController.text.trim(),
-        selectedModelId: _selectedModelId,
+        selectedModelId: _models.selectedModelId,
         chatStreamingEnabled: _chat.streamingEnabled,
         autoStartBackend: _autoStartBackend,
         closeBackendOnExit: _closeBackendOnExit,
@@ -181,12 +200,10 @@ class _StudioShellState extends State<StudioShell> {
           _initialSetupCheckDone = true;
           _requiresSetup = true;
           _authRequired = false;
-          _runtime = null;
-          _models = const [];
-          _jobs = const [];
-          _currentModel = null;
-          _gpuScheduler = null;
         });
+        _status.clear();
+        _models.clear();
+        _jobs.clear();
         return;
       }
       setState(() {
@@ -197,36 +214,15 @@ class _StudioShellState extends State<StudioShell> {
       if (_apiKeyController.text.trim().isEmpty) {
         return;
       }
-      final results = await Future.wait<dynamic>([
-        _client.runtime(),
-        _client.models(),
-        _client.currentModel(),
-        _client.gpuScheduler(),
-        _client.jobs(),
-        _client.capabilities(),
-        _client.downloads().catchError((_) => const []),
-        _client.adapters().catchError((_) => const []),
-        _client.benchmarks().catchError((_) => const []),
-        _client.storage().catchError((_) => const <String, dynamic>{}),
+      await Future.wait([
+        _status.refresh(),
+        _models.refresh(),
+        _jobs.refresh(),
+        _downloads.refresh().catchError((_) {}),
+        _adapters.refresh().catchError((_) {}),
+        _benchmarks.refresh().catchError((_) {}),
+        _storage.refresh().catchError((_) {}),
       ]);
-      setState(() {
-        _runtime = results[0] as Map<String, dynamic>;
-        _models = results[1] as List<dynamic>;
-        _currentModel = results[2] as Map<String, dynamic>;
-        _gpuScheduler = results[3] as Map<String, dynamic>;
-        _jobs = results[4] as List<dynamic>;
-        _capabilities = results[5] as List<dynamic>;
-        _downloads = results[6] as List<dynamic>;
-        _adapters = results[7] as List<dynamic>;
-        _benchmarks = results[8] as List<dynamic>;
-        _storage = results[9] as Map<String, dynamic>;
-        if (_selectedModelId != null &&
-            !_models.any(
-              (model) => model is Map && model['id'] == _selectedModelId,
-            )) {
-          _selectedModelId = null;
-        }
-      });
       await _savePreferences();
     });
   }
@@ -258,13 +254,9 @@ class _StudioShellState extends State<StudioShell> {
     if (prompt.isEmpty) {
       return;
     }
-    final modelId =
-        _selectedModelId ??
-        (_currentModel?['loaded'] == true
-            ? '${_currentModel?['model_id']}'
-            : '');
+    final modelId = _models.activeModelId();
     if (modelId.isEmpty) {
-      setState(() => _error = 'Please load a model on the Models page first.');
+      setState(() => _error = '请先在 Models 页面加载模型。');
       return;
     }
     _chatInputController.clear();
@@ -279,11 +271,7 @@ class _StudioShellState extends State<StudioShell> {
   }
 
   Future<void> _regenerateChat() async {
-    final modelId =
-        _selectedModelId ??
-        (_currentModel?['loaded'] == true
-            ? '${_currentModel?['model_id']}'
-            : '');
+    final modelId = _models.activeModelId();
     if (modelId.isEmpty) {
       return;
     }
@@ -296,56 +284,41 @@ class _StudioShellState extends State<StudioShell> {
   }
 
   Future<void> _scanModels() async => _guarded(() async {
-    await _client.scanModels();
+    await _models.scan();
     await _refreshAll();
   });
 
   Future<void> _loadModel(String modelId) async => _guarded(() async {
-    final current = await _client.loadModel(modelId);
-    _selectedModelId = '${current['model_id'] ?? modelId}';
+    await _models.load(modelId);
     await _savePreferences();
     await _refreshAll();
   });
 
   Future<void> _unloadModel() async {
-    final modelId =
-        _selectedModelId ??
-        (_currentModel?['loaded'] == true
-            ? '${_currentModel?['model_id']}'
-            : '');
-    if (modelId.isEmpty) {
+    if (_models.activeModelId().isEmpty) {
       return;
     }
     await _guarded(() async {
-      await _client.unloadModel(modelId);
-      _selectedModelId = null;
+      await _models.unload();
       await _savePreferences();
       await _refreshAll();
     });
   }
 
   Future<void> _selectModel(String modelId) async {
-    setState(() => _selectedModelId = modelId);
+    await _models.select(modelId);
     await _savePreferences();
   }
 
-  String _activeModelId() {
-    return _selectedModelId ??
-        (_currentModel?['loaded'] == true
-            ? '${_currentModel?['model_id']}'
-            : '');
-  }
+  String _activeModelId() => _models.activeModelId();
 
   Future<void> _deleteModel(String modelId) async => _guarded(() async {
-    await _client.deleteModel(modelId, confirm: true);
-    if (_selectedModelId == modelId) {
-      _selectedModelId = null;
-    }
+    await _models.delete(modelId);
     await _refreshAll();
   });
 
   Future<void> _startDownload() async => _guarded(() async {
-    await _client.startDownload(
+    await _downloads.start(
       repoId: _downloadRepoController.text.trim(),
       revision: _downloadRevisionController.text.trim(),
     );
@@ -353,22 +326,22 @@ class _StudioShellState extends State<StudioShell> {
   });
 
   Future<void> _cancelDownload(String id) async => _guarded(() async {
-    await _client.cancelDownload(id);
+    await _downloads.cancel(id);
     await _refreshAll();
   });
 
   Future<void> _retryDownload(String id) async => _guarded(() async {
-    await _client.retryDownload(id);
+    await _downloads.retry(id);
     await _refreshAll();
   });
 
   Future<void> _cancelJob(String id) async => _guarded(() async {
-    await _client.cancelJob(id);
+    await _jobs.cancel(id);
     await _refreshAll();
   });
 
   Future<void> _scanAdapters() async => _guarded(() async {
-    await _client.scanAdapters();
+    await _adapters.scan();
     await _refreshAll();
   });
 
@@ -386,54 +359,41 @@ class _StudioShellState extends State<StudioShell> {
       });
 
   Future<void> _startBenchmark() async => _guarded(() async {
-    final modelId =
-        _selectedModelId ??
-        (_currentModel?['loaded'] == true
-            ? '${_currentModel?['model_id']}'
-            : '');
+    final modelId = _models.activeModelId();
     if (modelId.isEmpty) {
       throw StudioApiException(
-        'Please load a model before starting Benchmark.',
+        '请先加载模型，再启动 Benchmark。',
       );
     }
-    await _client.startBenchmark(modelId: modelId);
+    await _benchmarks.start(modelId);
     await _refreshAll();
   });
 
   Future<void> _queryRag() async => _guarded(() async {
-    final result = await _client.ragQuery(_ragQueryController.text.trim());
-    setState(() => _ragResult = result);
+    await _rag.query();
   });
 
   Future<void> _previewCleanup() async => _guarded(() async {
-    final preview = await _client.cleanupPreview();
-    setState(() => _cleanupPreview = preview);
+    await _storage.previewCleanup();
   });
 
   Future<void> _cleanupStorage() async => _guarded(() async {
-    await _client.cleanupStorage();
-    _cleanupPreview = null;
+    await _storage.cleanup();
     await _refreshAll();
   });
 
   Future<void> _exportDiagnostics() async => _guarded(() async {
-    final result = await _client.exportDiagnostics();
-    setState(
-      () => _diagnosticsResult = const JsonEncoder.withIndent(
-        '  ',
-      ).convert(result),
-    );
+    await _diagnostics.export();
   });
 
   Future<void> _clearAuth() async {
     _apiKeyController.clear();
-    _selectedModelId = null;
+    _models.restoreSelectedModel(null);
     await _savePreferences();
     _syncClientAuth();
     setState(() {
-      _runtime = null;
-      _currentModel = null;
-      _gpuScheduler = null;
+      _status.clear();
+      _models.clear();
       _authRequired = true;
       _error = '认证信息已清除，请重新填写 API Key。';
     });
@@ -549,17 +509,17 @@ class _StudioShellState extends State<StudioShell> {
 
     final pages = [
       StatusPage(
-        runtime: _runtime,
-        models: _models,
-        gpuScheduler: _gpuScheduler,
-        jobs: _jobs,
-        capabilities: _capabilities,
+        runtime: _status.state.runtime,
+        models: _models.models,
+        gpuScheduler: _status.state.gpuScheduler,
+        jobs: _jobs.state.jobs,
+        capabilities: _status.state.capabilities,
         onCancelJob: _cancelJob,
       ),
       ModelsPage(
-        models: _models,
-        currentModel: _currentModel,
-        selectedModelId: _selectedModelId,
+        models: _models.models,
+        currentModel: _models.currentModel,
+        selectedModelId: _models.selectedModelId,
         onRefresh: _refreshAll,
         onScan: _scanModels,
         onLoad: _loadModel,
@@ -575,8 +535,8 @@ class _StudioShellState extends State<StudioShell> {
         controller: _chat,
         inputController: _chatInputController,
         systemController: _systemController,
-        selectedModelId: _selectedModelId,
-        currentModel: _currentModel,
+        selectedModelId: _models.selectedModelId,
+        currentModel: _models.currentModel,
         onSend: _sendChat,
         onStop: _chat.stop,
         onClear: _chat.clear,
@@ -587,7 +547,7 @@ class _StudioShellState extends State<StudioShell> {
         },
       ),
       DownloadsPage(
-        downloads: _downloads,
+        downloads: _downloads.state.downloads,
         repoController: _downloadRepoController,
         revisionController: _downloadRevisionController,
         onStart: _startDownload,
@@ -596,38 +556,38 @@ class _StudioShellState extends State<StudioShell> {
         onRefresh: _refreshAll,
       ),
       RagPage(
-        queryController: _ragQueryController,
-        result: _ragResult,
+        queryController: _rag.queryController,
+        result: _rag.state.result,
         onQuery: _queryRag,
       ),
       AdaptersPage(
-        adapters: _adapters,
-        currentModel: _currentModel,
+        adapters: _adapters.state.adapters,
+        currentModel: _models.currentModel,
         hasModelContext: _activeModelId().isNotEmpty,
         onRefresh: _refreshAll,
         onScan: _scanAdapters,
-        onLoad: (id) => _adapterAction((modelId) => _client.loadAdapter(id, modelId)),
-        onActivate: (id) => _adapterAction((modelId) => _client.activateAdapter(id, modelId)),
+        onLoad: (id) => _adapterAction((modelId) => _adapters.load(id, modelId)),
+        onActivate: (id) => _adapterAction((modelId) => _adapters.activate(id, modelId)),
         onDeactivate: (id) =>
-            _adapterAction((modelId) => _client.deactivateAdapter(id, modelId: modelId)),
+            _adapterAction((modelId) => _adapters.deactivate(id, modelId)),
       ),
       BenchmarksPage(
-        benchmarks: _benchmarks,
-        currentModel: _currentModel,
+        benchmarks: _benchmarks.state.benchmarks,
+        currentModel: _models.currentModel,
         onStart: _startBenchmark,
         onRefresh: _refreshAll,
       ),
       StoragePage(
-        storage: _storage,
-        cleanupPreview: _cleanupPreview,
+        storage: _storage.state.storage,
+        cleanupPreview: _storage.state.cleanupPreview,
         onRefresh: _refreshAll,
         onPreview: _previewCleanup,
         onCleanup: _cleanupStorage,
       ),
       DiagnosticsPage(
-        runtime: _runtime,
-        capabilities: _capabilities,
-        exportResult: _diagnosticsResult,
+        runtime: _status.state.runtime,
+        capabilities: _status.state.capabilities,
+        exportResult: _diagnostics.state.exportResult,
         onExport: _exportDiagnostics,
       ),
       SettingsPage(
@@ -671,70 +631,70 @@ class _StudioShellState extends State<StudioShell> {
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
               children: [
-                _SideNavItem(
+                SideNavItem(
                   index: 0,
                   selectedIndex: _pageIndex,
                   icon: Icons.monitor_heart_outlined,
                   label: 'Status',
                   onSelected: (index) => setState(() => _pageIndex = index),
                 ),
-                _SideNavItem(
+                SideNavItem(
                   index: 1,
                   selectedIndex: _pageIndex,
                   icon: Icons.storage_outlined,
                   label: 'Models',
                   onSelected: (index) => setState(() => _pageIndex = index),
                 ),
-                _SideNavItem(
+                SideNavItem(
                   index: 2,
                   selectedIndex: _pageIndex,
                   icon: Icons.chat_bubble_outline,
                   label: 'Chat',
                   onSelected: (index) => setState(() => _pageIndex = index),
                 ),
-                _SideNavItem(
+                SideNavItem(
                   index: 3,
                   selectedIndex: _pageIndex,
                   icon: Icons.cloud_download_outlined,
                   label: 'Downloads',
                   onSelected: (index) => setState(() => _pageIndex = index),
                 ),
-                _SideNavItem(
+                SideNavItem(
                   index: 4,
                   selectedIndex: _pageIndex,
                   icon: Icons.article_outlined,
                   label: 'RAG',
                   onSelected: (index) => setState(() => _pageIndex = index),
                 ),
-                _SideNavItem(
+                SideNavItem(
                   index: 5,
                   selectedIndex: _pageIndex,
                   icon: Icons.extension_outlined,
                   label: 'Adapters',
                   onSelected: (index) => setState(() => _pageIndex = index),
                 ),
-                _SideNavItem(
+                SideNavItem(
                   index: 6,
                   selectedIndex: _pageIndex,
                   icon: Icons.speed_outlined,
                   label: 'Benchmark',
                   onSelected: (index) => setState(() => _pageIndex = index),
                 ),
-                _SideNavItem(
+                SideNavItem(
                   index: 7,
                   selectedIndex: _pageIndex,
                   icon: Icons.cleaning_services_outlined,
                   label: 'Storage',
                   onSelected: (index) => setState(() => _pageIndex = index),
                 ),
-                _SideNavItem(
+                SideNavItem(
                   index: 8,
                   selectedIndex: _pageIndex,
                   icon: Icons.bug_report_outlined,
                   label: 'Diagnostics',
                   onSelected: (index) => setState(() => _pageIndex = index),
                 ),
-                _SideNavItem(
+                SideNavItem(
                   index: 9,
                   selectedIndex: _pageIndex,
                   icon: Icons.settings_outlined,
@@ -748,7 +708,7 @@ class _StudioShellState extends State<StudioShell> {
           Expanded(
             child: Column(
               children: [
-                _TopBar(
+                TopBar(
                   loading: _loading,
                   backendStatus: _backendStatus,
                   onRefresh: _refreshAll,
@@ -780,89 +740,6 @@ class _StudioShellState extends State<StudioShell> {
                 Expanded(child: pages[_pageIndex]),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SideNavItem extends StatelessWidget {
-  const _SideNavItem({
-    required this.index,
-    required this.selectedIndex,
-    required this.icon,
-    required this.label,
-    required this.onSelected,
-  });
-
-  final int index;
-  final int selectedIndex;
-  final IconData icon;
-  final String label;
-  final ValueChanged<int> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final selected = index == selectedIndex;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: ListTile(
-        dense: true,
-        selected: selected,
-        selectedTileColor: const Color(0xffdbeafe),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        leading: Icon(icon),
-        title: Text(label),
-        onTap: () => onSelected(index),
-      ),
-    );
-  }
-}
-
-class _TopBar extends StatelessWidget {
-  const _TopBar({
-    required this.loading,
-    required this.backendStatus,
-    required this.onRefresh,
-  });
-
-  final bool loading;
-  final String backendStatus;
-  final VoidCallback onRefresh;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 64,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      alignment: Alignment.centerLeft,
-      color: Colors.white,
-      child: Row(
-        children: [
-          const Text(
-            'LLM Studio',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              backendStatus,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.black54),
-            ),
-          ),
-          if (loading)
-            const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-          const SizedBox(width: 12),
-          IconButton.filledTonal(
-            onPressed: loading ? null : onRefresh,
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
           ),
         ],
       ),

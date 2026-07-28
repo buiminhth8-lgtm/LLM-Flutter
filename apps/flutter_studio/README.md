@@ -5,6 +5,12 @@
 常用开发命令：
 
 ```powershell
+.\scripts\test_flutter.ps1
+```
+
+也可以直接运行：
+
+```powershell
 cd apps\flutter_studio
 flutter pub get
 flutter analyze
@@ -22,3 +28,10 @@ python -m llm_studio.server --host 127.0.0.1 --port 8000
 当前不使用 `llm-studio.exe`、旧 CLI 或 click 启动后端。后端日志可在 Settings 页面查看和复制，复制内容会先脱敏。
 
 功能状态以 `GET /v1/capabilities` 为准。当前 Flutter Windows 已接入非流式聊天和 SSE 基础流式聊天；RAG、Adapter、Benchmark、Storage、Diagnostics 页面为最小可用或实验性能力，详细状态见根目录 `README.md`。
+
+当前 Flutter API 契约重点：
+
+- RAG 查询请求体使用 `question` 字段，默认 `top_k=5`。
+- Adapter 加载和激活会传入当前基础模型 ID。
+- 删除模型会在二次确认后调用 `confirm=true`，后端默认移入回收站。
+- Benchmark 的 Adapter 选择暂不暴露；`benchmark_with_adapter` 在 capabilities 中标记为 `not_implemented`。

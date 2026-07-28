@@ -7,13 +7,14 @@ import 'api_exception.dart';
 import 'sse_client.dart';
 
 class LlmStudioClient {
-  LlmStudioClient(this.baseUrl, {http.Client? httpClient})
+  LlmStudioClient(this.baseUrl, {http.Client? httpClient, this._sseClient})
       : _httpClient = httpClient ?? http.Client();
 
   String baseUrl;
   String userId = 'admin';
   String apiKey = '';
   final http.Client _httpClient;
+  final SseClient? _sseClient;
 
   Future<Map<String, dynamic>> health() async => _getMap('/health', authenticated: false);
 
@@ -152,7 +153,7 @@ class LlmStudioClient {
   }
 
   Stream<String> chatStream(String modelId, List<Map<String, String>> messages) {
-    final sse = SseClient();
+    final sse = _sseClient ?? SseClient();
     return sse.postJsonTokens(
       uri: Uri.parse('$baseUrl/v1/chat/completions'),
       headers: _authHeaders(),
