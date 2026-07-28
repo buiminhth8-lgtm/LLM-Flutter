@@ -85,11 +85,25 @@ class LlmStudioClient {
 
   Future<void> scanAdapters() async => _postMap('/v1/adapters/scan');
 
-  Future<void> loadAdapter(String id) async => _postMap('/v1/adapters/${Uri.encodeComponent(id)}/load');
+  Future<void> loadAdapter(String id, String modelId) async => _postMap(
+        '/v1/adapters/${Uri.encodeComponent(id)}/load',
+        body: {'model': modelId},
+      );
 
-  Future<void> activateAdapter(String id) async => _postMap('/v1/adapters/${Uri.encodeComponent(id)}/activate');
+  Future<void> activateAdapter(String id, String modelId) async => _postMap(
+        '/v1/adapters/${Uri.encodeComponent(id)}/activate',
+        body: {'model': modelId},
+      );
 
-  Future<void> deactivateAdapter(String id) async => _postMap('/v1/adapters/${Uri.encodeComponent(id)}/deactivate');
+  Future<void> deactivateAdapter(String id, {String? modelId}) async => _postMap(
+        '/v1/adapters/${Uri.encodeComponent(id)}/deactivate',
+        body: modelId == null || modelId.isEmpty ? const {} : {'model': modelId},
+      );
+
+  Future<void> unloadAdapter(String id, {String? modelId}) async => _postMap(
+        '/v1/adapters/${Uri.encodeComponent(id)}/unload',
+        body: modelId == null || modelId.isEmpty ? const {} : {'model': modelId},
+      );
 
   Future<List<dynamic>> benchmarks() async {
     final body = await _getMap('/v1/benchmarks');
@@ -116,8 +130,8 @@ class LlmStudioClient {
 
   Future<Map<String, dynamic>> exportDiagnostics() async => _postMap('/v1/diagnostics/export');
 
-  Future<String> ragQuery(String query) async {
-    final body = await _postMap('/v1/rag/query', body: {'query': query});
+  Future<String> ragQuery(String query, {int topK = 5}) async {
+    final body = await _postMap('/v1/rag/query', body: {'question': query, 'top_k': topK});
     return jsonEncode(body);
   }
 
@@ -153,9 +167,12 @@ class LlmStudioClient {
     return _postMap('/v1/models/register', body: {'path': path});
   }
 
-  Future<void> deleteModel(String modelId) async {
+  Future<void> deleteModel(String modelId, {required bool confirm}) async {
+    final uri = Uri.parse('$baseUrl/v1/models/${Uri.encodeComponent(modelId)}').replace(
+      queryParameters: {'confirm': confirm ? 'true' : 'false'},
+    );
     final response = await _httpClient
-        .delete(Uri.parse('$baseUrl/v1/models/${Uri.encodeComponent(modelId)}'), headers: _authHeaders())
+        .delete(uri, headers: _authHeaders())
         .timeout(const Duration(seconds: 30));
     _decodeMap(response);
   }

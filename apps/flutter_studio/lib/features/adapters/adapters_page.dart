@@ -5,6 +5,7 @@ class AdaptersPage extends StatelessWidget {
     super.key,
     required this.adapters,
     required this.currentModel,
+    required this.hasModelContext,
     required this.onRefresh,
     required this.onScan,
     required this.onLoad,
@@ -14,6 +15,7 @@ class AdaptersPage extends StatelessWidget {
 
   final List<dynamic> adapters;
   final Map<String, dynamic>? currentModel;
+  final bool hasModelContext;
   final VoidCallback onRefresh;
   final VoidCallback onScan;
   final Future<void> Function(String id) onLoad;
@@ -34,6 +36,11 @@ class AdaptersPage extends StatelessWidget {
           FilledButton.icon(onPressed: onRefresh, icon: const Icon(Icons.refresh), label: const Text('Refresh')),
         ]),
         const SizedBox(height: 12),
+        if (!hasModelContext)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: Text('请先加载或选择基础模型，再加载或激活 Adapter。'),
+          ),
         Expanded(
           child: adapters.isEmpty
               ? const Center(child: Text('No adapters found.'))
@@ -52,9 +59,9 @@ class AdaptersPage extends StatelessWidget {
                         subtitle: Text('base: ${map['base_model_name_or_path'] ?? 'unknown'}\nrank: ${map['rank'] ?? 'unknown'} alpha: ${map['alpha'] ?? 'unknown'} target: ${map['target_modules'] ?? 'unknown'}'),
                         isThreeLine: true,
                         trailing: Wrap(spacing: 8, children: [
-                          FilledButton.tonal(onPressed: compatible && id.isNotEmpty ? () => onLoad(id) : null, child: const Text('Load')),
-                          FilledButton(onPressed: compatible && id.isNotEmpty && !isActive ? () => onActivate(id) : null, child: Text(isActive ? 'Active' : 'Activate')),
-                          TextButton(onPressed: isActive ? () => onDeactivate(id) : null, child: const Text('Deactivate')),
+                          FilledButton.tonal(onPressed: compatible && hasModelContext && id.isNotEmpty ? () => onLoad(id) : null, child: const Text('Load')),
+                          FilledButton(onPressed: compatible && hasModelContext && id.isNotEmpty && !isActive ? () => onActivate(id) : null, child: Text(isActive ? 'Active' : 'Activate')),
+                          TextButton(onPressed: isActive && hasModelContext ? () => onDeactivate(id) : null, child: const Text('Deactivate')),
                         ]),
                       ),
                     );

@@ -329,8 +329,15 @@ class _StudioShellState extends State<StudioShell> {
     await _savePreferences();
   }
 
+  String _activeModelId() {
+    return _selectedModelId ??
+        (_currentModel?['loaded'] == true
+            ? '${_currentModel?['model_id']}'
+            : '');
+  }
+
   Future<void> _deleteModel(String modelId) async => _guarded(() async {
-    await _client.deleteModel(modelId);
+    await _client.deleteModel(modelId, confirm: true);
     if (_selectedModelId == modelId) {
       _selectedModelId = null;
     }
@@ -365,9 +372,16 @@ class _StudioShellState extends State<StudioShell> {
     await _refreshAll();
   });
 
-  Future<void> _adapterAction(Future<void> Function() action) async =>
+  Future<void> _adapterAction(Future<void> Function(String modelId) action) async =>
       _guarded(() async {
-        await action();
+        final modelId = _activeModelId();
+        if (modelId.isEmpty) {
+          throw StudioApiException(
+            '请先加载或选择基础模型。',
+            code: 'ADAPTER_MODEL_REQUIRED',
+          );
+        }
+        await action(modelId);
         await _refreshAll();
       });
 
@@ -589,12 +603,13 @@ class _StudioShellState extends State<StudioShell> {
       AdaptersPage(
         adapters: _adapters,
         currentModel: _currentModel,
+        hasModelContext: _activeModelId().isNotEmpty,
         onRefresh: _refreshAll,
         onScan: _scanAdapters,
-        onLoad: (id) => _adapterAction(() => _client.loadAdapter(id)),
-        onActivate: (id) => _adapterAction(() => _client.activateAdapter(id)),
+        onLoad: (id) => _adapterAction((modelId) => _client.loadAdapter(id, modelId)),
+        onActivate: (id) => _adapterAction((modelId) => _client.activateAdapter(id, modelId)),
         onDeactivate: (id) =>
-            _adapterAction(() => _client.deactivateAdapter(id)),
+            _adapterAction((modelId) => _client.deactivateAdapter(id, modelId: modelId)),
       ),
       BenchmarksPage(
         benchmarks: _benchmarks,

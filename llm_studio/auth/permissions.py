@@ -13,9 +13,19 @@ def _is_model_delete_path(method: str, path: str) -> bool:
     return method == "DELETE" and path.startswith("/v1/models/")
 
 
+def normalize_permission_path(path: str) -> str:
+    """Normalize compatibility API paths before permission lookup."""
+    if path.startswith("/api/v1/"):
+        return "/v1/" + path[len("/api/v1/") :]
+    if path == "/api/v1":
+        return "/v1"
+    return path
+
+
 def required_permission_for_request(method: str, path: str) -> Permission | None:
     """Return the permission required by a request, or None for authenticated-only."""
     method = method.upper()
+    path = normalize_permission_path(path)
 
     if method == "GET" and path in {
         "/v1/runtime",
@@ -77,4 +87,4 @@ def required_permission_for_request(method: str, path: str) -> Permission | None
     return None
 
 
-__all__ = ["Permission", "has_permission", "required_permission_for_request"]
+__all__ = ["Permission", "has_permission", "normalize_permission_path", "required_permission_for_request"]

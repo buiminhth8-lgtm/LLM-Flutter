@@ -82,11 +82,11 @@ class ModelsPage extends StatelessWidget {
                                   final confirmed = await showDialog<bool>(
                                     context: context,
                                     builder: (context) => AlertDialog(
-                                      title: const Text('Move model to trash?'),
-                                      content: const Text('Managed models are moved to trash. External models are unregistered by default.'),
+                                      title: const Text('移入回收站？'),
+                                      content: const Text('不会直接永久删除模型；受管理模型会移入回收站，外部模型默认只取消注册。'),
                                       actions: [
-                                        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-                                        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Move')),
+                                        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')),
+                                        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('移入回收站')),
                                       ],
                                     ),
                                   );
@@ -95,7 +95,7 @@ class ModelsPage extends StatelessWidget {
                                   }
                                 },
                                 icon: const Icon(Icons.delete_outline),
-                                tooltip: 'Move to trash',
+                                tooltip: '移入回收站',
                               ),
                             ],
                           ),
