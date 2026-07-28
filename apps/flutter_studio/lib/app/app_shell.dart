@@ -37,6 +37,8 @@ class _StudioShellState extends State<StudioShell> {
   final _chatInputController = TextEditingController();
   final _downloadRepoController = TextEditingController();
   final _downloadRevisionController = TextEditingController();
+  final _localPythonController = TextEditingController();
+  final _localBackendRootController = TextEditingController();
   final _ragQueryController = TextEditingController();
   final _setupPasswordController = TextEditingController();
   final _setupConfirmController = TextEditingController();
@@ -90,6 +92,8 @@ class _StudioShellState extends State<StudioShell> {
     _chatInputController.dispose();
     _downloadRepoController.dispose();
     _downloadRevisionController.dispose();
+    _localPythonController.dispose();
+    _localBackendRootController.dispose();
     _ragQueryController.dispose();
     _systemController.dispose();
     _setupPasswordController.dispose();
@@ -117,6 +121,8 @@ class _StudioShellState extends State<StudioShell> {
     _autoStartBackend = settings.autoStartBackend;
     _closeBackendOnExit = settings.closeBackendOnExit;
     _backendMode = settings.backendMode;
+    _localPythonController.text = settings.localPythonPath;
+    _localBackendRootController.text = settings.localBackendRoot;
     _chat.streamingEnabled = settings.chatStreamingEnabled;
     _syncClientAuth();
   }
@@ -131,8 +137,8 @@ class _StudioShellState extends State<StudioShell> {
       autoStartBackend: _autoStartBackend,
       closeBackendOnExit: _closeBackendOnExit,
       backendMode: _backendMode,
-      localPythonPath: '',
-      localBackendRoot: '',
+      localPythonPath: _localPythonController.text.trim(),
+      localBackendRoot: _localBackendRootController.text.trim(),
     ));
   }
 
@@ -147,7 +153,11 @@ class _StudioShellState extends State<StudioShell> {
     await _guarded(() async {
       if (_backendMode == 'local' && _autoStartBackend) {
         setState(() => _backendStatus = 'Starting backend...');
-        final backend = await _backend.ensureStarted(apiBase: _client.baseUrl);
+        final backend = await _backend.ensureStarted(
+          apiBase: _client.baseUrl,
+          localPythonPath: _localPythonController.text.trim(),
+          localBackendRoot: _localBackendRootController.text.trim(),
+        );
         setState(() => _backendStatus = backend.message);
       } else {
         setState(() => _backendStatus = 'Using remote backend.');
@@ -356,7 +366,11 @@ class _StudioShellState extends State<StudioShell> {
 
   Future<void> _restartBackend() async => _guarded(() async {
         await _backend.stop();
-        final result = await _backend.ensureStarted(apiBase: _client.baseUrl);
+        final result = await _backend.ensureStarted(
+          apiBase: _client.baseUrl,
+          localPythonPath: _localPythonController.text.trim(),
+          localBackendRoot: _localBackendRootController.text.trim(),
+        );
         setState(() => _backendStatus = result.message);
       });
 
@@ -404,7 +418,7 @@ class _StudioShellState extends State<StudioShell> {
       BenchmarksPage(benchmarks: _benchmarks, currentModel: _currentModel, onStart: _startBenchmark, onRefresh: _refreshAll),
       StoragePage(storage: _storage, cleanupPreview: _cleanupPreview, onRefresh: _refreshAll, onPreview: _previewCleanup, onCleanup: _cleanupStorage),
       DiagnosticsPage(runtime: _runtime, capabilities: _capabilities, exportResult: _diagnosticsResult, onExport: _exportDiagnostics),
-      SettingsPage(apiBaseController: _apiBaseController, userIdController: _userIdController, apiKeyController: _apiKeyController, backendMode: _backendMode, autoStartBackend: _autoStartBackend, closeBackendOnExit: _closeBackendOnExit, backendLogs: _backend.recentLogs(), onApply: () async { _syncClientAuth(); await _savePreferences(); await _refreshAll(); }, onClearAuth: _clearAuth, onRestartBackend: _restartBackend, onStopBackend: _stopBackend, onBackendModeChanged: (value) async { setState(() => _backendMode = value); await _savePreferences(); }, onAutoStartChanged: (value) async { setState(() => _autoStartBackend = value); await _savePreferences(); }, onCloseOnExitChanged: (value) async { setState(() => _closeBackendOnExit = value); await _savePreferences(); }),
+      SettingsPage(apiBaseController: _apiBaseController, userIdController: _userIdController, apiKeyController: _apiKeyController, localPythonController: _localPythonController, localBackendRootController: _localBackendRootController, backendMode: _backendMode, autoStartBackend: _autoStartBackend, closeBackendOnExit: _closeBackendOnExit, backendLogs: _backend.recentLogs(), onApply: () async { _syncClientAuth(); await _savePreferences(); await _refreshAll(); }, onClearAuth: _clearAuth, onRestartBackend: _restartBackend, onStopBackend: _stopBackend, onBackendModeChanged: (value) async { setState(() => _backendMode = value); await _savePreferences(); }, onAutoStartChanged: (value) async { setState(() => _autoStartBackend = value); await _savePreferences(); }, onCloseOnExitChanged: (value) async { setState(() => _closeBackendOnExit = value); await _savePreferences(); }),
     ];
 
     return Scaffold(

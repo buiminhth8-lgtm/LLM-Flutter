@@ -1333,3 +1333,5 @@ def run_api_server(config: Config, host: str | None = None, port: int | None = N
     app = get_app(config)
     uvicorn.run(app, host=host, port=port)
 
+
+app = get_app(Config())

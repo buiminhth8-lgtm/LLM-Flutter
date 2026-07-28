@@ -9,5 +9,5 @@ if (-not (Test-Path $python)) {
   throw "Python virtual environment was not found. Run scripts/setup_windows_python312.ps1 first."
 }
 
-Write-Host "Starting Flutter Windows client. The client will start the local FastAPI backend when needed."
+Write-Host "Starting Flutter Windows client. The client will start python -m llm_studio.server when needed."
 & "$PSScriptRoot\flutter_run_windows.ps1"

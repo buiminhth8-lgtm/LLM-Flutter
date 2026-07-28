@@ -7,6 +7,8 @@ class SettingsPage extends StatelessWidget {
     required this.apiBaseController,
     required this.userIdController,
     required this.apiKeyController,
+    required this.localPythonController,
+    required this.localBackendRootController,
     required this.backendMode,
     required this.autoStartBackend,
     required this.closeBackendOnExit,
@@ -23,6 +25,8 @@ class SettingsPage extends StatelessWidget {
   final TextEditingController apiBaseController;
   final TextEditingController userIdController;
   final TextEditingController apiKeyController;
+  final TextEditingController localPythonController;
+  final TextEditingController localBackendRootController;
   final String backendMode;
   final bool autoStartBackend;
   final bool closeBackendOnExit;
@@ -58,6 +62,12 @@ class SettingsPage extends StatelessWidget {
         ),
         SwitchListTile(title: const Text('Auto-start local backend'), value: autoStartBackend, onChanged: onAutoStartChanged),
         SwitchListTile(title: const Text('Close local backend on app exit'), value: closeBackendOnExit, onChanged: onCloseOnExitChanged),
+        const SizedBox(height: 12),
+        Row(children: [
+          Expanded(child: TextField(controller: localPythonController, decoration: const InputDecoration(labelText: 'Local Python path', border: OutlineInputBorder()))),
+          const SizedBox(width: 12),
+          Expanded(child: TextField(controller: localBackendRootController, decoration: const InputDecoration(labelText: 'Local backend root', border: OutlineInputBorder()))),
+        ]),
         const SizedBox(height: 12),
         Row(children: [
           Expanded(child: TextField(controller: userIdController, decoration: const InputDecoration(labelText: 'X-User-ID', border: OutlineInputBorder()))),

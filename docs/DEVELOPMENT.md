@@ -7,6 +7,7 @@ python -m compileall llm_studio
 python -m pytest
 python -m ruff check llm_studio tests
 python -m pip check
+python -m llm_studio.server --help
 ```
 
 Flutter checks:

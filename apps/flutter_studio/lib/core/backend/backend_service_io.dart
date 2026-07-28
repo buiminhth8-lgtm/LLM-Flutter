@@ -17,7 +17,11 @@ class DesktopBackendService implements BackendService {
   final List<String> _logs = <String>[];
 
   @override
-  Future<BackendLaunchResult> ensureStarted({required String apiBase}) async {
+  Future<BackendLaunchResult> ensureStarted({
+    required String apiBase,
+    String localPythonPath = '',
+    String localBackendRoot = '',
+  }) async {
     if (await _isHealthy(apiBase)) {
       return const BackendLaunchResult(
         startedByApp: false,
@@ -25,22 +29,16 @@ class DesktopBackendService implements BackendService {
       );
     }
 
-    final root = _findProjectRoot();
-    final python = _resolvePython(root);
-    if (!python.existsSync()) {
-      throw StateError(
-        'Missing Python executable at ${python.path}. '
-        'Run scripts/setup_windows_python312.ps1, or set LLM_STUDIO_PYTHON.',
-      );
-    }
+    final root = _findProjectRoot(localBackendRoot);
+    final python = await _resolvePython(root, localPythonPath);
 
     final uri = Uri.parse(apiBase);
     final host = uri.host.isEmpty ? '127.0.0.1' : uri.host;
     final port = uri.hasPort ? uri.port.toString() : '8000';
 
     _process = await Process.start(
-      python.path,
-      ['-m', 'llm_studio.cli', 'serve', '--host', host, '--port', port],
+      python.executable,
+      buildBackendServiceArgumentsForTesting(host: host, port: port, pythonPrefix: python.arguments),
       workingDirectory: root.path,
       mode: ProcessStartMode.normal,
     );
@@ -103,8 +101,9 @@ class DesktopBackendService implements BackendService {
     }
   }
 
-  Directory _findProjectRoot() {
+  Directory _findProjectRoot(String configuredRoot) {
     final candidates = <Directory>[
+      if (configuredRoot.trim().isNotEmpty) Directory(configuredRoot.trim()),
       if (_configuredProjectRoot.isNotEmpty) Directory(_configuredProjectRoot),
       if ((Platform.environment['LLM_STUDIO_ROOT'] ?? '').isNotEmpty)
         Directory(Platform.environment['LLM_STUDIO_ROOT']!),
@@ -125,20 +124,82 @@ class DesktopBackendService implements BackendService {
     );
   }
 
-  File _resolvePython(Directory root) {
-    if (_configuredPythonExecutable.isNotEmpty) {
-      return File(_configuredPythonExecutable);
+  Future<_PythonCommand> _resolvePython(Directory root, String configuredPython) async {
+    final candidates = <_PythonCommand>[
+      if (configuredPython.trim().isNotEmpty)
+        _PythonCommand(configuredPython.trim()),
+      if (_configuredPythonExecutable.isNotEmpty)
+        _PythonCommand(_configuredPythonExecutable),
+      if ((Platform.environment['LLM_STUDIO_PYTHON'] ?? '').isNotEmpty)
+        _PythonCommand(Platform.environment['LLM_STUDIO_PYTHON']!),
+      _PythonCommand(
+        '${root.path}${Platform.pathSeparator}.venv'
+        '${Platform.pathSeparator}Scripts${Platform.pathSeparator}python.exe',
+      ),
+      _PythonCommand(
+        '${root.path}${Platform.pathSeparator}venv'
+        '${Platform.pathSeparator}Scripts${Platform.pathSeparator}python.exe',
+      ),
+      const _PythonCommand('python'),
+      const _PythonCommand('py', arguments: ['-3.12']),
+    ];
+
+    final failures = <String>[];
+    for (final candidate in candidates) {
+      if (candidate.executable.contains(Platform.pathSeparator) &&
+          !File(candidate.executable).existsSync()) {
+        failures.add('${candidate.label}: executable not found');
+        continue;
+      }
+      final ok = await _verifyPython(candidate, root, failures);
+      if (ok) {
+        return candidate;
+      }
     }
 
-    final envPython = Platform.environment['LLM_STUDIO_PYTHON'];
-    if (envPython != null && envPython.isNotEmpty) {
-      return File(envPython);
-    }
-
-    return File(
-      '${root.path}${Platform.pathSeparator}.venv'
-      '${Platform.pathSeparator}Scripts${Platform.pathSeparator}python.exe',
+    throw StateError(
+      'Could not find a Python environment that can import LLM-Studio and uvicorn.\n'
+      '${failures.take(6).join('\n')}\n'
+      'Please run: python -m pip install -e . and python -m pip install -r requirements/web.txt',
     );
+  }
+
+  Future<bool> _verifyPython(
+    _PythonCommand candidate,
+    Directory root,
+    List<String> failures,
+  ) async {
+    final probes = const [
+      'import sys; print(sys.executable)',
+      'import llm_studio; print(llm_studio.__file__)',
+      'import uvicorn; print(uvicorn.__version__)',
+    ];
+    for (final probe in probes) {
+      try {
+        final result = await Process.run(
+          candidate.executable,
+          [...candidate.arguments, '-c', probe],
+          workingDirectory: root.path,
+        ).timeout(const Duration(seconds: 8));
+        final output = [
+          if ((result.stdout as String).trim().isNotEmpty)
+            (result.stdout as String).trim(),
+          if ((result.stderr as String).trim().isNotEmpty)
+            (result.stderr as String).trim(),
+        ].join('\n');
+        if (output.isNotEmpty) {
+          _appendLog('[python-probe] ${_redactSecrets(output)}');
+        }
+        if (result.exitCode != 0) {
+          failures.add('${candidate.label}: ${_redactSecrets(output)}');
+          return false;
+        }
+      } catch (error) {
+        failures.add('${candidate.label}: $error');
+        return false;
+      }
+    }
+    return true;
   }
 
   Directory? _walkUp(Directory start) {
@@ -195,4 +256,33 @@ class DesktopBackendService implements BackendService {
     );
     return redacted;
   }
+}
+
+List<String> buildBackendServiceArgumentsForTesting({
+  required String host,
+  required String port,
+  List<String> pythonPrefix = const [],
+}) {
+  return [
+    ...pythonPrefix,
+    '-m',
+    'llm_studio.server',
+    '--host',
+    host,
+    '--port',
+    port,
+  ];
+}
+
+String redactBackendLogForTesting(String value) {
+  return DesktopBackendService()._redactSecrets(value);
+}
+
+class _PythonCommand {
+  const _PythonCommand(this.executable, {this.arguments = const []});
+
+  final String executable;
+  final List<String> arguments;
+
+  String get label => ([executable, ...arguments]).join(' ');
 }

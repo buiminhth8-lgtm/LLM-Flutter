@@ -16,3 +16,9 @@ Implemented P3 surfaces:
 - Settings page for local/remote backend mode, API settings, backend restart/stop, exit behavior, and redacted backend logs.
 
 The client stores API keys in `shared_preferences` for now. This is acceptable for the current local desktop loop but is not a Windows credential vault.
+
+Backend startup no longer uses a console-script executable or the historical click CLI. The desktop client starts the service with:
+
+```powershell
+python -m llm_studio.server --host 127.0.0.1 --port 8000
+```

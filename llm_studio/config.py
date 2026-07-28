@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import platform
 from pathlib import Path
 from typing import Any
@@ -148,6 +149,9 @@ def _deep_merge(defaults: dict[str, Any], data: dict[str, Any]) -> dict[str, Any
 
 
 def get_default_config_path() -> Path:
+    env_path = os.environ.get("LLM_STUDIO_CONFIG")
+    if env_path:
+        return Path(env_path)
     return Path(__file__).parent.parent / "config.yaml"
 
 

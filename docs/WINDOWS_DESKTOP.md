@@ -16,7 +16,7 @@ flutter run -d windows --dart-define="LLM_STUDIO_ROOT=D:\develop\LLM-Studio\LLM-
 The client checks `/health`. When local backend mode and auto-start are enabled, it starts:
 
 ```powershell
-.venv\Scripts\python.exe -m llm_studio.cli serve
+.venv\Scripts\python.exe -m llm_studio.server
 ```
 
 The client can also connect to a remote backend by switching Settings to remote backend mode.
