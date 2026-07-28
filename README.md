@@ -82,6 +82,37 @@ P2 changes:
 - Diagnostic packages include runtime, version, pip, redacted config, model metadata summaries, disk usage, and capability status. They do not include model weights, full chat logs, RAG document bodies, API keys, tokens, cookies, or password hashes.
 - Flutter Windows now shows a minimal Job Center on the Status page for recent backend jobs.
 
+## P3 Flutter Desktop Productization
+
+P3 starts from `master` after P0/P1/P2 integration. The active development branch is:
+
+```text
+feat/p3-flutter-desktop-productization
+```
+
+Flutter client status:
+
+- `main.dart` is now only the application entry and public export surface.
+- `app/` contains MaterialApp, theme, and the desktop shell.
+- `core/api/` contains the API client, API exceptions, and SSE parser/client.
+- `core/backend/` contains local FastAPI process management and redacted logs.
+- `core/config/` persists desktop settings with `shared_preferences`.
+- `features/` contains separate Status, Models, Chat, Jobs, Downloads, RAG, Adapters, Benchmark, Storage, Diagnostics, Settings, and Setup surfaces.
+- Chat supports non-streaming and SSE streaming generation, Stop Generation, clear history, and regenerate.
+- Windows backend settings support local/remote mode, auto-start, restart, stop, and close-on-exit behavior.
+
+Developer scripts:
+
+```powershell
+.\scripts\flutter_analyze.ps1
+.\scripts\flutter_test.ps1
+.\scripts\flutter_build_windows.ps1
+.\scripts\flutter_run_windows.ps1
+.\scripts\dev_start_all.ps1
+```
+
+See [docs/FLUTTER_CLIENT.md](docs/FLUTTER_CLIENT.md), [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md), and [docs/WINDOWS_DESKTOP.md](docs/WINDOWS_DESKTOP.md).
+
 ---
 
 

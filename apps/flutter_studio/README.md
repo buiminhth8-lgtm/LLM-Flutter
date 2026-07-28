@@ -15,17 +15,35 @@ Supported:
 - Model load via `POST /v1/models/{id}/load`.
 - Current model via `GET /v1/models/current`.
 - Model unload via `POST /v1/models/unload`.
-- Non-streaming chat via `POST /v1/chat/completions` using the selected model ID.
-- Minimal Job Center on the Status page via `GET /v1/jobs`.
+- Non-streaming and SSE streaming chat via `POST /v1/chat/completions` using the selected model ID.
+- Stop generation, clear history, and regenerate from the Chat page.
+- Job Center on the Status page via `GET /v1/jobs`.
+- Downloads page for starting small Hugging Face download jobs and viewing truthful task state.
+- Minimal RAG query page.
+- Adapter scan/load/activate/deactivate page.
+- Experimental Benchmark page for current loaded model.
+- Storage cleanup preview and execution page.
+- Diagnostics export page with redaction explanation.
 - Backend stdout/stderr log capture with secret redaction.
+- Local/remote backend mode, backend restart, backend stop, and exit behavior settings.
 
 Current limitations:
 
-- Chat streaming/SSE UI is not yet enabled.
-- Download jobs are visible in Job Center, but a full download management page is not complete.
-- Benchmark is backend experimental and not exposed as a full Flutter page.
-- LoRA scan/load/activate/unload are backend-only; LoRA merge is not implemented.
+- Download pause is not a strict pause; cancel requests rely on backend cooperative cancellation and resumable cache.
+- Benchmark remains experimental and is only a local development reference.
+- LoRA merge is not exposed by default.
+- RAG upload and document management remain minimal; backend jobs are surfaced through Job Center.
 - `shared_preferences` is not a secure Windows key vault; move to Windows Credential Manager or secure storage in a later hardening pass.
+
+## Developer Checks
+
+From the repository root:
+
+```powershell
+.\scripts\flutter_analyze.ps1
+.\scripts\flutter_test.ps1
+.\scripts\flutter_build_windows.ps1
+```
 
 ## Run on Windows
 
