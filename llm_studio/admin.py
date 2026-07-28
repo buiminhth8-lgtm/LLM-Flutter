@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
-import os
 import secrets
 import time
 from pathlib import Path
-from typing import Optional
+
+from .auth import Role, normalize_role
+from .security import hash_api_key, redact_secret
+
+WEAK_PASSWORDS = {"admin", "123456", "password", "admin123", "12345678", "qwerty"}
 
 
 def generate_api_key(prefix: str = "sk-llmstudio") -> str:
@@ -16,17 +18,23 @@ def generate_api_key(prefix: str = "sk-llmstudio") -> str:
     return f"{prefix}-{secrets.token_hex(20)}"
 
 
-def _hash_secret(secret: str, salt: str | None = None) -> str:
-    salt = salt or secrets.token_hex(16)
-    digest = hashlib.pbkdf2_hmac("sha256", secret.encode("utf-8"), bytes.fromhex(salt), 310_000)
-    return f"pbkdf2_sha256${salt}${digest.hex()}"
+def _hash_secret(secret: str) -> str:
+    from argon2 import PasswordHasher
+
+    return PasswordHasher().hash(secret)
 
 
 def _verify_secret(secret: str, stored: str) -> bool:
+    if stored.startswith("$argon2"):
+        from argon2 import PasswordHasher
+        from argon2.exceptions import VerifyMismatchError
+
+        try:
+            return PasswordHasher().verify(stored, secret)
+        except VerifyMismatchError:
+            return False
     if stored.startswith("pbkdf2_sha256$"):
-        _, salt, digest = stored.split("$", 2)
-        candidate = _hash_secret(secret, salt).split("$", 2)[2]
-        return secrets.compare_digest(candidate, digest)
+        return False
     # Legacy plaintext migration path.
     return secrets.compare_digest(secret, stored)
 
@@ -43,7 +51,7 @@ class UserRecord:
         user_id: str,
         api_key_hash: str,
         api_key_masked: str,
-        role: str = "user",
+        role: str = Role.VIEWER.value,
         note: str = "",
         created_at: float = 0,
         enabled: bool = True,
@@ -51,7 +59,7 @@ class UserRecord:
         self.user_id = user_id
         self.api_key_hash = api_key_hash
         self.api_key_masked = api_key_masked
-        self.role = role
+        self.role = normalize_role(role, missing_role=Role.ADMIN).value
         self.note = note
         self.created_at = created_at or time.time()
         self.enabled = enabled
@@ -72,12 +80,12 @@ class UserRecord:
         return data
 
     @classmethod
-    def from_dict(cls, data: dict) -> "UserRecord":
+    def from_dict(cls, data: dict) -> UserRecord:
         legacy_key = data.get("api_key")
         api_key_hash = data.get("api_key_hash")
         api_key_masked = data.get("api_key_masked")
         if legacy_key and not api_key_hash:
-            api_key_hash = _hash_secret(legacy_key)
+            api_key_hash = hash_api_key(legacy_key)
             api_key_masked = _mask_key(legacy_key)
         if not api_key_hash:
             raise ValueError(f"User {data.get('user_id', '<unknown>')} has no API key hash")
@@ -85,7 +93,7 @@ class UserRecord:
             user_id=data["user_id"],
             api_key_hash=api_key_hash,
             api_key_masked=api_key_masked or "***",
-            role=data.get("role", "user"),
+            role=normalize_role(data.get("role"), missing_role=Role.ADMIN).value,
             note=data.get("note", ""),
             created_at=data.get("created_at", 0),
             enabled=data.get("enabled", True),
@@ -107,10 +115,10 @@ class AdminManager:
     def load(self):
         """Load users from JSON file."""
         if self._db_path.exists():
-            with open(self._db_path, "r", encoding="utf-8") as f:
+            with open(self._db_path, encoding="utf-8") as f:
                 data = json.load(f)
             stored_password = data.get("admin_password_hash") or data.get("admin_password", "")
-            if stored_password and not stored_password.startswith("pbkdf2_sha256$"):
+            if stored_password and not stored_password.startswith("$argon2"):
                 self._admin_password_hash = _hash_secret(stored_password)
             else:
                 self._admin_password_hash = stored_password
@@ -119,7 +127,8 @@ class AdminManager:
                 self._users[rec.user_id] = rec
             self.save()
         else:
-            self._create_default_admin()
+            self._users = {}
+            self._admin_password_hash = ""
 
     def save(self):
         """Persist users to JSON file."""
@@ -130,29 +139,34 @@ class AdminManager:
         with open(self._db_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
-    def _create_default_admin(self):
-        """Create the first admin user without storing plaintext secrets."""
-        password = os.environ.get("LLM_STUDIO_INITIAL_ADMIN_PASSWORD") or secrets.token_urlsafe(18)
-        if "LLM_STUDIO_INITIAL_ADMIN_PASSWORD" not in os.environ:
-            self.initial_admin_password = password
-            print(
-                "[Admin] Generated initial admin password. "
-                "It will be shown once in this startup log; change it immediately."
-            )
-            print(f"[Admin] Initial admin password: {password}")
+    @property
+    def initialized(self) -> bool:
+        return bool(self._admin_password_hash and self._users)
+
+    def initialize(self, admin_password: str, display_name: str = "Admin") -> UserRecord:
+        """Initialize the local admin account and return the first API key once."""
+        if self.initialized:
+            raise ValueError("LLM Studio ?????????????")
+        password = (admin_password or "").strip()
+        if not password:
+            raise ValueError("??????????")
+        if password.lower() in WEAK_PASSWORDS or len(password) < 8:
+            raise ValueError("????????????? 8 ?????????")
+
         self._admin_password_hash = _hash_secret(password)
         api_key = generate_api_key()
         admin = UserRecord(
             user_id="admin",
-            api_key_hash=_hash_secret(api_key),
+            api_key_hash=hash_api_key(api_key),
             api_key_masked=_mask_key(api_key),
             role="admin",
-            note="Default admin user created on first startup.",
+            note=display_name or "Admin",
         )
         admin.plain_api_key = api_key
         self._users["admin"] = admin
         self.save()
-        print(f"[Admin] Initial admin API key: {api_key}")
+        print(f"[Admin] Initialized admin API key: {redact_secret(api_key)}")
+        return admin
 
     def verify_admin_password(self, password: str) -> bool:
         """Verify admin dashboard login password."""
@@ -166,23 +180,23 @@ class AdminManager:
         self.save()
         return True
 
-    def authenticate(self, user_id: str, api_key: str) -> Optional[UserRecord]:
+    def authenticate(self, user_id: str, api_key: str) -> UserRecord | None:
         """Authenticate an API request. Returns user record or None."""
         user = self._users.get(user_id)
-        if user and user.enabled and _verify_secret(api_key, user.api_key_hash):
+        if user and user.enabled and secrets.compare_digest(hash_api_key(api_key), user.api_key_hash):
             return user
         return None
 
-    def create_user(self, user_id: str, role: str = "user", note: str = "") -> UserRecord:
+    def create_user(self, user_id: str, role: str = Role.VIEWER.value, note: str = "") -> UserRecord:
         """Create a new API user with auto-generated key."""
         if user_id in self._users:
             raise ValueError(f"User '{user_id}' already exists")
         api_key = generate_api_key()
         rec = UserRecord(
             user_id=user_id,
-            api_key_hash=_hash_secret(api_key),
+            api_key_hash=hash_api_key(api_key),
             api_key_masked=_mask_key(api_key),
-            role=role,
+            role=normalize_role(role, missing_role=Role.VIEWER).value,
             note=note,
         )
         rec.plain_api_key = api_key
@@ -194,7 +208,7 @@ class AdminManager:
         """List all users without full API keys."""
         return [u.to_dict() for u in self._users.values()]
 
-    def get_user(self, user_id: str) -> Optional[UserRecord]:
+    def get_user(self, user_id: str) -> UserRecord | None:
         return self._users.get(user_id)
 
     def delete_user(self, user_id: str) -> bool:
@@ -204,7 +218,7 @@ class AdminManager:
             return True
         return False
 
-    def toggle_user(self, user_id: str) -> Optional[bool]:
+    def toggle_user(self, user_id: str) -> bool | None:
         """Enable/disable a user. Returns new enabled state or None."""
         user = self._users.get(user_id)
         if user:
@@ -213,12 +227,12 @@ class AdminManager:
             return user.enabled
         return None
 
-    def regenerate_key(self, user_id: str) -> Optional[str]:
+    def regenerate_key(self, user_id: str) -> str | None:
         """Regenerate API key for a user. Returns new key once or None."""
         user = self._users.get(user_id)
         if user:
             api_key = generate_api_key()
-            user.api_key_hash = _hash_secret(api_key)
+            user.api_key_hash = hash_api_key(api_key)
             user.api_key_masked = _mask_key(api_key)
             user.plain_api_key = api_key
             self.save()
@@ -230,13 +244,13 @@ class AdminManager:
         if not user:
             return False
         if role is not None:
-            user.role = role
+            user.role = normalize_role(role, missing_role=Role.VIEWER).value
         if note is not None:
             user.note = note
         self.save()
         return True
 
-    def get_full_key(self, user_id: str) -> Optional[str]:
+    def get_full_key(self, user_id: str) -> str | None:
         """Full keys are no longer recoverable after creation."""
         user = self._users.get(user_id)
         return user.plain_api_key if user else None

@@ -1,0 +1,10 @@
+runtime:
+  backend: llama_cpp
+  max_gpu_memory: 7GiB
+
+llama_cpp:
+  n_ctx: 4096
+  n_gpu_layers: -1
+  n_batch: 256
+  n_ubatch: 128
+  flash_attn: true

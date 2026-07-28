@@ -1,0 +1,6 @@
+runtime:
+  dtype: bfloat16
+  quantization: none
+  attention_backend: sdpa
+  max_gpu_memory: 7GiB
+  cpu_offload: false

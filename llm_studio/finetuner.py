@@ -7,9 +7,9 @@ import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 from .chat import build_model_input
+from .finetune.memory_estimator import estimate_training_memory
 from .runtime.capabilities import detect_runtime_capabilities
 from .runtime.model_load_policy import estimate_model_size_b
 
@@ -42,7 +42,7 @@ class FineTuneArgs:
     resume_from_checkpoint: str | bool | None = None
 
     @classmethod
-    def from_config(cls, config_dict: dict, **overrides) -> "FineTuneArgs":
+    def from_config(cls, config_dict: dict, **overrides) -> FineTuneArgs:
         """Create from config dict with optional overrides."""
         merged = {**config_dict, **overrides}
         valid_fields = {name for name in cls.__dataclass_fields__}
@@ -61,13 +61,13 @@ class DatasetProcessor:
 
         data = []
         if format == "jsonl":
-            with open(path, "r", encoding="utf-8") as file:
+            with open(path, encoding="utf-8") as file:
                 for line in file:
                     line = line.strip()
                     if line:
                         data.append(json.loads(line))
         elif format == "json":
-            with open(path, "r", encoding="utf-8") as file:
+            with open(path, encoding="utf-8") as file:
                 data = json.load(file)
             if isinstance(data, dict):
                 data = data.get("data", data.get("items", [data]))
@@ -113,23 +113,29 @@ def tokenize_messages_for_assistant_loss(
     )["input_ids"]
 
     labels = [-100] * len(input_ids)
-    last_assistant_idx = max(
-        (idx for idx, msg in enumerate(messages) if msg["role"] == "assistant"),
-        default=-1,
-    )
-    if last_assistant_idx >= 0:
-        prefix_messages = messages[:last_assistant_idx]
-        prefix_text = build_model_input(tokenizer, prefix_messages, add_generation_prompt=True)
-        prefix_ids = tokenizer(
-            prefix_text,
-            truncation=True,
-            max_length=max_seq_length,
-            add_special_tokens=False,
-        )["input_ids"]
-        start = min(len(prefix_ids), len(input_ids))
-        labels[start:] = input_ids[start:]
-    else:
-        labels = input_ids.copy()
+    for idx, msg in enumerate(messages):
+        if msg["role"] != "assistant":
+            continue
+        prefix_text = build_model_input(tokenizer, messages[:idx], add_generation_prompt=True)
+        end_text = build_model_input(tokenizer, messages[: idx + 1], add_generation_prompt=False)
+        start = len(
+            tokenizer(
+                prefix_text,
+                truncation=True,
+                max_length=max_seq_length,
+                add_special_tokens=False,
+            )["input_ids"]
+        )
+        end = len(
+            tokenizer(
+                end_text,
+                truncation=True,
+                max_length=max_seq_length,
+                add_special_tokens=False,
+            )["input_ids"]
+        )
+        for pos in range(min(start, len(input_ids)), min(end, len(input_ids))):
+            labels[pos] = input_ids[pos]
 
     return {
         "input_ids": input_ids,
@@ -180,6 +186,16 @@ class FineTuner:
     def estimate_training_risk(self) -> list[str]:
         warnings: list[str] = []
         size_b = estimate_model_size_b(self.args.model_path)
+        estimate = estimate_training_memory(
+            model_path=self.args.model_path,
+            method=self.args.method,
+            max_seq_length=self.args.max_seq_length,
+            batch_size=self.args.per_device_train_batch_size or self.args.batch_size,
+        )
+        if estimate.risk_level == "unsupported":
+            raise RuntimeError(estimate.message)
+        if estimate.risk_level in {"warning", "high-risk"}:
+            warnings.append(estimate.message)
         if size_b is None:
             return warnings
         if size_b >= 14:
@@ -265,7 +281,7 @@ class FineTuner:
     def train(
         self,
         dataset_path: str,
-        progress_callback: Optional[Callable] = None,
+        progress_callback: Callable | None = None,
         resume_from_checkpoint: str | bool | None = None,
     ) -> str:
         """Run the fine-tuning training loop."""

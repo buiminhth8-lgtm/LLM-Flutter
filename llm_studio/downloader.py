@@ -1,15 +1,15 @@
 """Model download manager - supports HuggingFace and GGUF models."""
 
-import os
 import shutil
+from collections.abc import Callable
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional, Callable
 
 from huggingface_hub import (
-    snapshot_download,
-    hf_hub_download,
     HfApi,
+    hf_hub_download,
     list_repo_files,
+    snapshot_download,
 )
 
 from .config import Config
@@ -56,7 +56,7 @@ class ModelDownloader:
     def download_from_registry(
         self,
         model_name: str,
-        progress_callback: Optional[Callable] = None,
+        progress_callback: Callable | None = None,
     ) -> str:
         """Download a model from the registry by name."""
         registry = self.config.model_registry
@@ -79,8 +79,8 @@ class ModelDownloader:
         self,
         repo_id: str,
         model_type: str = "transformers",
-        filename: Optional[str] = None,
-        progress_callback: Optional[Callable] = None,
+        filename: str | None = None,
+        progress_callback: Callable | None = None,
     ) -> str:
         """
         Download a model from HuggingFace Hub.
@@ -143,14 +143,24 @@ class ModelDownloader:
         return models
 
     def delete_model(self, model_path: str) -> bool:
-        """Delete a locally downloaded model."""
+        """Move a managed local model to the project trash directory."""
         p = Path(model_path)
-        if p.is_dir():
-            shutil.rmtree(p)
-            return True
-        elif p.is_file():
-            p.unlink()
-            return True
+        if not p.exists():
+            return False
+        try:
+            resolved = p.resolve()
+            resolved.relative_to(self.models_dir.resolve())
+        except ValueError:
+            # External paths are only unregistered by newer repository APIs.
+            return False
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        trash = self.models_dir.parent / "data" / "trash" / "models"
+        trash.mkdir(parents=True, exist_ok=True)
+        target = trash / f"{stamp}-{p.name}"
+        if target.exists():
+            return False
+        shutil.move(str(p), str(target))
+        return True
         return False
 
     @staticmethod

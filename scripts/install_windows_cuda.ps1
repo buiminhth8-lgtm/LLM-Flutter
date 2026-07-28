@@ -12,7 +12,7 @@ Write-Host "Removing existing torch packages..."
 python -m pip uninstall -y torch torchvision torchaudio
 
 Write-Host "Installing CUDA PyTorch from PyTorch CUDA 13.2 index..."
-python -m pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cu132
+python -m pip install --no-cache-dir torch torchvision torchaudio -f https://mirrors.aliyun.com/pytorch-wheels/cu132
 
 python -c @'
 import sys

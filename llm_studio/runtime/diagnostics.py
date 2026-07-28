@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ..config import Config
 from .capabilities import detect_runtime_capabilities
 from .device_info import bytes_to_gib
 
@@ -30,6 +31,18 @@ def main() -> int:
     if caps.llama_cpp_error:
         print(f"llama.cpp detail: {caps.llama_cpp_error}")
     print(f"GPTQModel: {'yes' if caps.gptqmodel_installed else 'no'}")
+    try:
+        config = Config()
+        print(f"Max context: {config.generation.get('max_context_tokens', 'N/A')}")
+        print(f"Inference concurrency: {config.runtime.get('inference_concurrency', 1)}")
+        print(f"Queue size: {config.runtime.get('queue_limit', 8)}")
+        print(f"RAG embedding device: {config.get('rag', {}).get('device', 'cpu')}")
+        print(f"trust_remote_code: {config.runtime.get('trust_remote_code', False)}")
+        print("Chat template availability: model-specific (checked during load)")
+        print("Fine-tune support: run doctor for risk checks")
+        print("Security: admin password Argon2id, API keys SHA-256")
+    except Exception as exc:
+        print(f"Config diagnostics: failed: {exc}")
     return 0
 
 

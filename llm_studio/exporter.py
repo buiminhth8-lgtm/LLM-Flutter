@@ -2,7 +2,6 @@
 
 import shutil
 from pathlib import Path
-from typing import Optional
 
 from huggingface_hub import HfApi, create_repo
 
@@ -31,7 +30,7 @@ class ModelExporter:
         model_path: str,
         repo_id: str,
         private: bool = True,
-        token: Optional[str] = None,
+        token: str | None = None,
         commit_message: str = "Upload fine-tuned model",
     ) -> str:
         """
@@ -90,13 +89,11 @@ class ModelExporter:
         ]
 
         try:
-            result = subprocess.run(
-                convert_cmd, capture_output=True, text=True, check=True
-            )
+            subprocess.run(convert_cmd, capture_output=True, text=True, check=True)
             return output_path
-        except (subprocess.CalledProcessError, FileNotFoundError):
+        except (subprocess.CalledProcessError, FileNotFoundError) as exc:
             raise RuntimeError(
                 "GGUF conversion failed. Please install llama.cpp and ensure "
                 "the convert script is available, or use the llama.cpp "
                 "convert-hf-to-gguf.py script manually."
-            )
+            ) from exc

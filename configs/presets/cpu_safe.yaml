@@ -1,0 +1,10 @@
+runtime:
+  backend: transformers
+  device: cpu
+  dtype: float32
+  quantization: none
+  attention_backend: eager
+  cpu_offload: false
+
+rag:
+  device: cpu

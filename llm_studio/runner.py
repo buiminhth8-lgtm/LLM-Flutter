@@ -1,25 +1,19 @@
-"""Model runner - supports Transformers and llama.cpp (GGUF) backends."""
+"""Model runners for Transformers and llama.cpp (GGUF) backends."""
 
 from __future__ import annotations
 
-import time
+import gc
+from collections.abc import Generator
 from pathlib import Path
-from queue import Empty, Queue
-from threading import Event, Thread
-from typing import Any, Generator
+from typing import Any
 
-from .chat import Message, build_model_input, normalize_messages, truncate_messages
+from .adapters import AdapterInfo, AdapterManager
+from .chat import ChatHistoryWindow, ChatMessage, PromptBuilder, normalize_messages
 from .config import Config
+from .generation import CancellationToken, GenerationConfig, GenerationResult, GenerationWorker
 from .runtime.capabilities import detect_llama_cpp_cuda, detect_runtime_capabilities
 from .runtime.device_info import auto_cpu_threads
-from .runtime.model_load_policy import (
-    choose_model_load_policy,
-    generation_defaults,
-)
-
-
-class GenerationWorkerError(RuntimeError):
-    """Raised when a background generation worker fails."""
+from .runtime.model_load_policy import choose_model_load_policy, generation_defaults
 
 
 class BaseRunner:
@@ -31,18 +25,92 @@ class BaseRunner:
         self.model = None
         self.tokenizer = None
         self.load_policy = None
+        self.prompt_builder = PromptBuilder()
+        self.history_window = ChatHistoryWindow(self.prompt_builder)
+        self.adapter_manager = AdapterManager(self)
 
     def load(self):
         raise NotImplementedError
 
-    def generate(self, prompt: str | list[Message], **kwargs) -> str:
+    def generate(
+        self,
+        messages: list[ChatMessage] | list[dict] | str,
+        generation_config: GenerationConfig | None = None,
+        **kwargs,
+    ) -> str:
         raise NotImplementedError
 
-    def generate_stream(self, prompt: str | list[Message], **kwargs) -> Generator[str, None, None]:
+    def generate_result(
+        self,
+        messages: list[ChatMessage] | list[dict] | str,
+        generation_config: GenerationConfig | None = None,
+        **kwargs,
+    ) -> GenerationResult:
+        text = self.generate(messages, generation_config=generation_config, **kwargs)
+        return GenerationResult(text=text)
+
+    def generate_stream(
+        self,
+        messages: list[ChatMessage] | list[dict] | str,
+        generation_config: GenerationConfig | None = None,
+        cancellation_token: CancellationToken | None = None,
+        **kwargs,
+    ) -> Generator[str, None, None]:
         raise NotImplementedError
 
     def unload(self):
         raise NotImplementedError
+
+    def load_adapter(self, adapter: AdapterInfo, adapter_name: str | None = None) -> str:
+        return self.adapter_manager.load_adapter(adapter, adapter_name)
+
+    def activate_adapter(self, adapter_name: str) -> None:
+        self.adapter_manager.activate_adapter(adapter_name)
+
+    def deactivate_adapter(self) -> None:
+        self.adapter_manager.deactivate_adapter()
+
+    def unload_adapter(self, adapter_name: str) -> None:
+        self.adapter_manager.unload_adapter(adapter_name)
+
+    def list_loaded_adapters(self) -> tuple[str, ...]:
+        return self.adapter_manager.list_loaded_adapters()
+
+
+def _generation_config_from_kwargs(config: Config, kwargs: dict) -> GenerationConfig:
+    defaults = generation_defaults(config)
+    max_configured = int(defaults["max_new_tokens"])
+    requested = int(kwargs.get("max_tokens", kwargs.get("max_new_tokens", max_configured)))
+    max_new_tokens = min(requested, max_configured)
+    temperature = float(kwargs.get("temperature", defaults["temperature"]))
+    do_sample = bool(kwargs.get("do_sample", defaults["do_sample"])) and temperature > 0
+    return GenerationConfig(
+        max_new_tokens=max_new_tokens,
+        temperature=temperature,
+        top_p=float(kwargs.get("top_p", defaults["top_p"])),
+        top_k=int(kwargs.get("top_k", defaults["top_k"])),
+        repetition_penalty=float(kwargs.get("repetition_penalty", defaults["repetition_penalty"])),
+        do_sample=do_sample,
+        max_context_tokens=int(kwargs.get("max_context_tokens", defaults["max_context_tokens"])),
+        timeout_seconds=float(kwargs.get("timeout", config.runtime.get("request_timeout_seconds", 300))),
+    )
+
+
+def _hf_generation_kwargs(generation_config: GenerationConfig) -> dict:
+    kwargs: dict[str, Any] = {
+        "max_new_tokens": generation_config.max_new_tokens,
+        "repetition_penalty": generation_config.repetition_penalty,
+        "do_sample": generation_config.do_sample,
+    }
+    if generation_config.do_sample:
+        kwargs.update(
+            {
+                "temperature": generation_config.temperature,
+                "top_p": generation_config.top_p,
+                "top_k": generation_config.top_k,
+            }
+        )
+    return kwargs
 
 
 class TransformersRunner(BaseRunner):
@@ -124,63 +192,62 @@ class TransformersRunner(BaseRunner):
             self.model = self.model.to("cpu")
         self.model.eval()
 
-    def _prepare_inputs(self, messages: str | list[Message], max_context_tokens: int):
+    def _prepare_inputs(
+        self,
+        messages: list[ChatMessage] | list[dict] | str,
+        generation_config: GenerationConfig,
+    ):
         normalized = normalize_messages(messages)
-        normalized = truncate_messages(
-            self.tokenizer,
-            normalized,
-            max_context_tokens=max_context_tokens,
+        fitted = self.history_window.fit_messages(
+            tokenizer=self.tokenizer,
+            messages=normalized,
+            max_context_tokens=generation_config.max_context_tokens,
+            reserved_generation_tokens=generation_config.max_new_tokens,
         )
-        text = build_model_input(self.tokenizer, normalized, add_generation_prompt=True)
+        text = self.prompt_builder.build_text(
+            tokenizer=self.tokenizer,
+            messages=fitted,
+            add_generation_prompt=True,
+        )
         inputs = self.tokenizer(text, return_tensors="pt")
         device = getattr(self.model, "device", None)
         if device is not None:
             inputs = inputs.to(device)
         return inputs
 
-    def _generation_kwargs(self, kwargs: dict) -> dict:
-        defaults = generation_defaults(self.config)
-        temperature = kwargs.get("temperature", defaults["temperature"])
-        return {
-            "max_new_tokens": int(kwargs.get("max_tokens", kwargs.get("max_new_tokens", defaults["max_new_tokens"]))),
-            "temperature": temperature,
-            "top_p": kwargs.get("top_p", defaults["top_p"]),
-            "top_k": kwargs.get("top_k", defaults["top_k"]),
-            "repetition_penalty": kwargs.get("repetition_penalty", defaults["repetition_penalty"]),
-            "do_sample": bool(kwargs.get("do_sample", defaults["do_sample"])) and temperature > 0,
-        }
-
-    def generate(self, prompt: str | list[Message], **kwargs) -> str:
+    def generate(
+        self,
+        messages: list[ChatMessage] | list[dict] | str,
+        generation_config: GenerationConfig | None = None,
+        **kwargs,
+    ) -> str:
         import torch
 
-        defaults = generation_defaults(self.config)
-        inputs = self._prepare_inputs(prompt, int(kwargs.get("max_context_tokens", defaults["max_context_tokens"])))
-        gen_kwargs = self._generation_kwargs(kwargs)
-
+        generation_config = generation_config or _generation_config_from_kwargs(self.config, kwargs)
+        inputs = self._prepare_inputs(messages, generation_config)
         with torch.inference_mode():
-            outputs = self.model.generate(**inputs, **gen_kwargs)
-
+            outputs = self.model.generate(**inputs, **_hf_generation_kwargs(generation_config))
         new_tokens = outputs[0][inputs["input_ids"].shape[-1] :]
         return self.tokenizer.decode(new_tokens, skip_special_tokens=True)
 
-    def generate_stream(self, prompt: str | list[Message], **kwargs) -> Generator[str, None, None]:
+    def generate_stream(
+        self,
+        messages: list[ChatMessage] | list[dict] | str,
+        generation_config: GenerationConfig | None = None,
+        cancellation_token: CancellationToken | None = None,
+        **kwargs,
+    ) -> Generator[str, None, None]:
         import torch
         from transformers import StoppingCriteria, StoppingCriteriaList, TextIteratorStreamer
 
+        generation_config = generation_config or _generation_config_from_kwargs(self.config, kwargs)
+        cancellation_token = cancellation_token or CancellationToken()
+
         class CancelCriteria(StoppingCriteria):
-            def __init__(self, event: Event):
-                self.event = event
-
             def __call__(self, input_ids, scores, **kwargs):
-                return self.event.is_set()
+                return cancellation_token.is_cancelled
 
-        defaults = generation_defaults(self.config)
-        timeout = float(kwargs.get("timeout", self.config.runtime.get("request_timeout_seconds", 300)))
-        started_at = time.monotonic()
-        cancel_event = Event()
-        errors: Queue[BaseException] = Queue(maxsize=1)
-
-        inputs = self._prepare_inputs(prompt, int(kwargs.get("max_context_tokens", defaults["max_context_tokens"])))
+        inputs = self._prepare_inputs(messages, generation_config)
         streamer = TextIteratorStreamer(
             self.tokenizer,
             skip_prompt=True,
@@ -189,58 +256,34 @@ class TransformersRunner(BaseRunner):
         )
         generation_kwargs = {
             **inputs,
-            **self._generation_kwargs(kwargs),
+            **_hf_generation_kwargs(generation_config),
             "streamer": streamer,
-            "stopping_criteria": StoppingCriteriaList([CancelCriteria(cancel_event)]),
+            "stopping_criteria": StoppingCriteriaList([CancelCriteria()]),
         }
 
-        def worker():
-            try:
-                with torch.inference_mode():
-                    self.model.generate(**generation_kwargs)
-            except BaseException as exc:
-                try:
-                    errors.put_nowait(exc)
-                except Exception:
-                    pass
+        def target() -> None:
+            with torch.inference_mode():
+                self.model.generate(**generation_kwargs)
 
-        thread = Thread(target=worker, name="llm-studio-generation", daemon=True)
-        thread.start()
-        try:
-            while thread.is_alive():
-                try:
-                    chunk = next(streamer)
-                    if chunk:
-                        yield chunk
-                except StopIteration:
-                    break
-                except Empty:
-                    if not thread.is_alive():
-                        break
-                if errors.qsize():
-                    raise GenerationWorkerError(str(errors.get_nowait()))
-                if timeout > 0 and time.monotonic() - started_at > timeout:
-                    cancel_event.set()
-                    raise TimeoutError(f"生成超时，超过 {timeout:.0f} 秒。")
-            for chunk in streamer:
-                if chunk:
-                    yield chunk
-            if errors.qsize():
-                raise GenerationWorkerError(str(errors.get_nowait()))
-        except GeneratorExit:
-            cancel_event.set()
-            raise
-        finally:
-            cancel_event.set()
-            thread.join(timeout=5)
+        yield from GenerationWorker(
+            target=target,
+            streamer=streamer,
+            cancellation_token=cancellation_token,
+            timeout_seconds=generation_config.timeout_seconds,
+        )
 
     def unload(self):
         import torch
 
+        allocated_before = torch.cuda.memory_allocated() if torch.cuda.is_available() else 0
+        print(f"[ModelManager] step=unload-start allocatedBefore={allocated_before}")
         self.model = None
         self.tokenizer = None
+        gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+        allocated_after = torch.cuda.memory_allocated() if torch.cuda.is_available() else 0
+        print(f"[ModelManager] step=unload-success allocatedAfter={allocated_after}")
 
 
 class GGUFRunner(BaseRunner):
@@ -250,9 +293,7 @@ class GGUFRunner(BaseRunner):
         try:
             from llama_cpp import Llama
         except ImportError as exc:
-            raise RuntimeError(
-                "当前未安装 GGUF 后端。请安装 requirements/gguf.txt。"
-            ) from exc
+            raise RuntimeError("当前未安装 GGUF 后端。请安装 requirements/gguf.txt。") from exc
 
         cuda_enabled, detail = detect_llama_cpp_cuda()
         llama_cfg = self.config.get("llama_cpp", {})
@@ -278,47 +319,68 @@ class GGUFRunner(BaseRunner):
         )
         print(f"[GGUF] CUDA enabled: {cuda_enabled}; n_gpu_layers={n_gpu_layers if cuda_enabled else 0}")
 
-    def generate(self, prompt: str | list[Message], **kwargs) -> str:
-        defaults = generation_defaults(self.config)
-        messages = normalize_messages(prompt)
+    def generate(
+        self,
+        messages: list[ChatMessage] | list[dict] | str,
+        generation_config: GenerationConfig | None = None,
+        **kwargs,
+    ) -> str:
+        generation_config = generation_config or _generation_config_from_kwargs(self.config, kwargs)
+        create_kwargs = self._llama_generation_kwargs(generation_config)
         response = self.model.create_chat_completion(
-            messages=messages,
-            max_tokens=int(kwargs.get("max_tokens", defaults["max_new_tokens"])),
-            temperature=kwargs.get("temperature", defaults["temperature"]),
-            top_p=kwargs.get("top_p", defaults["top_p"]),
-            top_k=kwargs.get("top_k", defaults["top_k"]),
-            repeat_penalty=kwargs.get("repetition_penalty", defaults["repetition_penalty"]),
+            messages=[message.to_dict() for message in normalize_messages(messages)],
+            **create_kwargs,
         )
         return response["choices"][0]["message"]["content"]
 
-    def generate_stream(self, prompt: str | list[Message], **kwargs) -> Generator[str, None, None]:
-        defaults = generation_defaults(self.config)
+    def generate_stream(
+        self,
+        messages: list[ChatMessage] | list[dict] | str,
+        generation_config: GenerationConfig | None = None,
+        cancellation_token: CancellationToken | None = None,
+        **kwargs,
+    ) -> Generator[str, None, None]:
+        generation_config = generation_config or _generation_config_from_kwargs(self.config, kwargs)
+        cancellation_token = cancellation_token or CancellationToken()
         stream = self.model.create_chat_completion(
-            messages=normalize_messages(prompt),
-            max_tokens=int(kwargs.get("max_tokens", defaults["max_new_tokens"])),
-            temperature=kwargs.get("temperature", defaults["temperature"]),
-            top_p=kwargs.get("top_p", defaults["top_p"]),
-            top_k=kwargs.get("top_k", defaults["top_k"]),
-            repeat_penalty=kwargs.get("repetition_penalty", defaults["repetition_penalty"]),
+            messages=[message.to_dict() for message in normalize_messages(messages)],
             stream=True,
+            **self._llama_generation_kwargs(generation_config),
         )
-        try:
-            for chunk in stream:
-                delta = chunk["choices"][0].get("delta", {})
-                content = delta.get("content", "")
-                if content:
-                    yield content
-        except GeneratorExit:
-            raise
+        for chunk in stream:
+            if cancellation_token.is_cancelled:
+                break
+            delta = chunk["choices"][0].get("delta", {})
+            content = delta.get("content", "")
+            if content:
+                yield content
+
+    def _llama_generation_kwargs(self, generation_config: GenerationConfig) -> dict:
+        kwargs: dict[str, Any] = {
+            "max_tokens": generation_config.max_new_tokens,
+            "repeat_penalty": generation_config.repetition_penalty,
+        }
+        if generation_config.do_sample:
+            kwargs.update(
+                {
+                    "temperature": generation_config.temperature,
+                    "top_p": generation_config.top_p,
+                    "top_k": generation_config.top_k,
+                }
+            )
+        else:
+            kwargs["temperature"] = 0
+        return kwargs
 
     def unload(self):
         self.model = None
+        gc.collect()
 
 
 def create_runner(model_path: str, config: Config) -> BaseRunner:
     """Factory function to create the appropriate model runner."""
-    p = Path(model_path)
+    path = Path(model_path)
     backend = config.runtime.get("backend", "auto")
-    if backend == "gguf" or p.suffix == ".gguf" or (p.is_file() and ".gguf" in p.name.lower()):
+    if backend == "gguf" or path.suffix == ".gguf" or (path.is_file() and ".gguf" in path.name.lower()):
         return GGUFRunner(model_path, config)
     return TransformersRunner(model_path, config)
