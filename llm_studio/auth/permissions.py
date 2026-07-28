@@ -20,6 +20,7 @@ def required_permission_for_request(method: str, path: str) -> Permission | None
     if method == "GET" and path in {
         "/v1/runtime",
         "/v1/gpu/scheduler",
+        "/v1/capabilities",
         "/v1/storage",
     }:
         return Permission.VIEW_RUNTIME
@@ -50,10 +51,18 @@ def required_permission_for_request(method: str, path: str) -> Permission | None
     if path.startswith("/v1/downloads"):
         return Permission.MANAGE_DOWNLOADS if method != "GET" else Permission.VIEW_MODELS
     if path.startswith("/v1/adapters"):
-        return Permission.MANAGE_ADAPTERS if method != "GET" else Permission.VIEW_MODELS
+        if method == "GET":
+            return Permission.VIEW_MODELS
+        if path == "/v1/adapters/scan" or path == "/v1/adapters/register" or path.endswith("/merge"):
+            return Permission.MANAGE_ADAPTERS
+        if path.endswith(("/load", "/activate", "/deactivate", "/unload")):
+            return Permission.LOAD_MODEL
+        return Permission.MANAGE_ADAPTERS
     if method == "POST" and path == "/v1/benchmarks":
         return Permission.RUN_BENCHMARK
-    if method == "POST" and path == "/v1/storage/cleanup":
+    if method == "DELETE" and path.startswith("/v1/benchmarks/"):
+        return Permission.RUN_BENCHMARK
+    if method == "POST" and path in {"/v1/storage/cleanup", "/v1/storage/cleanup/preview"}:
         return Permission.MANAGE_STORAGE
     if method == "POST" and path == "/v1/diagnostics/export":
         return Permission.EXPORT_DIAGNOSTICS

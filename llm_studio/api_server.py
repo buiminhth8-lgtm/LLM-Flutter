@@ -20,10 +20,9 @@ from .api.errors import (
     GENERATION_CANCELLED,
     GENERATION_TIMEOUT,
     GPU_BUSY,
-    GPU_TASK_TIMEOUT,
     INVALID_MESSAGES,
-    MODEL_NOT_FOUND,
     MODEL_LOAD_BUSY,
+    MODEL_NOT_FOUND,
     PERMISSION_DENIED,
     QUEUE_FULL,
     api_error,
@@ -31,11 +30,12 @@ from .api.errors import (
 )
 from .auth import has_permission, required_permission_for_request
 from .benchmarks import BenchmarkConfig, BenchmarkRunner
+from .capabilities import get_capabilities
 from .chat import ChatMessage as CoreChatMessage
 from .chat import InvalidChatMessageError
 from .config import Config
 from .diagnostics import export_diagnostics
-from .downloads import DownloadManager, DownloadRequest
+from .downloads import DownloadManager, DownloadRequest, DownloadTaskState
 from .execution import run_blocking_io, run_cpu_bound
 from .generation import CancellationToken
 from .generation.exceptions import (
@@ -344,6 +344,9 @@ def get_app(config: Config):
         max_new_tokens: int = 128
         context_lengths: list[int] = Field(default_factory=lambda: [512, 2048])
 
+    class StorageCleanupRequest(BaseModel):
+        categories: list[str] | None = None
+
     # 鈹€鈹€ Helper Functions 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
     def _gpu_request(task_type: GpuTaskType, owner: str, request_id: str | None = None) -> GpuTaskRequest:
@@ -529,6 +532,7 @@ def get_app(config: Config):
             "backend": type(runner).__name__ if runner else None,
             "dtype": getattr(policy, "dtype", None),
             "quantization": getattr(policy, "quantization", None),
+            "loaded_adapters": list(runner.list_loaded_adapters()) if runner and hasattr(runner, "list_loaded_adapters") else [],
         }
 
     @app.post("/v1/models/unload")
@@ -583,21 +587,34 @@ def get_app(config: Config):
         assert _job_repository is not None
         return {
             "data": [
-                job.to_dict()
+                DownloadTaskState.from_job(job).to_dict()
                 for job in _job_repository.list(limit=100)
                 if job.type == JobType.MODEL_DOWNLOAD.value
             ]
         }
 
+    @app.get("/v1/downloads/{job_id}")
+    async def get_download(job_id: str):
+        assert _job_repository is not None
+        job = _job_repository.get(job_id)
+        return DownloadTaskState.from_job(job).to_dict()
+
     @app.post("/v1/downloads/{job_id}/cancel")
     async def cancel_download(job_id: str):
         assert _download_manager is not None
-        return _download_manager.cancel_job(job_id).to_dict()
+        job = _download_manager.cancel_job(job_id)
+        data = DownloadTaskState.from_job(job).to_dict()
+        data["cancel_semantics"] = "取消请求已提交；当前网络传输步骤可能结束后才会停止，重试会复用 Hugging Face 缓存。"
+        return data
 
     @app.post("/v1/downloads/{job_id}/retry")
     async def retry_download(job_id: str):
         assert _download_manager is not None and _job_repository is not None
-        return {"job_id": _download_manager.retry_interrupted(_job_repository.get(job_id)).id}
+        return {
+            "job_id": _download_manager.retry_interrupted(_job_repository.get(job_id)).id,
+            "resume_supported": True,
+            "message": "Retry reuses the Hugging Face cache; strict pause/resume is not claimed.",
+        }
 
     @app.get("/v1/jobs")
     async def list_jobs(limit: int = 50, offset: int = 0):
@@ -619,6 +636,12 @@ def get_app(config: Config):
         assert _adapter_repository is not None
         return {"data": [adapter.to_dict() for adapter in _adapter_repository.list()]}
 
+    @app.post("/v1/adapters/scan")
+    async def scan_adapters():
+        assert _adapter_repository is not None
+        adapters = await run_blocking_io(_adapter_repository.list)
+        return {"data": [adapter.to_dict() for adapter in adapters]}
+
     @app.post("/v1/adapters/register")
     async def register_adapter(req: AdapterPathRequest):
         assert _adapter_repository is not None
@@ -637,8 +660,23 @@ def get_app(config: Config):
         assert _adapter_repository is not None
         _, runner = await _get_or_load_runner(req.model, f"req-{uuid.uuid4().hex[:12]}")
         adapter = _adapter_repository.get(adapter_id)
-        runner.activate_adapter(req.adapter_name or adapter.name)
+        await run_blocking_io(runner.activate_adapter, req.adapter_name or adapter.name)
         return {"status": "ok", "active_adapter": req.adapter_name or adapter.name}
+
+    @app.post("/v1/adapters/{adapter_id}/deactivate")
+    async def deactivate_adapter(adapter_id: str, req: AdapterActionRequest):
+        _, runner = await _get_or_load_runner(req.model, f"req-{uuid.uuid4().hex[:12]}")
+        await run_blocking_io(runner.deactivate_adapter)
+        return {"status": "ok", "active_adapter": None, "loaded_adapters": runner.list_loaded_adapters()}
+
+    @app.post("/v1/adapters/{adapter_id}/unload")
+    async def unload_adapter(adapter_id: str, req: AdapterActionRequest):
+        assert _adapter_repository is not None
+        _, runner = await _get_or_load_runner(req.model, f"req-{uuid.uuid4().hex[:12]}")
+        adapter = _adapter_repository.get(adapter_id)
+        name = req.adapter_name or adapter.name
+        await run_blocking_io(runner.unload_adapter, name)
+        return {"status": "ok", "unloaded_adapter": name, "loaded_adapters": runner.list_loaded_adapters()}
 
     @app.post("/v1/adapters/{adapter_id}/merge")
     async def merge_adapter(adapter_id: str, req: AdapterActionRequest):
@@ -696,20 +734,36 @@ def get_app(config: Config):
 
         return await run_blocking_io(BenchmarkRepository(config).get, benchmark_id)
 
+    @app.delete("/v1/benchmarks/{benchmark_id}")
+    async def delete_benchmark(benchmark_id: str):
+        from .benchmarks.repository import BenchmarkRepository
+
+        deleted = await run_blocking_io(BenchmarkRepository(config).delete, benchmark_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Benchmark not found.")
+        return {"status": "deleted", "id": benchmark_id}
+
     @app.get("/v1/storage")
     async def storage_status():
         items = await run_blocking_io(collect_disk_usage, config)
         return {"data": [item.to_dict() for item in items]}
 
-    @app.post("/v1/storage/cleanup")
-    async def cleanup_storage():
+    @app.post("/v1/storage/cleanup/preview")
+    async def cleanup_storage_preview(req: StorageCleanupRequest | None = None):
         manager = CacheManager(config)
-        incomplete = await run_blocking_io(manager.cleanup_incomplete_downloads)
-        old_benchmarks = await run_blocking_io(manager.cleanup_old_benchmarks)
+        categories = set(req.categories) if req and req.categories else None
+        items = await run_blocking_io(manager.preview_cleanup, categories)
         return {
-            "incomplete_downloads_removed": incomplete,
-            "old_benchmark_files_removed": old_benchmarks,
+            "items": [item.to_dict() for item in items],
+            "total_size_bytes": sum(item.size_bytes for item in items),
         }
+
+    @app.post("/v1/storage/cleanup")
+    async def cleanup_storage(req: StorageCleanupRequest | None = None):
+        manager = CacheManager(config)
+        categories = set(req.categories) if req and req.categories else None
+        items = await run_blocking_io(manager.preview_cleanup, categories)
+        return await run_blocking_io(manager.cleanup_preview_items, items)
 
     @app.post("/v1/diagnostics/export")
     async def diagnostics_export():
@@ -1091,7 +1145,7 @@ def get_app(config: Config):
         try:
             admin = _admin.initialize(req.admin_password, req.display_name)
         except ValueError as exc:
-            raise HTTPException(status_code=400, detail="原密码错误。")
+            raise HTTPException(status_code=400, detail="原密码错误。") from exc
         return {"user_id": admin.user_id, "api_key": admin.plain_api_key}
 
     @app.get("/v1/gpu/scheduler")
@@ -1099,6 +1153,10 @@ def get_app(config: Config):
         if _gpu_scheduler is None:
             return {"enabled": False, "max_heavy_tasks": 0, "running": [], "queued_count": 0}
         return _gpu_scheduler.snapshot().to_dict()
+
+    @app.get("/v1/capabilities")
+    async def capabilities_status():
+        return {"capabilities": [capability.to_dict() for capability in get_capabilities()]}
 
     @app.get("/v1/runtime")
     async def runtime_status():
@@ -1188,8 +1246,8 @@ def get_app(config: Config):
         try:
             user = _admin.create_user(req.user_id, role=req.role, note=req.note)
             return {"status": "ok", "user": user.to_dict(include_secret=True)}
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail="原密码错误。")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="原密码错误。") from exc
 
     @app.delete("/admin/api/users/{user_id}")
     async def admin_delete_user(request: Request, user_id: str):

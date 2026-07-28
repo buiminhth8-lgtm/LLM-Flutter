@@ -16,13 +16,15 @@ Supported:
 - Current model via `GET /v1/models/current`.
 - Model unload via `POST /v1/models/unload`.
 - Non-streaming chat via `POST /v1/chat/completions` using the selected model ID.
+- Minimal Job Center on the Status page via `GET /v1/jobs`.
 - Backend stdout/stderr log capture with secret redaction.
 
 Current limitations:
 
 - Chat streaming/SSE UI is not yet enabled.
-- Full download progress UI is not yet complete.
-- LoRA merge and benchmark pages remain experimental.
+- Download jobs are visible in Job Center, but a full download management page is not complete.
+- Benchmark is backend experimental and not exposed as a full Flutter page.
+- LoRA scan/load/activate/unload are backend-only; LoRA merge is not implemented.
 - `shared_preferences` is not a secure Windows key vault; move to Windows Credential Manager or secure storage in a later hardening pass.
 
 ## Run on Windows

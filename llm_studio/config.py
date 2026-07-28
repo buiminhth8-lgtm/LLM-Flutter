@@ -272,7 +272,6 @@ class Config:
                         "benchmarks_dir",
                         "jobs_dir",
                         "diagnostics_dir",
-                        "temp_dir",
                     }:
                         p.mkdir(parents=True, exist_ok=True)
                     else:

@@ -22,6 +22,15 @@ def cuda_peak_memory() -> tuple[int | None, int | None]:
     return torch.cuda.max_memory_allocated(), torch.cuda.max_memory_reserved()
 
 
+def reset_cuda_peak_memory() -> None:
+    try:
+        import torch
+    except Exception:
+        return
+    if torch.cuda.is_available():
+        torch.cuda.reset_peak_memory_stats()
+
+
 def sync_cuda() -> None:
     try:
         import torch

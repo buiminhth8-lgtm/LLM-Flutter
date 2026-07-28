@@ -67,6 +67,7 @@ class _StudioShellState extends State<StudioShell> {
   Map<String, dynamic>? _currentModel;
   Map<String, dynamic>? _gpuScheduler;
   List<dynamic> _models = const [];
+  List<dynamic> _jobs = const [];
   String? _selectedModelId;
   final List<ChatTurn> _turns = [];
 
@@ -140,6 +141,7 @@ class _StudioShellState extends State<StudioShell> {
           _requiresSetup = true;
           _runtime = null;
           _models = const [];
+          _jobs = const [];
           _currentModel = null;
           _gpuScheduler = null;
         });
@@ -150,11 +152,13 @@ class _StudioShellState extends State<StudioShell> {
       final models = await _client.models();
       final current = await _client.currentModel();
       final gpuScheduler = await _client.gpuScheduler();
+      final jobs = await _client.jobs();
       setState(() {
         _runtime = runtime;
         _models = models;
         _currentModel = current;
         _gpuScheduler = gpuScheduler;
+        _jobs = jobs;
         if (_selectedModelId != null &&
             !models.any(
               (model) => model is Map && model['id'] == _selectedModelId,
@@ -324,6 +328,7 @@ class _StudioShellState extends State<StudioShell> {
         runtime: _runtime,
         models: _models,
         gpuScheduler: _gpuScheduler,
+        jobs: _jobs,
       ),
       _ModelsPage(
         models: _models,
@@ -503,6 +508,14 @@ class LlmStudioClient {
     return _decodeMap(response);
   }
 
+  Future<List<dynamic>> jobs() async {
+    final response = await http
+        .get(Uri.parse('$baseUrl/v1/jobs?limit=20'), headers: _authHeaders())
+        .timeout(const Duration(seconds: 8));
+    final body = _decodeMap(response);
+    return (body['data'] as List?) ?? const [];
+  }
+
   Future<String> chat(
     String modelId,
     List<Map<String, String>> messages,
@@ -541,6 +554,8 @@ class LlmStudioClient {
           'PERMISSION_DENIED' => '当前 API Key 权限不足。',
           'UPLOAD_FILE_TOO_LARGE' => '上传文件过大。',
           'GPU_BUSY' => 'GPU 正在执行其他任务，请稍后重试。',
+          'DOWNLOAD_FAILED' => '模型下载失败，请查看任务详情。',
+          'DOWNLOAD_DISK_FULL' => '磁盘空间不足，无法继续下载。',
           _ => '${error['message']}',
         };
         throw StudioApiException('$code: $message');
@@ -728,45 +743,115 @@ class _TopBar extends StatelessWidget {
 }
 
 class _DashboardPage extends StatelessWidget {
-  const _DashboardPage({required this.runtime, required this.models});
+  const _DashboardPage({
+    required this.runtime,
+    required this.models,
+    required this.gpuScheduler,
+    required this.jobs,
+  });
 
   final Map<String, dynamic>? runtime;
   final List<dynamic> models;
+  final Map<String, dynamic>? gpuScheduler;
+  final List<dynamic> jobs;
 
   @override
   Widget build(BuildContext context) {
     final data = runtime ?? const <String, dynamic>{};
     return _PagePadding(
-      child: GridView.count(
-        crossAxisCount: MediaQuery.sizeOf(context).width > 1100 ? 4 : 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 2.4,
+      child: Column(
         children: [
-          _MetricTile(
-            label: 'CUDA',
-            value: '${data['cuda_available'] ?? 'unknown'}',
+          Expanded(
+            child: GridView.count(
+              crossAxisCount: MediaQuery.sizeOf(context).width > 1100 ? 4 : 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 2.4,
+              children: [
+                _MetricTile(
+                  label: 'CUDA',
+                  value: '${data['cuda_available'] ?? 'unknown'}',
+                ),
+                _MetricTile(
+                  label: 'GPU',
+                  value: '${data['gpu_name'] ?? 'not detected'}',
+                ),
+                _MetricTile(
+                  label: 'BF16',
+                  value: '${data['bf16_supported'] ?? 'unknown'}',
+                ),
+                _MetricTile(label: 'Models', value: '${models.length}'),
+                _MetricTile(
+                  label: 'Current model',
+                  value: '${data['current_model'] ?? 'none'}',
+                ),
+                _MetricTile(label: 'Backend', value: '${data['backend'] ?? 'none'}'),
+                _MetricTile(label: 'Queue', value: '${data['queue_length'] ?? 0}'),
+                _MetricTile(
+                  label: 'GPU tasks',
+                  value:
+                      '${gpuScheduler?['running'] is List ? (gpuScheduler?['running'] as List).length : 0} running',
+                ),
+              ],
+            ),
           ),
-          _MetricTile(
-            label: 'GPU',
-            value: '${data['gpu_name'] ?? 'not detected'}',
-          ),
-          _MetricTile(
-            label: 'BF16',
-            value: '${data['bf16_supported'] ?? 'unknown'}',
-          ),
-          _MetricTile(label: 'Models', value: '${models.length}'),
-          _MetricTile(
-            label: 'Current model',
-            value: '${data['current_model'] ?? 'none'}',
-          ),
-          _MetricTile(label: 'Backend', value: '${data['backend'] ?? 'none'}'),
-          _MetricTile(label: 'Queue', value: '${data['queue_length'] ?? 0}'),
-          _MetricTile(
-            label: 'Concurrency',
-            value: '${data['inference_concurrency'] ?? '-'}',
-          ),
+          const SizedBox(height: 12),
+          SizedBox(height: 260, child: _JobsPanel(jobs: jobs)),
         ],
+      ),
+    );
+  }
+}
+
+class _JobsPanel extends StatelessWidget {
+  const _JobsPanel({required this.jobs});
+
+  final List<dynamic> jobs;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Job Center',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: jobs.isEmpty
+                  ? const Center(child: Text('No recent jobs.'))
+                  : ListView.separated(
+                      itemCount: jobs.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final job = jobs[index];
+                        final map = job is Map ? job : const {};
+                        final progress = map['progress'];
+                        final error = map['error_message'];
+                        return ListTile(
+                          dense: true,
+                          leading: const Icon(Icons.task_alt_outlined),
+                          title: Text('${map['type'] ?? 'job'} - ${map['status'] ?? 'unknown'}'),
+                          subtitle: Text(
+                            [
+                              if (progress != null) 'progress: $progress',
+                              if (map['message'] != null) '${map['message']}',
+                              if (error != null) 'error: $error',
+                            ].join('\n'),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }

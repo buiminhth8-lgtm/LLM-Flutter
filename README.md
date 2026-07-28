@@ -68,6 +68,20 @@ Experimental or not complete:
 - Multi-platform Flutter packaging beyond Windows desktop.
 - Installer validation on a clean Windows VM.
 
+## P2 Capability Closure
+
+The backend exposes `GET /v1/capabilities` as the source of truth for feature state. The same table is documented in [docs/CAPABILITIES.md](docs/CAPABILITIES.md).
+
+P2 changes:
+
+- Download jobs now return truthful task state. Unknown totals are returned as `null`; cancel means a cooperative cancellation request, and retry reuses the Hugging Face cache.
+- Successful downloads are validated, moved into `data/models`, and then scanned into the unified model repository.
+- LoRA scan/load/activate/deactivate/unload are backend-only and use the model adapter API. LoRA Merge is explicitly `not_implemented` and does not modify base models.
+- Benchmark jobs are experimental. Loading time, TTFT, and token/s are reported separately, and reports include a local-reference disclaimer.
+- Storage cleanup supports preview first and only removes temporary categories such as failed downloads, temporary uploads, old benchmark files, diagnostics packages, and trash. It does not delete formal model weights, external models, LoRA adapters, RAG source documents, or user configuration.
+- Diagnostic packages include runtime, version, pip, redacted config, model metadata summaries, disk usage, and capability status. They do not include model weights, full chat logs, RAG document bodies, API keys, tokens, cookies, or password hashes.
+- Flutter Windows now shows a minimal Job Center on the Status page for recent backend jobs.
+
 ---
 
 

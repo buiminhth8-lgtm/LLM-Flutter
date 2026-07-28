@@ -5,10 +5,10 @@ from __future__ import annotations
 import asyncio
 import threading
 import time
+from collections.abc import Iterator
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Iterator
 
 
 class GpuTaskType(StrEnum):

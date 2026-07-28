@@ -46,3 +46,14 @@ class BenchmarkRepository:
             if data.get("id") == result_id:
                 return data
         raise FileNotFoundError(result_id)
+
+    def delete(self, result_id: str) -> bool:
+        deleted = False
+        for path in self.root.glob("*.json"):
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if data.get("id") == result_id:
+                md_path = path.with_suffix(".md")
+                path.unlink(missing_ok=True)
+                md_path.unlink(missing_ok=True)
+                deleted = True
+        return deleted

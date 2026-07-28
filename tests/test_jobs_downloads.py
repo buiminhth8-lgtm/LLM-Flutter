@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from llm_studio.downloads import DownloadManager, DownloadRequest
+from llm_studio.downloads import DownloadManager, DownloadRequest, DownloadTaskState
 from llm_studio.jobs import Job, JobQueue, JobRepository, JobStatus, JobType, sanitize_payload
 from llm_studio.jobs.exceptions import JobNotImplementedError
 
@@ -66,6 +66,20 @@ def test_download_manager_does_not_store_token(tmp_path):
     assert "token" not in stored.payload
     queue.shutdown(wait=True)
     assert (tmp_path / "models" / "transformers" / "org--model").exists()
+
+
+def test_download_task_state_does_not_fake_unknown_totals(tmp_path):
+    job = Job.new(
+        "job-download",
+        JobType.MODEL_DOWNLOAD.value,
+        {"repo_id": "org/model", "revision": None},
+    )
+    state = DownloadTaskState.from_job(job)
+
+    assert state.total_bytes is None
+    assert state.downloaded_bytes is None
+    assert state.resume_supported is True
+    assert state.can_cancel is True
 
 
 def test_queue_success_transition(tmp_path):

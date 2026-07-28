@@ -87,7 +87,7 @@ def validate_extension(filename: str, allowed_extensions: tuple[str, ...]) -> No
         raise UploadExtensionNotAllowed("不支持的上传文件扩展名。")
 
 
-async def save_upload_file_safely(file: "UploadFile", policy: UploadPolicy) -> SavedUpload:
+async def save_upload_file_safely(file: UploadFile, policy: UploadPolicy) -> SavedUpload:
     original = sanitize_filename(file.filename or "")
     validate_extension(original, policy.allowed_extensions)
     policy.destination_dir.mkdir(parents=True, exist_ok=True)

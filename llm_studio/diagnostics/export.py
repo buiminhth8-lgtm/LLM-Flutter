@@ -9,6 +9,7 @@ import sys
 import zipfile
 from pathlib import Path
 
+from llm_studio.capabilities import get_capabilities
 from llm_studio.config_io import redact_config
 from llm_studio.models.repository import LocalModelRepository
 from llm_studio.models.storage import layout_from_config
@@ -30,6 +31,7 @@ def diagnostic_manifest() -> list[str]:
         "config-redacted.yaml",
         "models-summary.json",
         "disk-usage.json",
+        "capabilities.json",
     ]
 
 
@@ -52,6 +54,7 @@ def export_diagnostics(config, output_path: str | Path | None = None) -> Path:
         {**item.to_dict(), "path": redact_path(str(item.path))}
         for item in collect_disk_usage(config)
     ]
+    capabilities = [capability.to_dict() for capability in get_capabilities()]
 
     import yaml
 
@@ -65,5 +68,6 @@ def export_diagnostics(config, output_path: str | Path | None = None) -> Path:
         )
         archive.writestr("models-summary.json", json.dumps(models, ensure_ascii=False, indent=2))
         archive.writestr("disk-usage.json", json.dumps(disk, ensure_ascii=False, indent=2))
+        archive.writestr("capabilities.json", json.dumps(capabilities, ensure_ascii=False, indent=2))
     os.replace(output, output)
     return output
