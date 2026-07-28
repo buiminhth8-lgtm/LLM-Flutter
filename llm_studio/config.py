@@ -34,6 +34,11 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "inference_concurrency": 1,
         "queue_limit": 8,
         "request_timeout_seconds": 300,
+        "gpu_scheduler": {
+            "enabled": True,
+            "max_heavy_tasks": 1,
+            "queue_timeout_seconds": 30,
+        },
     },
     "generation": {
         "max_new_tokens": 512,
@@ -117,6 +122,17 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "trash_retention_days": 30,
             "logs_retention_days": 30,
         },
+    },
+    "uploads": {
+        "temp_dir": "./data/uploads",
+        "max_document_size_mb": 50,
+        "max_image_size_mb": 20,
+        "allowed_document_extensions": [".txt", ".md", ".pdf", ".docx"],
+        "allowed_image_extensions": [".png", ".jpg", ".jpeg", ".webp"],
+    },
+    "execution": {
+        "blocking_io_workers": 4,
+        "cpu_workers": 2,
     },
 }
 
@@ -237,6 +253,7 @@ class Config:
             "models": ("root_dir", "temp_dir", "metadata_cache", "adapters_dir"),
             "huggingface": ("cache_dir",),
             "storage": ("trash_dir", "benchmarks_dir", "jobs_dir", "diagnostics_dir"),
+            "uploads": ("temp_dir",),
         }.items():
             cfg = self._data.get(section, {})
             for key in keys:
@@ -255,6 +272,7 @@ class Config:
                         "benchmarks_dir",
                         "jobs_dir",
                         "diagnostics_dir",
+                        "temp_dir",
                     }:
                         p.mkdir(parents=True, exist_ok=True)
                     else:

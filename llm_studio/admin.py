@@ -7,6 +7,7 @@ import secrets
 import time
 from pathlib import Path
 
+from .auth import Role, normalize_role
 from .security import hash_api_key, redact_secret
 
 WEAK_PASSWORDS = {"admin", "123456", "password", "admin123", "12345678", "qwerty"}
@@ -50,7 +51,7 @@ class UserRecord:
         user_id: str,
         api_key_hash: str,
         api_key_masked: str,
-        role: str = "user",
+        role: str = Role.VIEWER.value,
         note: str = "",
         created_at: float = 0,
         enabled: bool = True,
@@ -58,7 +59,7 @@ class UserRecord:
         self.user_id = user_id
         self.api_key_hash = api_key_hash
         self.api_key_masked = api_key_masked
-        self.role = role
+        self.role = normalize_role(role, missing_role=Role.ADMIN).value
         self.note = note
         self.created_at = created_at or time.time()
         self.enabled = enabled
@@ -92,7 +93,7 @@ class UserRecord:
             user_id=data["user_id"],
             api_key_hash=api_key_hash,
             api_key_masked=api_key_masked or "***",
-            role=data.get("role", "user"),
+            role=normalize_role(data.get("role"), missing_role=Role.ADMIN).value,
             note=data.get("note", ""),
             created_at=data.get("created_at", 0),
             enabled=data.get("enabled", True),
@@ -186,7 +187,7 @@ class AdminManager:
             return user
         return None
 
-    def create_user(self, user_id: str, role: str = "user", note: str = "") -> UserRecord:
+    def create_user(self, user_id: str, role: str = Role.VIEWER.value, note: str = "") -> UserRecord:
         """Create a new API user with auto-generated key."""
         if user_id in self._users:
             raise ValueError(f"User '{user_id}' already exists")
@@ -195,7 +196,7 @@ class AdminManager:
             user_id=user_id,
             api_key_hash=hash_api_key(api_key),
             api_key_masked=_mask_key(api_key),
-            role=role,
+            role=normalize_role(role, missing_role=Role.VIEWER).value,
             note=note,
         )
         rec.plain_api_key = api_key
@@ -243,7 +244,7 @@ class AdminManager:
         if not user:
             return False
         if role is not None:
-            user.role = role
+            user.role = normalize_role(role, missing_role=Role.VIEWER).value
         if note is not None:
             user.note = note
         self.save()

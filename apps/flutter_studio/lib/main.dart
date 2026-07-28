@@ -65,6 +65,7 @@ class _StudioShellState extends State<StudioShell> {
   String _backendStatus = 'Backend has not started yet.';
   Map<String, dynamic>? _runtime;
   Map<String, dynamic>? _currentModel;
+  Map<String, dynamic>? _gpuScheduler;
   List<dynamic> _models = const [];
   String? _selectedModelId;
   final List<ChatTurn> _turns = [];
@@ -140,6 +141,7 @@ class _StudioShellState extends State<StudioShell> {
           _runtime = null;
           _models = const [];
           _currentModel = null;
+          _gpuScheduler = null;
         });
         return;
       }
@@ -147,10 +149,12 @@ class _StudioShellState extends State<StudioShell> {
       final runtime = await _client.runtime();
       final models = await _client.models();
       final current = await _client.currentModel();
+      final gpuScheduler = await _client.gpuScheduler();
       setState(() {
         _runtime = runtime;
         _models = models;
         _currentModel = current;
+        _gpuScheduler = gpuScheduler;
         if (_selectedModelId != null &&
             !models.any(
               (model) => model is Map && model['id'] == _selectedModelId,
@@ -278,6 +282,7 @@ class _StudioShellState extends State<StudioShell> {
     setState(() {
       _runtime = null;
       _currentModel = null;
+      _gpuScheduler = null;
       _error = 'Authentication has been cleared.';
     });
   }
@@ -315,7 +320,11 @@ class _StudioShellState extends State<StudioShell> {
       );
     }
     final pages = [
-      _DashboardPage(runtime: _runtime, models: _models),
+      _DashboardPage(
+        runtime: _runtime,
+        models: _models,
+        gpuScheduler: _gpuScheduler,
+      ),
       _ModelsPage(
         models: _models,
         currentModel: _currentModel,
@@ -487,6 +496,13 @@ class LlmStudioClient {
     return _decodeMap(response);
   }
 
+  Future<Map<String, dynamic>> gpuScheduler() async {
+    final response = await http
+        .get(Uri.parse('$baseUrl/v1/gpu/scheduler'), headers: _authHeaders())
+        .timeout(const Duration(seconds: 8));
+    return _decodeMap(response);
+  }
+
   Future<String> chat(
     String modelId,
     List<Map<String, String>> messages,
@@ -520,7 +536,14 @@ class LlmStudioClient {
     if (response.statusCode >= 400) {
       if (body is Map && body['error'] is Map) {
         final error = body['error'] as Map;
-        throw StudioApiException('${error['code']}: ${error['message']}');
+        final code = '${error['code']}';
+        final message = switch (code) {
+          'PERMISSION_DENIED' => '当前 API Key 权限不足。',
+          'UPLOAD_FILE_TOO_LARGE' => '上传文件过大。',
+          'GPU_BUSY' => 'GPU 正在执行其他任务，请稍后重试。',
+          _ => '${error['message']}',
+        };
+        throw StudioApiException('$code: $message');
       }
       throw StudioApiException('HTTP ${response.statusCode}: ${response.body}');
     }
