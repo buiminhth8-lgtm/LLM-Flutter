@@ -10,9 +10,6 @@ readme = "README.md"
 requires-python = ">=3.10,<3.13"
 license = {text = "MIT"}
 
-[project.scripts]
-llm-studio = "llm_studio.cli:main"
-
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["llm_studio", "llm_studio.*"]

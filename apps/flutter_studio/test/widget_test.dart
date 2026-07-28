@@ -34,6 +34,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Clear auth'), findsOneWidget);
+    await tester.drag(find.byType(ListView).last, const Offset(0, -400));
+    await tester.pumpAndSettle();
+
     expect(find.text('Backend logs'), findsOneWidget);
+    expect(find.text('Copy logs'), findsOneWidget);
   });
 }

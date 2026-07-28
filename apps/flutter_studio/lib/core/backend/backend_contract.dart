@@ -1,5 +1,9 @@
 abstract interface class BackendService {
-  Future<BackendLaunchResult> ensureStarted({required String apiBase});
+  Future<BackendLaunchResult> ensureStarted({
+    required String apiBase,
+    String localPythonPath = '',
+    String localBackendRoot = '',
+  });
 
   List<String> recentLogs({int limit = 200});
 

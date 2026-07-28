@@ -5,5 +5,5 @@ if (-not (Test-Path ".\.venv\Scripts\python.exe")) {
 }
 
 $python = ".\.venv\Scripts\python.exe"
-& $python -m llm_studio.cli doctor
-& $python -m llm_studio.cli version
+& $python -m llm_studio.runtime.diagnostics
+& $python -m llm_studio.server --help
