@@ -9,6 +9,10 @@ def test_capability_registry_has_truthful_statuses():
     assert caps["chat_stream"].status != CapabilityStatus.BACKEND_ONLY
     assert caps["chat_stream"].frontend_exposed is True
     assert caps["lora_merge"].status == CapabilityStatus.NOT_IMPLEMENTED
+    assert caps["benchmark"].status == CapabilityStatus.EXPERIMENTAL
+    assert caps["benchmark_with_adapter"].status == CapabilityStatus.NOT_IMPLEMENTED
+    assert caps["benchmark_with_adapter"].frontend_exposed is False
+    assert caps["lora_scan"].frontend_exposed is True
     assert caps["flutter_windows"].status == CapabilityStatus.AVAILABLE
     assert caps["flutter_android"].status == CapabilityStatus.NOT_IMPLEMENTED
 
@@ -51,3 +55,5 @@ models:
     caps = {item["name"]: item for item in response.json()["capabilities"]}
     assert caps["chat_stream"]["status"] != CapabilityStatus.BACKEND_ONLY.value
     assert caps["chat_stream"]["frontend_exposed"] is True
+    assert caps["benchmark_with_adapter"]["status"] == CapabilityStatus.NOT_IMPLEMENTED.value
+    assert caps["benchmark_with_adapter"]["frontend_exposed"] is False

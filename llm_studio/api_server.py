@@ -48,10 +48,10 @@ from .api.errors import (
     api_error,
     error_payload,
 )
+from .api.routers.capabilities import router as capabilities_router
 from .auth import has_permission, required_permission_for_request
 from .auth.roles import Role
 from .benchmarks import BenchmarkConfig, BenchmarkRunner
-from .capabilities import get_capabilities
 from .chat import ChatMessage as CoreChatMessage
 from .chat import InvalidChatMessageError
 from .config import Config
@@ -164,6 +164,7 @@ def get_app(config: Config):
         version="1.0.0",
         lifespan=lifespan,
     )
+    app.include_router(capabilities_router)
 
     @app.middleware("http")
     async def request_id_middleware(request: Request, call_next):
@@ -1376,10 +1377,6 @@ def get_app(config: Config):
         if _gpu_scheduler is None:
             return {"enabled": False, "max_heavy_tasks": 0, "running": [], "queued_count": 0}
         return _gpu_scheduler.snapshot().to_dict()
-
-    @app.get("/v1/capabilities")
-    async def capabilities_status():
-        return {"capabilities": [capability.to_dict() for capability in get_capabilities()]}
 
     @app.get("/v1/runtime")
     async def runtime_status():
