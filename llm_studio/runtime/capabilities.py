@@ -5,26 +5,25 @@ from __future__ import annotations
 import importlib.util
 import platform
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass(frozen=True)
 class RuntimeCapabilities:
     python_version: str
-    torch_version: Optional[str]
+    torch_version: str | None
     cuda_available: bool
-    cuda_runtime: Optional[str]
-    gpu_name: Optional[str]
-    compute_capability: Optional[tuple[int, int]]
-    total_vram_bytes: Optional[int]
+    cuda_runtime: str | None
+    gpu_name: str | None
+    compute_capability: tuple[int, int] | None
+    total_vram_bytes: int | None
     bf16_supported: bool
     bitsandbytes_installed: bool
     bitsandbytes_4bit_usable: bool
     llama_cpp_installed: bool
     llama_cpp_cuda_enabled: bool
     gptqmodel_installed: bool
-    bitsandbytes_error: Optional[str] = None
-    llama_cpp_error: Optional[str] = None
+    bitsandbytes_error: str | None = None
+    llama_cpp_error: str | None = None
 
 
 def _module_installed(name: str) -> bool:

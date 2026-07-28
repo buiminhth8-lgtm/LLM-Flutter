@@ -1,14 +1,14 @@
 """CLI entry point for LLM Studio."""
 
-import sys
-import click
 from pathlib import Path
+
+import click
 from rich.console import Console
-from rich.table import Table
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.table import Table
 
-from .config import Config, get_platform_info, get_device
+from .config import Config, get_device, get_platform_info
 
 console = Console()
 
@@ -27,6 +27,20 @@ def cli(ctx, config):
 
 
 # ── System Info ──────────────────────────────────────────
+
+@cli.command()
+def version():
+    """Show LLM-Studio version and runtime details."""
+    from .version import get_version_info
+
+    info = get_version_info()
+    table = Table(title="LLM-Studio Version")
+    table.add_column("Item")
+    table.add_column("Value")
+    for key, value in info.items():
+        table.add_row(key, str(value))
+    console.print(table)
+
 
 @cli.command()
 def info():
@@ -48,6 +62,52 @@ def info():
     for k, v in info.items():
         table.add_row(labels.get(k, k), str(v))
     table.add_row("推理设备", get_device())
+    console.print(table)
+
+
+@cli.command()
+@click.pass_context
+def doctor(ctx):
+    """Run environment self checks."""
+    from pathlib import Path
+
+    from .runtime.capabilities import detect_runtime_capabilities
+
+    config = ctx.obj["config"]
+    checks = []
+
+    try:
+        Path("config.yaml").read_text(encoding="utf-8")
+        checks.append(("PASS", "UTF-8", "config.yaml 可按 UTF-8 读取"))
+    except Exception as exc:
+        checks.append(("FAIL", "UTF-8", str(exc)))
+
+    caps = detect_runtime_capabilities()
+    checks.append(("PASS" if caps.torch_version else "WARN", "torch", caps.torch_version or "未安装"))
+    checks.append(("PASS" if caps.cuda_available else "WARN", "CUDA", str(caps.cuda_available)))
+    checks.append(("PASS" if caps.bf16_supported else "WARN", "BF16", str(caps.bf16_supported)))
+    checks.append(("PASS" if caps.bitsandbytes_4bit_usable else "WARN", "bitsandbytes", caps.bitsandbytes_error or "usable"))
+    checks.append(("PASS" if caps.llama_cpp_cuda_enabled else "WARN", "llama.cpp", caps.llama_cpp_error or "CUDA enabled"))
+    checks.append(("PASS" if caps.gptqmodel_installed else "WARN", "GPTQModel", str(caps.gptqmodel_installed)))
+
+    for label, path in (
+        ("models_dir", config.models_dir),
+        ("datasets_dir", config.datasets_dir),
+        ("finetune_output_dir", config.finetune_output_dir),
+    ):
+        checks.append(("PASS" if path.exists() else "FAIL", label, str(path)))
+
+    auth_enabled = config.get("auth", {}).get("enabled", False)
+    checks.append(("PASS" if auth_enabled else "WARN", "auth", f"enabled={auth_enabled}"))
+    checks.append(("PASS", "CORS", ", ".join(config.get("api", {}).get("allowed_origins", []))))
+
+    table = Table(title="LLM Studio Doctor")
+    table.add_column("Status")
+    table.add_column("Check")
+    table.add_column("Detail")
+    for status, name, detail in checks:
+        style = {"PASS": "green", "WARN": "yellow", "FAIL": "red"}[status]
+        table.add_row(f"[{style}]{status}[/{style}]", name, detail)
     console.print(table)
 
 
@@ -239,7 +299,7 @@ def chat(ctx, model_path, temperature, max_tokens):
 @click.pass_context
 def finetune(ctx, model_path, dataset_path, method, output, epochs, batch_size, lr, lora_r, max_seq_len):
     """微调模型"""
-    from .finetuner import FineTuner, FineTuneArgs
+    from .finetuner import FineTuneArgs, FineTuner
 
     config = ctx.obj["config"]
     output_dir = output or str(config.finetune_output_dir / "cli_finetune")
@@ -278,7 +338,7 @@ def finetune(ctx, model_path, dataset_path, method, output, epochs, batch_size, 
         console.print(f"\n[green]? 微调完成！模型保存至: {final_path}[/green]")
     except Exception as e:
         console.print(f"\n[red]? 微调失败: {e}[/red]")
-        raise SystemExit(1)
+        raise SystemExit(1) from e
 
 
 # ── Upload ───────────────────────────────────────────────
@@ -300,25 +360,6 @@ def upload(ctx, model_path, repo_id, private, token):
             console.print(f"[green]? 上传成功: {url}[/green]")
         except Exception as e:
             console.print(f"[red]? 上传失败: {e}[/red]")
-
-
-# ── Web UI ───────────────────────────────────────────────
-
-@cli.command()
-@click.option("--port", "-p", default=7860, help="端口号")
-@click.option("--share", is_flag=True, help="创建公开分享链接")
-@click.pass_context
-def ui(ctx, port, share):
-    """启动 Web 界面"""
-    from .web_ui import launch_ui
-    config = ctx.obj["config"]
-    console.print(f"[green]? 启动 Web UI: http://localhost:{port}[/green]")
-    launch_ui(config, share=share, port=port)
-
-
-# ── API Server ───────────────────────────────────────────
-
-@cli.command()
 @click.option("--host", default=None, help="监听地址，默认读取 config.yaml 的 api.host")
 @click.option("--port", "-p", default=None, type=int, help="API 端口号，默认读取 config.yaml 的 api.port")
 @click.pass_context

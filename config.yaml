@@ -58,6 +58,7 @@ rag:
   chunk_size: 500
   chunk_overlap: 50
   top_k: 5
+  index_path: "./data/rag"
   system_template: |
     你是一个智能助手。请根据以下参考资料回答用户的问题。
     如果参考资料中没有相关信息，请根据你的知识回答并说明。
@@ -71,15 +72,42 @@ rag:
 api:
   host: "127.0.0.1"
   port: 8000
-  cors_origins:
-    - "http://127.0.0.1:7860"
-    - "http://localhost:7860"
+  allowed_origins:
+    - "http://127.0.0.1:5000"
+    - "http://localhost:5000"
+    - "http://127.0.0.1:8080"
+    - "http://localhost:8080"
 
 # API authentication (X-User-ID + X-API-Key headers)
 # Set enabled: true to enforce authentication
 # Users are managed via the admin dashboard at /admin
 auth:
   enabled: true
+
+models:
+  root_dir: "./data/models"
+  temp_dir: "./data/downloads"
+  metadata_cache: "./data/model_index.json"
+  adapters_dir: "./data/adapters"
+  allow_external_paths: true
+  follow_symlinks: false
+  minimum_free_space_gb: 10
+
+huggingface:
+  cache_dir: "./data/huggingface"
+  use_global_cache: false
+
+storage:
+  trash_dir: "./data/trash/models"
+  benchmarks_dir: "./data/benchmarks"
+  jobs_dir: "./data/jobs"
+  diagnostics_dir: "./data/diagnostics"
+  cleanup:
+    enabled: true
+    incomplete_download_days: 7
+    benchmark_retention_days: 90
+    trash_retention_days: 30
+    logs_retention_days: 30
 
 # Vision model registry
 vision_model_registry:

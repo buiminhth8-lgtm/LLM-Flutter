@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import csv
 import hashlib
-import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -177,7 +176,7 @@ class DocumentLoader:
     @staticmethod
     def _load_csv(path: Path) -> str:
         rows: list[str] = []
-        with open(path, "r", encoding="utf-8", newline="") as file:
+        with open(path, encoding="utf-8", newline="") as file:
             reader = csv.reader(file)
             for row in reader:
                 rows.append(" | ".join(row))

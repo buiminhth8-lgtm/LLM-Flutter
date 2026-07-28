@@ -2,7 +2,6 @@
 
 import base64
 from pathlib import Path
-from typing import Optional, Generator
 
 from .config import Config, get_device
 from .runtime.capabilities import detect_runtime_capabilities
@@ -22,7 +21,7 @@ class VisionRunner:
     def load(self):
         """Load a vision-language model (Qwen2-VL, LLaVA, etc.)."""
         import torch
-        from transformers import AutoProcessor, AutoModelForVision2Seq
+        from transformers import AutoModelForVision2Seq, AutoProcessor
 
         caps = detect_runtime_capabilities(run_bnb_probe=False)
         device = get_device()
@@ -147,7 +146,7 @@ class VisionRunner:
         if backend == "easyocr":
             return self._ocr_with_easyocr(image_path, gpu=bool(vision_cfg.get("ocr_gpu", False)))
         if backend == "auto":
-            for name, func in (
+            for _name, func in (
                 ("easyocr", lambda: self._ocr_with_easyocr(image_path, gpu=False)),
                 ("paddleocr", lambda: self._ocr_with_paddleocr(image_path)),
             ):
