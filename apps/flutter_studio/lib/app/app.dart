@@ -4,9 +4,14 @@ import 'app_shell.dart';
 import 'app_theme.dart';
 
 class LlmStudioApp extends StatelessWidget {
-  const LlmStudioApp({super.key, this.autoRefresh = true});
+  const LlmStudioApp({
+    super.key,
+    this.autoRefresh = true,
+    this.initialRequiresSetup = false,
+  });
 
   final bool autoRefresh;
+  final bool initialRequiresSetup;
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +19,10 @@ class LlmStudioApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'LLM Studio',
       theme: buildStudioTheme(),
-      home: StudioShell(autoRefresh: autoRefresh),
+      home: StudioShell(
+        autoRefresh: autoRefresh,
+        initialRequiresSetup: initialRequiresSetup,
+      ),
     );
   }
 }

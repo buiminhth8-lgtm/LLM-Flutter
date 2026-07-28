@@ -21,9 +21,14 @@ import '../features/status/status_page.dart';
 import '../features/storage/storage_page.dart';
 
 class StudioShell extends StatefulWidget {
-  const StudioShell({super.key, this.autoRefresh = true});
+  const StudioShell({
+    super.key,
+    this.autoRefresh = true,
+    this.initialRequiresSetup = false,
+  });
 
   final bool autoRefresh;
+  final bool initialRequiresSetup;
 
   @override
   State<StudioShell> createState() => _StudioShellState();
@@ -42,14 +47,18 @@ class _StudioShellState extends State<StudioShell> {
   final _ragQueryController = TextEditingController();
   final _setupPasswordController = TextEditingController();
   final _setupConfirmController = TextEditingController();
-  final _systemController = TextEditingController(text: 'You are a concise and reliable local assistant.');
+  final _systemController = TextEditingController(
+    text: 'You are a concise and reliable local assistant.',
+  );
   final _client = LlmStudioClient(defaultApiBase);
   final BackendService _backend = createBackendService();
   late final ChatController _chat = ChatController(_client);
 
   int _pageIndex = 0;
   bool _loading = false;
+  bool _initialSetupCheckDone = false;
   bool _requiresSetup = false;
+  bool _authRequired = false;
   bool _autoStartBackend = true;
   bool _closeBackendOnExit = true;
   String _backendMode = 'local';
@@ -73,6 +82,8 @@ class _StudioShellState extends State<StudioShell> {
   @override
   void initState() {
     super.initState();
+    _initialSetupCheckDone = widget.initialRequiresSetup || !widget.autoRefresh;
+    _requiresSetup = widget.initialRequiresSetup;
     _chat.addListener(_onChatChanged);
     if (widget.autoRefresh) {
       unawaited(_bootstrap());
@@ -128,18 +139,20 @@ class _StudioShellState extends State<StudioShell> {
   }
 
   Future<void> _savePreferences() async {
-    await _settingsStore.save(AppSettings(
-      apiBaseUrl: _apiBaseController.text.trim(),
-      userId: _userIdController.text.trim(),
-      apiKey: _apiKeyController.text.trim(),
-      selectedModelId: _selectedModelId,
-      chatStreamingEnabled: _chat.streamingEnabled,
-      autoStartBackend: _autoStartBackend,
-      closeBackendOnExit: _closeBackendOnExit,
-      backendMode: _backendMode,
-      localPythonPath: _localPythonController.text.trim(),
-      localBackendRoot: _localBackendRootController.text.trim(),
-    ));
+    await _settingsStore.save(
+      AppSettings(
+        apiBaseUrl: _apiBaseController.text.trim(),
+        userId: _userIdController.text.trim(),
+        apiKey: _apiKeyController.text.trim(),
+        selectedModelId: _selectedModelId,
+        chatStreamingEnabled: _chat.streamingEnabled,
+        autoStartBackend: _autoStartBackend,
+        closeBackendOnExit: _closeBackendOnExit,
+        backendMode: _backendMode,
+        localPythonPath: _localPythonController.text.trim(),
+        localBackendRoot: _localBackendRootController.text.trim(),
+      ),
+    );
   }
 
   void _syncClientAuth() {
@@ -165,7 +178,9 @@ class _StudioShellState extends State<StudioShell> {
       final setup = await _client.setupStatus();
       if (setup['requires_setup'] == true) {
         setState(() {
+          _initialSetupCheckDone = true;
           _requiresSetup = true;
+          _authRequired = false;
           _runtime = null;
           _models = const [];
           _jobs = const [];
@@ -174,7 +189,14 @@ class _StudioShellState extends State<StudioShell> {
         });
         return;
       }
-      setState(() => _requiresSetup = false);
+      setState(() {
+        _initialSetupCheckDone = true;
+        _requiresSetup = false;
+        _authRequired = _apiKeyController.text.trim().isEmpty;
+      });
+      if (_apiKeyController.text.trim().isEmpty) {
+        return;
+      }
       final results = await Future.wait<dynamic>([
         _client.runtime(),
         _client.models(),
@@ -198,7 +220,10 @@ class _StudioShellState extends State<StudioShell> {
         _adapters = results[7] as List<dynamic>;
         _benchmarks = results[8] as List<dynamic>;
         _storage = results[9] as Map<String, dynamic>;
-        if (_selectedModelId != null && !_models.any((model) => model is Map && model['id'] == _selectedModelId)) {
+        if (_selectedModelId != null &&
+            !_models.any(
+              (model) => model is Map && model['id'] == _selectedModelId,
+            )) {
           _selectedModelId = null;
         }
       });
@@ -210,7 +235,7 @@ class _StudioShellState extends State<StudioShell> {
     final password = _setupPasswordController.text;
     final confirm = _setupConfirmController.text;
     if (password.isEmpty || password != confirm) {
-      setState(() => _error = 'Passwords do not match.');
+      setState(() => _error = '两次输入的管理员密码不一致。');
       return;
     }
     await _guarded(() async {
@@ -220,6 +245,8 @@ class _StudioShellState extends State<StudioShell> {
       _setupPasswordController.clear();
       _setupConfirmController.clear();
       _requiresSetup = false;
+      _authRequired = false;
+      _initialSetupCheckDone = true;
       _syncClientAuth();
       await _savePreferences();
       await _refreshAll();
@@ -231,42 +258,61 @@ class _StudioShellState extends State<StudioShell> {
     if (prompt.isEmpty) {
       return;
     }
-    final modelId = _selectedModelId ?? (_currentModel?['loaded'] == true ? '${_currentModel?['model_id']}' : '');
+    final modelId =
+        _selectedModelId ??
+        (_currentModel?['loaded'] == true
+            ? '${_currentModel?['model_id']}'
+            : '');
     if (modelId.isEmpty) {
       setState(() => _error = 'Please load a model on the Models page first.');
       return;
     }
     _chatInputController.clear();
     await _guarded(() async {
-      await _chat.send(modelId: modelId, systemPrompt: _systemController.text, userText: prompt);
+      await _chat.send(
+        modelId: modelId,
+        systemPrompt: _systemController.text,
+        userText: prompt,
+      );
       await _savePreferences();
     });
   }
 
   Future<void> _regenerateChat() async {
-    final modelId = _selectedModelId ?? (_currentModel?['loaded'] == true ? '${_currentModel?['model_id']}' : '');
+    final modelId =
+        _selectedModelId ??
+        (_currentModel?['loaded'] == true
+            ? '${_currentModel?['model_id']}'
+            : '');
     if (modelId.isEmpty) {
       return;
     }
     await _guarded(() async {
-      await _chat.regenerate(modelId: modelId, systemPrompt: _systemController.text);
+      await _chat.regenerate(
+        modelId: modelId,
+        systemPrompt: _systemController.text,
+      );
     });
   }
 
   Future<void> _scanModels() async => _guarded(() async {
-        await _client.scanModels();
-        await _refreshAll();
-      });
+    await _client.scanModels();
+    await _refreshAll();
+  });
 
   Future<void> _loadModel(String modelId) async => _guarded(() async {
-        final current = await _client.loadModel(modelId);
-        _selectedModelId = '${current['model_id'] ?? modelId}';
-        await _savePreferences();
-        await _refreshAll();
-      });
+    final current = await _client.loadModel(modelId);
+    _selectedModelId = '${current['model_id'] ?? modelId}';
+    await _savePreferences();
+    await _refreshAll();
+  });
 
   Future<void> _unloadModel() async {
-    final modelId = _selectedModelId ?? (_currentModel?['loaded'] == true ? '${_currentModel?['model_id']}' : '');
+    final modelId =
+        _selectedModelId ??
+        (_currentModel?['loaded'] == true
+            ? '${_currentModel?['model_id']}'
+            : '');
     if (modelId.isEmpty) {
       return;
     }
@@ -284,72 +330,86 @@ class _StudioShellState extends State<StudioShell> {
   }
 
   Future<void> _deleteModel(String modelId) async => _guarded(() async {
-        await _client.deleteModel(modelId);
-        if (_selectedModelId == modelId) {
-          _selectedModelId = null;
-        }
-        await _refreshAll();
-      });
+    await _client.deleteModel(modelId);
+    if (_selectedModelId == modelId) {
+      _selectedModelId = null;
+    }
+    await _refreshAll();
+  });
 
   Future<void> _startDownload() async => _guarded(() async {
-        await _client.startDownload(repoId: _downloadRepoController.text.trim(), revision: _downloadRevisionController.text.trim());
-        await _refreshAll();
-      });
+    await _client.startDownload(
+      repoId: _downloadRepoController.text.trim(),
+      revision: _downloadRevisionController.text.trim(),
+    );
+    await _refreshAll();
+  });
 
   Future<void> _cancelDownload(String id) async => _guarded(() async {
-        await _client.cancelDownload(id);
-        await _refreshAll();
-      });
+    await _client.cancelDownload(id);
+    await _refreshAll();
+  });
 
   Future<void> _retryDownload(String id) async => _guarded(() async {
-        await _client.retryDownload(id);
-        await _refreshAll();
-      });
+    await _client.retryDownload(id);
+    await _refreshAll();
+  });
 
   Future<void> _cancelJob(String id) async => _guarded(() async {
-        await _client.cancelJob(id);
-        await _refreshAll();
-      });
+    await _client.cancelJob(id);
+    await _refreshAll();
+  });
 
   Future<void> _scanAdapters() async => _guarded(() async {
-        await _client.scanAdapters();
-        await _refreshAll();
-      });
+    await _client.scanAdapters();
+    await _refreshAll();
+  });
 
-  Future<void> _adapterAction(Future<void> Function() action) async => _guarded(() async {
+  Future<void> _adapterAction(Future<void> Function() action) async =>
+      _guarded(() async {
         await action();
         await _refreshAll();
       });
 
   Future<void> _startBenchmark() async => _guarded(() async {
-        final modelId = _selectedModelId ?? (_currentModel?['loaded'] == true ? '${_currentModel?['model_id']}' : '');
-        if (modelId.isEmpty) {
-          throw StudioApiException('Please load a model before starting Benchmark.');
-        }
-        await _client.startBenchmark(modelId: modelId);
-        await _refreshAll();
-      });
+    final modelId =
+        _selectedModelId ??
+        (_currentModel?['loaded'] == true
+            ? '${_currentModel?['model_id']}'
+            : '');
+    if (modelId.isEmpty) {
+      throw StudioApiException(
+        'Please load a model before starting Benchmark.',
+      );
+    }
+    await _client.startBenchmark(modelId: modelId);
+    await _refreshAll();
+  });
 
   Future<void> _queryRag() async => _guarded(() async {
-        final result = await _client.ragQuery(_ragQueryController.text.trim());
-        setState(() => _ragResult = result);
-      });
+    final result = await _client.ragQuery(_ragQueryController.text.trim());
+    setState(() => _ragResult = result);
+  });
 
   Future<void> _previewCleanup() async => _guarded(() async {
-        final preview = await _client.cleanupPreview();
-        setState(() => _cleanupPreview = preview);
-      });
+    final preview = await _client.cleanupPreview();
+    setState(() => _cleanupPreview = preview);
+  });
 
   Future<void> _cleanupStorage() async => _guarded(() async {
-        await _client.cleanupStorage();
-        _cleanupPreview = null;
-        await _refreshAll();
-      });
+    await _client.cleanupStorage();
+    _cleanupPreview = null;
+    await _refreshAll();
+  });
 
   Future<void> _exportDiagnostics() async => _guarded(() async {
-        final result = await _client.exportDiagnostics();
-        setState(() => _diagnosticsResult = const JsonEncoder.withIndent('  ').convert(result));
-      });
+    final result = await _client.exportDiagnostics();
+    setState(
+      () => _diagnosticsResult = const JsonEncoder.withIndent(
+        '  ',
+      ).convert(result),
+    );
+  });
 
   Future<void> _clearAuth() async {
     _apiKeyController.clear();
@@ -360,24 +420,25 @@ class _StudioShellState extends State<StudioShell> {
       _runtime = null;
       _currentModel = null;
       _gpuScheduler = null;
-      _error = 'Authentication has been cleared.';
+      _authRequired = true;
+      _error = '认证信息已清除，请重新填写 API Key。';
     });
   }
 
   Future<void> _restartBackend() async => _guarded(() async {
-        await _backend.stop();
-        final result = await _backend.ensureStarted(
-          apiBase: _client.baseUrl,
-          localPythonPath: _localPythonController.text.trim(),
-          localBackendRoot: _localBackendRootController.text.trim(),
-        );
-        setState(() => _backendStatus = result.message);
-      });
+    await _backend.stop();
+    final result = await _backend.ensureStarted(
+      apiBase: _client.baseUrl,
+      localPythonPath: _localPythonController.text.trim(),
+      localBackendRoot: _localBackendRootController.text.trim(),
+    );
+    setState(() => _backendStatus = result.message);
+  });
 
   Future<void> _stopBackend() async => _guarded(() async {
-        await _backend.stop();
-        setState(() => _backendStatus = 'Backend stopped by Flutter.');
-      });
+    await _backend.stop();
+    setState(() => _backendStatus = 'Backend stopped by Flutter.');
+  });
 
   Future<void> _guarded(Future<void> Function() action) async {
     setState(() {
@@ -387,7 +448,14 @@ class _StudioShellState extends State<StudioShell> {
     try {
       await action();
     } catch (error) {
-      setState(() => _error = error.toString());
+      if (error is AuthRequiredException) {
+        await _handleAuthRequired(error);
+      } else {
+        setState(() {
+          _initialSetupCheckDone = true;
+          _error = error.toString();
+        });
+      }
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -395,8 +463,65 @@ class _StudioShellState extends State<StudioShell> {
     }
   }
 
+  Future<void> _handleAuthRequired(AuthRequiredException error) async {
+    try {
+      final setup = await _client.setupStatus();
+      if (setup['requires_setup'] == true) {
+        setState(() {
+          _initialSetupCheckDone = true;
+          _requiresSetup = true;
+          _authRequired = false;
+          _error = null;
+        });
+        return;
+      }
+    } catch (_) {
+      // Preserve the original authentication error if setup status cannot be checked.
+    }
+    setState(() {
+      _initialSetupCheckDone = true;
+      _requiresSetup = false;
+      _authRequired = true;
+      _error = error.toString();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (!_initialSetupCheckDone && widget.autoRefresh) {
+      return Scaffold(
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 460),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      '正在检查 LLM-Studio 初始化状态',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      _backendStatus,
+                      style: const TextStyle(color: Colors.black54),
+                    ),
+                    const SizedBox(height: 18),
+                    const LinearProgressIndicator(),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     if (_requiresSetup) {
       return SetupPage(
         passwordController: _setupPasswordController,
@@ -409,16 +534,118 @@ class _StudioShellState extends State<StudioShell> {
     }
 
     final pages = [
-      StatusPage(runtime: _runtime, models: _models, gpuScheduler: _gpuScheduler, jobs: _jobs, capabilities: _capabilities, onCancelJob: _cancelJob),
-      ModelsPage(models: _models, currentModel: _currentModel, selectedModelId: _selectedModelId, onRefresh: _refreshAll, onScan: _scanModels, onLoad: _loadModel, onUnload: _unloadModel, onSelect: _selectModel, onRegisterExternal: () => setState(() => _error = 'External model registration will use the backend register API in the next UI pass.'), onMoveToTrash: _deleteModel),
-      ChatPage(controller: _chat, inputController: _chatInputController, systemController: _systemController, selectedModelId: _selectedModelId, currentModel: _currentModel, onSend: _sendChat, onStop: _chat.stop, onClear: _chat.clear, onRegenerate: _regenerateChat, onStreamingChanged: (value) async { setState(() => _chat.streamingEnabled = value); await _savePreferences(); }),
-      DownloadsPage(downloads: _downloads, repoController: _downloadRepoController, revisionController: _downloadRevisionController, onStart: _startDownload, onCancel: _cancelDownload, onRetry: _retryDownload, onRefresh: _refreshAll),
-      RagPage(queryController: _ragQueryController, result: _ragResult, onQuery: _queryRag),
-      AdaptersPage(adapters: _adapters, currentModel: _currentModel, onRefresh: _refreshAll, onScan: _scanAdapters, onLoad: (id) => _adapterAction(() => _client.loadAdapter(id)), onActivate: (id) => _adapterAction(() => _client.activateAdapter(id)), onDeactivate: (id) => _adapterAction(() => _client.deactivateAdapter(id))),
-      BenchmarksPage(benchmarks: _benchmarks, currentModel: _currentModel, onStart: _startBenchmark, onRefresh: _refreshAll),
-      StoragePage(storage: _storage, cleanupPreview: _cleanupPreview, onRefresh: _refreshAll, onPreview: _previewCleanup, onCleanup: _cleanupStorage),
-      DiagnosticsPage(runtime: _runtime, capabilities: _capabilities, exportResult: _diagnosticsResult, onExport: _exportDiagnostics),
-      SettingsPage(apiBaseController: _apiBaseController, userIdController: _userIdController, apiKeyController: _apiKeyController, localPythonController: _localPythonController, localBackendRootController: _localBackendRootController, backendMode: _backendMode, autoStartBackend: _autoStartBackend, closeBackendOnExit: _closeBackendOnExit, backendLogs: _backend.recentLogs(), onApply: () async { _syncClientAuth(); await _savePreferences(); await _refreshAll(); }, onClearAuth: _clearAuth, onRestartBackend: _restartBackend, onStopBackend: _stopBackend, onBackendModeChanged: (value) async { setState(() => _backendMode = value); await _savePreferences(); }, onAutoStartChanged: (value) async { setState(() => _autoStartBackend = value); await _savePreferences(); }, onCloseOnExitChanged: (value) async { setState(() => _closeBackendOnExit = value); await _savePreferences(); }),
+      StatusPage(
+        runtime: _runtime,
+        models: _models,
+        gpuScheduler: _gpuScheduler,
+        jobs: _jobs,
+        capabilities: _capabilities,
+        onCancelJob: _cancelJob,
+      ),
+      ModelsPage(
+        models: _models,
+        currentModel: _currentModel,
+        selectedModelId: _selectedModelId,
+        onRefresh: _refreshAll,
+        onScan: _scanModels,
+        onLoad: _loadModel,
+        onUnload: _unloadModel,
+        onSelect: _selectModel,
+        onRegisterExternal: () => setState(
+          () => _error =
+              'External model registration will use the backend register API in the next UI pass.',
+        ),
+        onMoveToTrash: _deleteModel,
+      ),
+      ChatPage(
+        controller: _chat,
+        inputController: _chatInputController,
+        systemController: _systemController,
+        selectedModelId: _selectedModelId,
+        currentModel: _currentModel,
+        onSend: _sendChat,
+        onStop: _chat.stop,
+        onClear: _chat.clear,
+        onRegenerate: _regenerateChat,
+        onStreamingChanged: (value) async {
+          setState(() => _chat.streamingEnabled = value);
+          await _savePreferences();
+        },
+      ),
+      DownloadsPage(
+        downloads: _downloads,
+        repoController: _downloadRepoController,
+        revisionController: _downloadRevisionController,
+        onStart: _startDownload,
+        onCancel: _cancelDownload,
+        onRetry: _retryDownload,
+        onRefresh: _refreshAll,
+      ),
+      RagPage(
+        queryController: _ragQueryController,
+        result: _ragResult,
+        onQuery: _queryRag,
+      ),
+      AdaptersPage(
+        adapters: _adapters,
+        currentModel: _currentModel,
+        onRefresh: _refreshAll,
+        onScan: _scanAdapters,
+        onLoad: (id) => _adapterAction(() => _client.loadAdapter(id)),
+        onActivate: (id) => _adapterAction(() => _client.activateAdapter(id)),
+        onDeactivate: (id) =>
+            _adapterAction(() => _client.deactivateAdapter(id)),
+      ),
+      BenchmarksPage(
+        benchmarks: _benchmarks,
+        currentModel: _currentModel,
+        onStart: _startBenchmark,
+        onRefresh: _refreshAll,
+      ),
+      StoragePage(
+        storage: _storage,
+        cleanupPreview: _cleanupPreview,
+        onRefresh: _refreshAll,
+        onPreview: _previewCleanup,
+        onCleanup: _cleanupStorage,
+      ),
+      DiagnosticsPage(
+        runtime: _runtime,
+        capabilities: _capabilities,
+        exportResult: _diagnosticsResult,
+        onExport: _exportDiagnostics,
+      ),
+      SettingsPage(
+        apiBaseController: _apiBaseController,
+        userIdController: _userIdController,
+        apiKeyController: _apiKeyController,
+        localPythonController: _localPythonController,
+        localBackendRootController: _localBackendRootController,
+        backendMode: _backendMode,
+        autoStartBackend: _autoStartBackend,
+        closeBackendOnExit: _closeBackendOnExit,
+        backendLogs: _backend.recentLogs(),
+        onApply: () async {
+          _syncClientAuth();
+          await _savePreferences();
+          await _refreshAll();
+        },
+        onClearAuth: _clearAuth,
+        onRestartBackend: _restartBackend,
+        onStopBackend: _stopBackend,
+        onBackendModeChanged: (value) async {
+          setState(() => _backendMode = value);
+          await _savePreferences();
+        },
+        onAutoStartChanged: (value) async {
+          setState(() => _autoStartBackend = value);
+          await _savePreferences();
+        },
+        onCloseOnExitChanged: (value) async {
+          setState(() => _closeBackendOnExit = value);
+          await _savePreferences();
+        },
+      ),
     ];
 
     return Scaffold(
@@ -429,16 +656,76 @@ class _StudioShellState extends State<StudioShell> {
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
               children: [
-                _SideNavItem(index: 0, selectedIndex: _pageIndex, icon: Icons.monitor_heart_outlined, label: 'Status', onSelected: (index) => setState(() => _pageIndex = index)),
-                _SideNavItem(index: 1, selectedIndex: _pageIndex, icon: Icons.storage_outlined, label: 'Models', onSelected: (index) => setState(() => _pageIndex = index)),
-                _SideNavItem(index: 2, selectedIndex: _pageIndex, icon: Icons.chat_bubble_outline, label: 'Chat', onSelected: (index) => setState(() => _pageIndex = index)),
-                _SideNavItem(index: 3, selectedIndex: _pageIndex, icon: Icons.cloud_download_outlined, label: 'Downloads', onSelected: (index) => setState(() => _pageIndex = index)),
-                _SideNavItem(index: 4, selectedIndex: _pageIndex, icon: Icons.article_outlined, label: 'RAG', onSelected: (index) => setState(() => _pageIndex = index)),
-                _SideNavItem(index: 5, selectedIndex: _pageIndex, icon: Icons.extension_outlined, label: 'Adapters', onSelected: (index) => setState(() => _pageIndex = index)),
-                _SideNavItem(index: 6, selectedIndex: _pageIndex, icon: Icons.speed_outlined, label: 'Benchmark', onSelected: (index) => setState(() => _pageIndex = index)),
-                _SideNavItem(index: 7, selectedIndex: _pageIndex, icon: Icons.cleaning_services_outlined, label: 'Storage', onSelected: (index) => setState(() => _pageIndex = index)),
-                _SideNavItem(index: 8, selectedIndex: _pageIndex, icon: Icons.bug_report_outlined, label: 'Diagnostics', onSelected: (index) => setState(() => _pageIndex = index)),
-                _SideNavItem(index: 9, selectedIndex: _pageIndex, icon: Icons.settings_outlined, label: 'Settings', onSelected: (index) => setState(() => _pageIndex = index)),
+                _SideNavItem(
+                  index: 0,
+                  selectedIndex: _pageIndex,
+                  icon: Icons.monitor_heart_outlined,
+                  label: 'Status',
+                  onSelected: (index) => setState(() => _pageIndex = index),
+                ),
+                _SideNavItem(
+                  index: 1,
+                  selectedIndex: _pageIndex,
+                  icon: Icons.storage_outlined,
+                  label: 'Models',
+                  onSelected: (index) => setState(() => _pageIndex = index),
+                ),
+                _SideNavItem(
+                  index: 2,
+                  selectedIndex: _pageIndex,
+                  icon: Icons.chat_bubble_outline,
+                  label: 'Chat',
+                  onSelected: (index) => setState(() => _pageIndex = index),
+                ),
+                _SideNavItem(
+                  index: 3,
+                  selectedIndex: _pageIndex,
+                  icon: Icons.cloud_download_outlined,
+                  label: 'Downloads',
+                  onSelected: (index) => setState(() => _pageIndex = index),
+                ),
+                _SideNavItem(
+                  index: 4,
+                  selectedIndex: _pageIndex,
+                  icon: Icons.article_outlined,
+                  label: 'RAG',
+                  onSelected: (index) => setState(() => _pageIndex = index),
+                ),
+                _SideNavItem(
+                  index: 5,
+                  selectedIndex: _pageIndex,
+                  icon: Icons.extension_outlined,
+                  label: 'Adapters',
+                  onSelected: (index) => setState(() => _pageIndex = index),
+                ),
+                _SideNavItem(
+                  index: 6,
+                  selectedIndex: _pageIndex,
+                  icon: Icons.speed_outlined,
+                  label: 'Benchmark',
+                  onSelected: (index) => setState(() => _pageIndex = index),
+                ),
+                _SideNavItem(
+                  index: 7,
+                  selectedIndex: _pageIndex,
+                  icon: Icons.cleaning_services_outlined,
+                  label: 'Storage',
+                  onSelected: (index) => setState(() => _pageIndex = index),
+                ),
+                _SideNavItem(
+                  index: 8,
+                  selectedIndex: _pageIndex,
+                  icon: Icons.bug_report_outlined,
+                  label: 'Diagnostics',
+                  onSelected: (index) => setState(() => _pageIndex = index),
+                ),
+                _SideNavItem(
+                  index: 9,
+                  selectedIndex: _pageIndex,
+                  icon: Icons.settings_outlined,
+                  label: 'Settings',
+                  onSelected: (index) => setState(() => _pageIndex = index),
+                ),
               ],
             ),
           ),
@@ -446,12 +733,34 @@ class _StudioShellState extends State<StudioShell> {
           Expanded(
             child: Column(
               children: [
-                _TopBar(loading: _loading, backendStatus: _backendStatus, onRefresh: _refreshAll),
+                _TopBar(
+                  loading: _loading,
+                  backendStatus: _backendStatus,
+                  onRefresh: _refreshAll,
+                ),
+                if (_authRequired)
+                  MaterialBanner(
+                    content: const Text(
+                      '后端已经初始化，但当前客户端没有可用 API Key。请在 Settings 中填写 API Key，或使用管理员密码恢复/重新生成 API Key。',
+                    ),
+                    leading: const Icon(Icons.lock_outline),
+                    actions: [
+                      TextButton(
+                        onPressed: () => setState(() => _pageIndex = 9),
+                        child: const Text('打开 Settings'),
+                      ),
+                    ],
+                  ),
                 if (_error != null)
                   MaterialBanner(
                     content: Text(_error!),
                     leading: const Icon(Icons.error_outline),
-                    actions: [TextButton(onPressed: () => setState(() => _error = null), child: const Text('Dismiss'))],
+                    actions: [
+                      TextButton(
+                        onPressed: () => setState(() => _error = null),
+                        child: const Text('Dismiss'),
+                      ),
+                    ],
                   ),
                 Expanded(child: pages[_pageIndex]),
               ],
@@ -497,7 +806,11 @@ class _SideNavItem extends StatelessWidget {
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.loading, required this.backendStatus, required this.onRefresh});
+  const _TopBar({
+    required this.loading,
+    required this.backendStatus,
+    required this.onRefresh,
+  });
 
   final bool loading;
   final String backendStatus;
@@ -510,14 +823,34 @@ class _TopBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       alignment: Alignment.centerLeft,
       color: Colors.white,
-      child: Row(children: [
-        const Text('LLM Studio', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
-        const SizedBox(width: 12),
-        Expanded(child: Text(backendStatus, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black54))),
-        if (loading) const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-        const SizedBox(width: 12),
-        IconButton.filledTonal(onPressed: loading ? null : onRefresh, icon: const Icon(Icons.refresh), tooltip: 'Refresh'),
-      ]),
+      child: Row(
+        children: [
+          const Text(
+            'LLM Studio',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              backendStatus,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.black54),
+            ),
+          ),
+          if (loading)
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          const SizedBox(width: 12),
+          IconButton.filledTonal(
+            onPressed: loading ? null : onRefresh,
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
+          ),
+        ],
+      ),
     );
   }
 }

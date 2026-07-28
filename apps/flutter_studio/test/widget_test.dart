@@ -13,6 +13,20 @@ void main() {
     expect(find.text('Settings'), findsOneWidget);
   });
 
+  testWidgets('first run setup state shows initialization page', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const LlmStudioApp(autoRefresh: false, initialRequiresSetup: true),
+    );
+
+    expect(find.text('初始化 LLM-Studio'), findsOneWidget);
+    expect(find.text('管理员密码'), findsOneWidget);
+    expect(find.text('确认管理员密码'), findsOneWidget);
+    expect(find.text('初始化'), findsOneWidget);
+    expect(find.text('Settings'), findsNothing);
+  });
+
   testWidgets('chat is disabled until a model is loaded', (tester) async {
     await tester.pumpWidget(const LlmStudioApp(autoRefresh: false));
     await tester.tap(find.text('Chat'));
