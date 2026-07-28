@@ -34,20 +34,44 @@ ADAPTER_INCOMPATIBLE = "ADAPTER_INCOMPATIBLE"
 PEFT_NOT_AVAILABLE = "PEFT_NOT_AVAILABLE"
 MODEL_DELETE_CONFIRM_REQUIRED = "MODEL_DELETE_CONFIRM_REQUIRED"
 MODEL_DELETE_FAILED = "MODEL_DELETE_FAILED"
+MODEL_LOAD_FAILED = "MODEL_LOAD_FAILED"
+MODEL_UNLOAD_FAILED = "MODEL_UNLOAD_FAILED"
+RAG_INGEST_FAILED = "RAG_INGEST_FAILED"
+RAG_QUERY_FAILED = "RAG_QUERY_FAILED"
+RAG_PATH_NOT_ALLOWED = "RAG_PATH_NOT_ALLOWED"
+VISION_ANALYZE_FAILED = "VISION_ANALYZE_FAILED"
+VISION_PATH_NOT_ALLOWED = "VISION_PATH_NOT_ALLOWED"
+ADAPTER_OPERATION_FAILED = "ADAPTER_OPERATION_FAILED"
+BENCHMARK_FAILED = "BENCHMARK_FAILED"
+STORAGE_CLEANUP_FAILED = "STORAGE_CLEANUP_FAILED"
+DIAGNOSTICS_EXPORT_FAILED = "DIAGNOSTICS_EXPORT_FAILED"
+INTERNAL_ERROR = "INTERNAL_ERROR"
 
 
-def error_payload(code: str, message: str, request_id: str) -> dict:
-    return {
-        "error": {
-            "code": code,
-            "message": message,
-            "request_id": request_id,
-        }
+def error_payload(
+    code: str,
+    message: str,
+    request_id: str | None = None,
+    details: dict | None = None,
+) -> dict:
+    error: dict[str, object] = {
+        "code": code,
+        "message": message,
+        "request_id": request_id or "",
     }
+    if details:
+        error["details"] = details
+    return {"error": error}
 
 
-def api_error(status_code: int, code: str, message: str, request_id: str) -> HTTPException:
+def api_error(
+    status_code: int,
+    code: str,
+    message: str,
+    request_id: str | None = None,
+    details: dict | None = None,
+) -> HTTPException:
     return HTTPException(
         status_code=status_code,
-        detail=error_payload(code, message, request_id),
+        detail=error_payload(code, message, request_id, details),
     )
