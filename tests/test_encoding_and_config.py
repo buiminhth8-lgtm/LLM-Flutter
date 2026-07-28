@@ -21,6 +21,7 @@ def test_config_loads_legacy_minimal_config(tmp_path):
     cfg = Config(cfg_path)
     assert cfg.runtime["trust_remote_code"] is False
     assert cfg.get("rag")["chunk_size"] == 300
+    assert cfg.models_dir == (tmp_path / "models").resolve()
 
 
 def test_config_loads_rtx5060_example():

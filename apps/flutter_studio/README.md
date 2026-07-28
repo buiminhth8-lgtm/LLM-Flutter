@@ -2,7 +2,7 @@
 
 This is the Windows Flutter desktop client for LLM-Studio. It owns the local Python/FastAPI backend lifecycle on desktop: when the app starts, it checks `/health` and starts the backend if it is not already running.
 
-The backend is launched as a pure Python service with `python -m llm_studio.server`. The Flutter client does not use `llm-studio.exe`, `llm_studio.cli`, or click.
+The backend is launched as a pure Python service with `python -m llm_studio.server`. The Flutter client does not use the old console-script executable or the old click-based CLI.
 
 ## Current Scope
 

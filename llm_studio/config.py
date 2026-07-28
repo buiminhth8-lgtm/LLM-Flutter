@@ -10,7 +10,6 @@ from typing import Any
 import yaml
 
 DEFAULT_CONFIG: dict[str, Any] = {
-    "models_dir": "./models",
     "finetune_output_dir": "./finetuned_models",
     "datasets_dir": "./datasets",
     "inference": {
@@ -220,6 +219,12 @@ class Config:
                 loaded = yaml.safe_load(f) or {}
                 if not isinstance(loaded, dict):
                     raise ValueError("配置文件必须是 YAML 对象。")
+                if "models_dir" in loaded:
+                    models_section = loaded.get("models")
+                    if not isinstance(models_section, dict) or "root_dir" not in models_section:
+                        loaded = dict(loaded)
+                        loaded["models"] = dict(models_section or {})
+                        loaded["models"]["root_dir"] = loaded["models_dir"]
                 self._data = _deep_merge(DEFAULT_CONFIG, loaded)
         else:
             self._data = dict(DEFAULT_CONFIG)
@@ -245,7 +250,14 @@ class Config:
         if is_template_config:
             while base.name.lower() in {"configs", "presets"}:
                 base = base.parent
-        for key in ("models_dir", "finetune_output_dir", "datasets_dir"):
+        legacy_models_dir = self._data.get("models_dir")
+        if legacy_models_dir:
+            p = Path(legacy_models_dir)
+            if not p.is_absolute():
+                p = base / p
+            self._data["models_dir"] = str(p.resolve())
+
+        for key in ("finetune_output_dir", "datasets_dir"):
             val = self._data.get(key, f"./{key.replace('_dir', '')}")
             p = Path(val)
             if not p.is_absolute():
@@ -285,7 +297,7 @@ class Config:
     @property
     def models_dir(self) -> Path:
         models_cfg = self._data.get("models", {})
-        return Path(models_cfg.get("root_dir") or self._data["models_dir"])
+        return Path(models_cfg.get("root_dir") or self._data.get("models_dir", "./data/models"))
 
     @property
     def finetune_output_dir(self) -> Path:
