@@ -35,5 +35,6 @@ void main() {
 
     expect(find.text('Clear auth'), findsOneWidget);
     expect(find.text('Backend logs'), findsOneWidget);
+    expect(find.text('Copy logs'), findsOneWidget);
   });
 }

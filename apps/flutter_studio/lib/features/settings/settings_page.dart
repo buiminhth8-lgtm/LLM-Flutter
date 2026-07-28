@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({
@@ -64,7 +65,33 @@ class SettingsPage extends StatelessWidget {
           Expanded(child: TextField(controller: apiKeyController, obscureText: true, decoration: const InputDecoration(labelText: 'X-API-Key', border: OutlineInputBorder()))),
         ]),
         const SizedBox(height: 16),
-        const Text('Backend logs', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+        Row(
+          children: [
+            const Text(
+              'Backend logs',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+            const Spacer(),
+            OutlinedButton.icon(
+              onPressed: backendLogs.isEmpty
+                  ? null
+                  : () async {
+                      await Clipboard.setData(
+                        ClipboardData(text: backendLogs.join('\n')),
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Backend logs copied.'),
+                          ),
+                        );
+                      }
+                    },
+              icon: const Icon(Icons.copy),
+              label: const Text('Copy logs'),
+            ),
+          ],
+        ),
         const SizedBox(height: 8),
         SizedBox(
           height: 220,
@@ -74,7 +101,17 @@ class SettingsPage extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               children: backendLogs.isEmpty
                   ? const [Text('No backend logs captured yet.', style: TextStyle(color: Colors.white70))]
-                  : backendLogs.map((line) => Text(line, style: const TextStyle(color: Colors.white70, fontFamily: 'monospace'))).toList(),
+                  : backendLogs
+                        .map(
+                          (line) => SelectableText(
+                            line,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                        )
+                        .toList(),
             ),
           ),
         ),
