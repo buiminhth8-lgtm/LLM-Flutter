@@ -13,18 +13,26 @@ from pathlib import Path
 from typing import Annotated
 
 from .adapters import AdapterRepository
+from .adapters.exceptions import AdapterCompatibilityError, AdapterError, AdapterNotFoundError
 from .admin import AdminManager
 from .api.errors import (
+    ADAPTER_INCOMPATIBLE,
+    ADAPTER_MODEL_REQUIRED,
+    ADAPTER_NOT_FOUND,
     AUTH_REQUIRED,
     CUDA_OUT_OF_MEMORY,
     GENERATION_CANCELLED,
     GENERATION_TIMEOUT,
     GPU_BUSY,
     INVALID_MESSAGES,
+    MODEL_DELETE_CONFIRM_REQUIRED,
+    MODEL_DELETE_FAILED,
     MODEL_LOAD_BUSY,
     MODEL_NOT_FOUND,
+    PEFT_NOT_AVAILABLE,
     PERMISSION_DENIED,
     QUEUE_FULL,
+    RAG_QUERY_INVALID,
     api_error,
     error_payload,
 )
@@ -46,6 +54,7 @@ from .generation.exceptions import (
 from .jobs import JobQueue, JobRepository, JobType
 from .jobs.exceptions import JobNotImplementedError
 from .models import LocalModelRepository
+from .models.exceptions import ModelDeleteError
 from .models.selection import ModelSelectionError, select_model_for_chat
 from .models.storage import layout_from_config
 from .rag import RAGPipeline
@@ -299,11 +308,18 @@ def get_app(config: Config):
         recursive: bool = True
 
     class RAGQueryRequest(BaseModel):
-        question: str
+        question: str | None = None
+        query: str | None = None
         top_k: int = 5
         model: str | None = None
         temperature: float = 0.7
         max_tokens: int = 2048
+
+        def resolved_question(self) -> str:
+            question = (self.question or self.query or "").strip()
+            if not question:
+                raise ValueError("RAG question is empty")
+            return question
 
     class VisionRequest(BaseModel):
         model: str = Field(..., description="瑙嗚妯″瀷璺緞")
@@ -332,7 +348,7 @@ def get_app(config: Config):
         path: str
 
     class AdapterActionRequest(BaseModel):
-        model: str = "auto"
+        model: str | None = None
         adapter_name: str | None = None
 
     class BenchmarkRequest(BaseModel):
@@ -422,6 +438,24 @@ def get_app(config: Config):
             _current_model_id = selected.id
         return selected.id, _runners[model_path]
 
+    def _resolve_adapter_model(req: AdapterActionRequest, request_id: str) -> str:
+        model = (req.model or _current_model_id or "").strip()
+        if not model:
+            raise api_error(
+                400,
+                ADAPTER_MODEL_REQUIRED,
+                "请先加载或选择基础模型，再执行 Adapter 操作。",
+                request_id,
+            )
+        return model
+
+    def _raise_adapter_error(exc: AdapterError, request_id: str):
+        if isinstance(exc, AdapterNotFoundError):
+            raise api_error(404, ADAPTER_NOT_FOUND, str(exc), request_id) from exc
+        if isinstance(exc, AdapterCompatibilityError):
+            raise api_error(400, ADAPTER_INCOMPATIBLE, str(exc), request_id) from exc
+        raise api_error(400, PEFT_NOT_AVAILABLE, str(exc), request_id) from exc
+
     def _get_vision_runner(model_path: str) -> VisionRunner:
         if model_path not in _vision_runners:
             raise HTTPException(
@@ -488,8 +522,18 @@ def get_app(config: Config):
     @app.delete("/v1/models/{model_id}")
     async def delete_model(model_id: str, confirm: bool = False):
         assert _model_repository is not None
-        target = _model_repository.move_to_trash(model_id, confirm=confirm)
-        return {"status": "moved_to_trash", "trash_path": str(target)}
+        try:
+            target = _model_repository.move_to_trash(model_id, confirm=confirm)
+        except ModelDeleteError as exc:
+            code = MODEL_DELETE_CONFIRM_REQUIRED if not confirm else MODEL_DELETE_FAILED
+            status_code = 409 if not confirm else 400
+            raise api_error(status_code, code, str(exc), f"req-{uuid.uuid4().hex[:12]}") from exc
+        return {
+            "status": "moved_to_trash",
+            "model_id": model_id,
+            "trashed": True,
+            "trash_path": str(target),
+        }
 
     @app.post("/v1/models/load")
     async def load_model(req: LoadModelRequest):
@@ -648,38 +692,63 @@ def get_app(config: Config):
         return _adapter_repository.register_path(req.path).to_dict()
 
     @app.post("/v1/adapters/{adapter_id}/load")
-    async def load_adapter(adapter_id: str, req: AdapterActionRequest):
+    async def load_adapter(adapter_id: str, req: AdapterActionRequest | None = None):
         assert _adapter_repository is not None
-        _, runner = await _get_or_load_runner(req.model, f"req-{uuid.uuid4().hex[:12]}")
-        adapter = _adapter_repository.get(adapter_id)
-        name = await asyncio.to_thread(runner.load_adapter, adapter, req.adapter_name)
+        req = req or AdapterActionRequest()
+        request_id = f"req-{uuid.uuid4().hex[:12]}"
+        model = _resolve_adapter_model(req, request_id)
+        _, runner = await _get_or_load_runner(model, request_id)
+        try:
+            adapter = _adapter_repository.get(adapter_id)
+            name = await asyncio.to_thread(runner.load_adapter, adapter, req.adapter_name)
+        except AdapterError as exc:
+            _raise_adapter_error(exc, request_id)
         return {"status": "ok", "adapter_name": name, "loaded_adapters": runner.list_loaded_adapters()}
 
     @app.post("/v1/adapters/{adapter_id}/activate")
-    async def activate_adapter(adapter_id: str, req: AdapterActionRequest):
+    async def activate_adapter(adapter_id: str, req: AdapterActionRequest | None = None):
         assert _adapter_repository is not None
-        _, runner = await _get_or_load_runner(req.model, f"req-{uuid.uuid4().hex[:12]}")
-        adapter = _adapter_repository.get(adapter_id)
-        await run_blocking_io(runner.activate_adapter, req.adapter_name or adapter.name)
+        req = req or AdapterActionRequest()
+        request_id = f"req-{uuid.uuid4().hex[:12]}"
+        model = _resolve_adapter_model(req, request_id)
+        _, runner = await _get_or_load_runner(model, request_id)
+        try:
+            adapter = _adapter_repository.get(adapter_id)
+            await run_blocking_io(runner.activate_adapter, req.adapter_name or adapter.name)
+        except AdapterError as exc:
+            _raise_adapter_error(exc, request_id)
         return {"status": "ok", "active_adapter": req.adapter_name or adapter.name}
 
     @app.post("/v1/adapters/{adapter_id}/deactivate")
-    async def deactivate_adapter(adapter_id: str, req: AdapterActionRequest):
-        _, runner = await _get_or_load_runner(req.model, f"req-{uuid.uuid4().hex[:12]}")
-        await run_blocking_io(runner.deactivate_adapter)
+    async def deactivate_adapter(adapter_id: str, req: AdapterActionRequest | None = None):
+        req = req or AdapterActionRequest()
+        request_id = f"req-{uuid.uuid4().hex[:12]}"
+        model = _resolve_adapter_model(req, request_id)
+        _, runner = await _get_or_load_runner(model, request_id)
+        try:
+            await run_blocking_io(runner.deactivate_adapter)
+        except AdapterError as exc:
+            _raise_adapter_error(exc, request_id)
         return {"status": "ok", "active_adapter": None, "loaded_adapters": runner.list_loaded_adapters()}
 
     @app.post("/v1/adapters/{adapter_id}/unload")
-    async def unload_adapter(adapter_id: str, req: AdapterActionRequest):
+    async def unload_adapter(adapter_id: str, req: AdapterActionRequest | None = None):
         assert _adapter_repository is not None
-        _, runner = await _get_or_load_runner(req.model, f"req-{uuid.uuid4().hex[:12]}")
-        adapter = _adapter_repository.get(adapter_id)
-        name = req.adapter_name or adapter.name
-        await run_blocking_io(runner.unload_adapter, name)
+        req = req or AdapterActionRequest()
+        request_id = f"req-{uuid.uuid4().hex[:12]}"
+        model = _resolve_adapter_model(req, request_id)
+        _, runner = await _get_or_load_runner(model, request_id)
+        try:
+            adapter = _adapter_repository.get(adapter_id)
+            name = req.adapter_name or adapter.name
+            await run_blocking_io(runner.unload_adapter, name)
+        except AdapterError as exc:
+            _raise_adapter_error(exc, request_id)
         return {"status": "ok", "unloaded_adapter": name, "loaded_adapters": runner.list_loaded_adapters()}
 
     @app.post("/v1/adapters/{adapter_id}/merge")
-    async def merge_adapter(adapter_id: str, req: AdapterActionRequest):
+    async def merge_adapter(adapter_id: str, req: AdapterActionRequest | None = None):
+        req = req or AdapterActionRequest()
         assert _job_queue is not None
         job = _job_queue.submit(
             JobType.LORA_MERGE.value,
@@ -977,11 +1046,16 @@ def get_app(config: Config):
     @app.post("/v1/rag/query")
     async def rag_query(req: RAGQueryRequest):
         """RAG endpoint."""
+        request_id = f"req-{uuid.uuid4().hex[:12]}"
+        try:
+            question = req.resolved_question()
+        except ValueError as exc:
+            raise api_error(400, RAG_QUERY_INVALID, "RAG 查询问题不能为空。", request_id) from exc
         if _rag_pipeline is None:
             raise HTTPException(status_code=500, detail="RAG pipeline not initialized")
 
         # Retrieve relevant docs
-        results = await run_cpu_bound(_rag_pipeline.query, req.question, top_k=req.top_k)
+        results = await run_cpu_bound(_rag_pipeline.query, question, top_k=req.top_k)
 
         context_docs = [
             {
@@ -996,7 +1070,7 @@ def get_app(config: Config):
         answer = None
         if req.model:
             resolved_model_id, runner = await _get_or_load_runner(req.model, f"req-{uuid.uuid4().hex[:12]}")
-            rag_prompt = _rag_pipeline.build_rag_prompt(req.question, top_k=req.top_k)
+            rag_prompt = _rag_pipeline.build_rag_prompt(question, top_k=req.top_k)
             assert _gpu_scheduler is not None
             async with _gpu_scheduler.acquire(_gpu_request(GpuTaskType.INFERENCE, "rag-query", resolved_model_id)):
                 answer = await run_blocking_io(
@@ -1007,7 +1081,7 @@ def get_app(config: Config):
                 )
 
         return {
-            "question": req.question,
+            "question": question,
             "retrieved_documents": context_docs,
             "answer": answer,
         }

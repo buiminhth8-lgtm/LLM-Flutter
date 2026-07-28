@@ -68,12 +68,17 @@ def test_rbac_roles_gate_api_actions(monkeypatch, tmp_path):
     pytest.importorskip("fastapi")
     from fastapi.testclient import TestClient
 
-    import llm_studio.api_server as api_server
-    from llm_studio.api_server import get_app
-
     cfg_path = tmp_path / "config.yaml"
     _write_config(cfg_path)
     _create_ready_model(tmp_path)
+    monkeypatch.setenv("LLM_STUDIO_CONFIG", str(cfg_path))
+
+    import llm_studio.api_server as api_server
+    from llm_studio.api_server import get_app
+
+    api_server._runners.clear()
+    api_server._runner_model_ids.clear()
+    api_server._current_model_id = None
     monkeypatch.setattr(api_server, "create_runner", FakeRunner)
     client = TestClient(get_app(Config(cfg_path)))
     headers = _setup_users(client)
@@ -106,6 +111,51 @@ def test_rbac_roles_gate_api_actions(monkeypatch, tmp_path):
         json={"model_id": model_id, "context_lengths": [16], "measured_runs": 1, "warmup_runs": 0},
     )
     assert benchmark.status_code == 200
+
+
+def test_api_v1_compat_routes_use_v1_permissions(monkeypatch, tmp_path):
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    cfg_path = tmp_path / "config.yaml"
+    _write_config(cfg_path)
+    _create_ready_model(tmp_path)
+    monkeypatch.setenv("LLM_STUDIO_CONFIG", str(cfg_path))
+
+    import llm_studio.api_server as api_server
+    from llm_studio.api_server import get_app
+
+    api_server._runners.clear()
+    api_server._runner_model_ids.clear()
+    api_server._current_model_id = None
+    monkeypatch.setattr(api_server, "create_runner", FakeRunner)
+    client = TestClient(get_app(Config(cfg_path)))
+    headers = _setup_users(client)
+
+    assert client.get("/api/v1/models").status_code == 401
+    assert client.get("/api/v1/models", headers={"X-User-ID": "admin", "X-API-Key": "bad"}).status_code == 401
+    assert client.get("/api/v1/models", headers=headers["viewer"]).status_code == 200
+
+    chat_denied = client.post(
+        "/api/v1/chat/completions",
+        headers=headers["viewer"],
+        json={"model": "auto", "messages": [{"role": "user", "content": "hello"}]},
+    )
+    assert chat_denied.status_code == 403
+    assert chat_denied.json()["error"]["code"] == "PERMISSION_DENIED"
+
+    chat_allowed = client.post(
+        "/api/v1/chat/completions",
+        headers=headers["operator"],
+        json={"model": "auto", "messages": [{"role": "user", "content": "hello"}]},
+    )
+    assert chat_allowed.status_code == 200
+
+    model_id = client.get("/api/v1/models", headers=headers["admin"]).json()["data"][0]["id"]
+    load_denied = client.post("/api/v1/models/load", headers=headers["viewer"], json={"model": model_id})
+    assert load_denied.status_code == 403
+    assert load_denied.json()["error"]["code"] == "PERMISSION_DENIED"
+    assert client.post("/api/v1/models/load", headers=headers["operator"], json={"model": model_id}).status_code == 200
 
 
 def test_legacy_missing_role_migrates_to_admin(tmp_path):
