@@ -19,24 +19,37 @@ from .api.errors import (
     ADAPTER_INCOMPATIBLE,
     ADAPTER_MODEL_REQUIRED,
     ADAPTER_NOT_FOUND,
+    ADAPTER_OPERATION_FAILED,
     AUTH_REQUIRED,
+    BENCHMARK_FAILED,
     CUDA_OUT_OF_MEMORY,
+    DIAGNOSTICS_EXPORT_FAILED,
     GENERATION_CANCELLED,
     GENERATION_TIMEOUT,
     GPU_BUSY,
+    INTERNAL_ERROR,
     INVALID_MESSAGES,
     MODEL_DELETE_CONFIRM_REQUIRED,
     MODEL_DELETE_FAILED,
     MODEL_LOAD_BUSY,
+    MODEL_LOAD_FAILED,
     MODEL_NOT_FOUND,
+    MODEL_UNLOAD_FAILED,
     PEFT_NOT_AVAILABLE,
     PERMISSION_DENIED,
     QUEUE_FULL,
+    RAG_INGEST_FAILED,
+    RAG_PATH_NOT_ALLOWED,
+    RAG_QUERY_FAILED,
     RAG_QUERY_INVALID,
+    STORAGE_CLEANUP_FAILED,
+    VISION_ANALYZE_FAILED,
+    VISION_PATH_NOT_ALLOWED,
     api_error,
     error_payload,
 )
 from .auth import has_permission, required_permission_for_request
+from .auth.roles import Role
 from .benchmarks import BenchmarkConfig, BenchmarkRunner
 from .capabilities import get_capabilities
 from .chat import ChatMessage as CoreChatMessage
@@ -67,6 +80,7 @@ from .runtime.gpu_scheduler import (
     GpuTaskTimeoutError,
     GpuTaskType,
 )
+from .security.paths import PathSecurityError, resolve_allowed_path
 from .security.uploads import (
     UploadError,
     UploadPolicy,
@@ -163,9 +177,11 @@ def get_app(config: Config):
         if isinstance(exc.detail, dict) and "error" in exc.detail:
             return JSONResponse(status_code=exc.status_code, content=exc.detail)
         request_id = getattr(request.state, "request_id", f"req-{uuid.uuid4().hex[:12]}")
+        code = INTERNAL_ERROR if exc.status_code >= 500 else "HTTP_ERROR"
+        message = "服务内部错误，请查看后端日志。" if exc.status_code >= 500 else str(exc.detail)
         return JSONResponse(
             status_code=exc.status_code,
-            content=error_payload("HTTP_ERROR", str(exc.detail), request_id),
+            content=error_payload(code, message, request_id),
         )
 
     api_cfg = config.get("api", {})
@@ -181,7 +197,7 @@ def get_app(config: Config):
         allow_headers=["*"],
     )
 
-    # 鈹€鈹€ Authentication Middleware 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    # Authentication middleware
 
     auth_config = config.get("auth", {})
     auth_enabled = auth_config.get("enabled", False)
@@ -233,7 +249,7 @@ def get_app(config: Config):
                     status_code=401,
                     content=error_payload(
                         AUTH_REQUIRED,
-                        "Invalid or missing authentication. Provide X-User-ID and X-API-Key headers.",
+                        "请提供有效的 X-User-ID 和 X-API-Key。",
                         request_id,
                     ),
                 )
@@ -255,7 +271,7 @@ def get_app(config: Config):
 
     app.add_middleware(AuthMiddleware)
 
-    # 鈹€鈹€ Pydantic Models 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    # Pydantic models
 
     class ChatMessageModel(BaseModel):
         role: str = "user"
@@ -264,7 +280,7 @@ def get_app(config: Config):
         tool_call_id: str | None = None
 
     class ChatRequest(BaseModel):
-        model: str = Field(default="auto", description="妯″瀷璺緞锛?auto' 鑷姩閫夋嫨")
+        model: str = Field(default="auto", description="模型 ID；auto 表示自动选择可用模型。")
         messages: list[ChatMessageModel]
         temperature: float = 0.7
         max_tokens: int = 2048
@@ -322,14 +338,14 @@ def get_app(config: Config):
             return question
 
     class VisionRequest(BaseModel):
-        model: str = Field(..., description="瑙嗚妯″瀷璺緞")
-        image_path: str = Field(..., description="鍥剧墖鏂囦欢璺緞")
+        model: str = Field(..., description="已加载的视觉模型 ID。")
+        image_path: str = Field(..., description="图片文件路径；默认仅允许管理员访问 allowlist 内路径。")
         prompt: str = "Please describe this image."
         max_tokens: int = 1024
         temperature: float = 0.7
 
     class LoadModelRequest(BaseModel):
-        model: str = Field(..., description="妯″瀷璺緞")
+        model: str = Field(..., description="模型 ID 或已注册模型路径。")
         model_type: str = "text"  # "text" or "vision"
         strategy: str = "auto"
 
@@ -363,7 +379,7 @@ def get_app(config: Config):
     class StorageCleanupRequest(BaseModel):
         categories: list[str] | None = None
 
-    # 鈹€鈹€ Helper Functions 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    # Helper functions
 
     def _gpu_request(task_type: GpuTaskType, owner: str, request_id: str | None = None) -> GpuTaskRequest:
         scheduler_cfg = config.runtime.get("gpu_scheduler", {})
@@ -397,6 +413,62 @@ def get_app(config: Config):
     def _raise_upload_error(exc: UploadError, request_id: str):
         raise api_error(exc.status_code, exc.code, str(exc), request_id) from exc
 
+    def _request_id() -> str:
+        return f"req-{uuid.uuid4().hex[:12]}"
+
+    def _request_role(request: Request) -> Role | None:
+        user = getattr(request.state, "user", None)
+        if not isinstance(user, dict):
+            return None
+        role = user.get("role")
+        if not role:
+            return None
+        try:
+            return Role(str(role).lower())
+        except ValueError:
+            return None
+
+    def _local_path_access_roots() -> tuple[bool, list[Path]]:
+        security_cfg = config.get("security", {})
+        local_cfg = security_cfg.get("local_path_access", {}) if isinstance(security_cfg, dict) else {}
+        enabled = bool(local_cfg.get("enabled", False))
+        raw_roots = local_cfg.get("allowed_roots", [])
+        base = config.config_path.parent
+        roots: list[Path] = []
+        for raw_root in raw_roots:
+            root = Path(str(raw_root))
+            roots.append(root if root.is_absolute() else base / root)
+        return enabled, roots
+
+    def _resolve_admin_local_path(
+        raw_path: str,
+        request: Request,
+        *,
+        error_code: str,
+        request_id: str,
+        allow_file: bool,
+        allow_dir: bool,
+    ) -> Path:
+        if _request_role(request) is not Role.ADMIN:
+            raise api_error(403, error_code, "本地路径访问仅限管理员。", request_id)
+        enabled, allowed_roots = _local_path_access_roots()
+        if not enabled:
+            raise api_error(
+                403,
+                error_code,
+                "本地路径访问默认禁用；请在 security.local_path_access 中启用并配置 allowed_roots。",
+                request_id,
+            )
+        try:
+            return resolve_allowed_path(
+                raw_path,
+                allowed_roots,
+                allow_file=allow_file,
+                allow_dir=allow_dir,
+            )
+        except PathSecurityError as exc:
+            raise api_error(403, error_code, str(exc), request_id) from exc
+
     def _select_repository_model(model: str | None, request_id: str):
         assert _model_repository is not None
         caps = detect_runtime_capabilities(run_bnb_probe=False)
@@ -429,10 +501,7 @@ def get_app(config: Config):
             except GpuTaskTimeoutError as e:
                 raise api_error(409, MODEL_LOAD_BUSY, str(e), request_id) from e
             except Exception as e:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Failed to load model '{selected.display_name}': {e}",
-                ) from e
+                raise api_error(400, MODEL_LOAD_FAILED, f"模型加载失败：{selected.display_name}", request_id) from e
         else:
             _runner_model_ids[model_path] = selected.id
             _current_model_id = selected.id
@@ -454,28 +523,33 @@ def get_app(config: Config):
             raise api_error(404, ADAPTER_NOT_FOUND, str(exc), request_id) from exc
         if isinstance(exc, AdapterCompatibilityError):
             raise api_error(400, ADAPTER_INCOMPATIBLE, str(exc), request_id) from exc
-        raise api_error(400, PEFT_NOT_AVAILABLE, str(exc), request_id) from exc
+        message = str(exc)
+        if "peft" in message.lower():
+            raise api_error(400, PEFT_NOT_AVAILABLE, message, request_id) from exc
+        raise api_error(400, ADAPTER_OPERATION_FAILED, message, request_id) from exc
 
-    def _get_vision_runner(model_path: str) -> VisionRunner:
+    def _get_vision_runner(model_path: str, request_id: str) -> VisionRunner:
         if model_path not in _vision_runners:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Vision model not loaded: {model_path}. Call POST /v1/models/load first.",
-            )
+            raise api_error(400, MODEL_NOT_FOUND, "视觉模型未加载，请先加载模型。", request_id)
         return _vision_runners[model_path]
 
     async def _load_text_model(model_id: str, request_id: str) -> dict:
         global _current_model_id
         selected = _select_repository_model(model_id, request_id)
         model_path = str(selected.path)
-        if model_path not in _runners:
-            assert _concurrency is not None and _gpu_scheduler is not None
-            async with _concurrency.model_load():
-                if model_path not in _runners:
-                    runner = create_runner(model_path, config)
-                    async with _gpu_scheduler.acquire(_gpu_request(GpuTaskType.MODEL_LOAD, "model-load", request_id)):
-                        await run_blocking_io(runner.load)
-                    _runners[model_path] = runner
+        try:
+            if model_path not in _runners:
+                assert _concurrency is not None and _gpu_scheduler is not None
+                async with _concurrency.model_load():
+                    if model_path not in _runners:
+                        runner = create_runner(model_path, config)
+                        async with _gpu_scheduler.acquire(_gpu_request(GpuTaskType.MODEL_LOAD, "model-load", request_id)):
+                            await run_blocking_io(runner.load)
+                        _runners[model_path] = runner
+        except GpuTaskTimeoutError as e:
+            raise api_error(409, MODEL_LOAD_BUSY, str(e), request_id) from e
+        except Exception as e:
+            raise api_error(400, MODEL_LOAD_FAILED, f"模型加载失败：{selected.display_name}", request_id) from e
         _runner_model_ids[model_path] = selected.id
         _current_model_id = selected.id
         runner = _runners[model_path]
@@ -488,7 +562,7 @@ def get_app(config: Config):
             "quantization": getattr(policy, "quantization", None),
         }
 
-    # 鈹€鈹€ Endpoints: Models 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    # Model endpoints
 
     @app.get("/v1/models")
     async def list_models():
@@ -538,7 +612,7 @@ def get_app(config: Config):
     @app.post("/v1/models/load")
     async def load_model(req: LoadModelRequest):
         """Load a model by repository id, preserving the legacy body endpoint."""
-        request_id = f"req-{uuid.uuid4().hex[:12]}"
+        request_id = _request_id()
         if req.model_type == "vision":
             if req.model not in _vision_runners:
                 vr = VisionRunner(req.model, config)
@@ -548,13 +622,15 @@ def get_app(config: Config):
                         await run_blocking_io(vr.load)
                 except GpuTaskTimeoutError as e:
                     raise api_error(409, MODEL_LOAD_BUSY, str(e), request_id) from e
+                except Exception as e:
+                    raise api_error(400, MODEL_LOAD_FAILED, "视觉模型加载失败。", request_id) from e
                 _vision_runners[req.model] = vr
             return {"status": "ok", "model": req.model, "type": "vision"}
         return await _load_text_model(req.model, request_id)
 
     @app.post("/v1/models/{model_id}/load")
     async def load_model_by_id(model_id: str):
-        request_id = f"req-{uuid.uuid4().hex[:12]}"
+        request_id = _request_id()
         return await _load_text_model(model_id, request_id)
 
     @app.get("/v1/models/current")
@@ -608,6 +684,8 @@ def get_app(config: Config):
                             _current_model_id = None
         except GpuTaskTimeoutError as e:
             raise api_error(409, GPU_BUSY, str(e), request_id) from e
+        except Exception as e:
+            raise api_error(500, MODEL_UNLOAD_FAILED, "模型卸载失败。", request_id) from e
         return {"status": "ok", "model": req.model}
 
     @app.post("/v1/downloads")
@@ -703,6 +781,8 @@ def get_app(config: Config):
             name = await asyncio.to_thread(runner.load_adapter, adapter, req.adapter_name)
         except AdapterError as exc:
             _raise_adapter_error(exc, request_id)
+        except Exception as exc:
+            raise api_error(500, ADAPTER_OPERATION_FAILED, "Adapter 加载失败。", request_id) from exc
         return {"status": "ok", "adapter_name": name, "loaded_adapters": runner.list_loaded_adapters()}
 
     @app.post("/v1/adapters/{adapter_id}/activate")
@@ -717,6 +797,8 @@ def get_app(config: Config):
             await run_blocking_io(runner.activate_adapter, req.adapter_name or adapter.name)
         except AdapterError as exc:
             _raise_adapter_error(exc, request_id)
+        except Exception as exc:
+            raise api_error(500, ADAPTER_OPERATION_FAILED, "Adapter 激活失败。", request_id) from exc
         return {"status": "ok", "active_adapter": req.adapter_name or adapter.name}
 
     @app.post("/v1/adapters/{adapter_id}/deactivate")
@@ -729,6 +811,8 @@ def get_app(config: Config):
             await run_blocking_io(runner.deactivate_adapter)
         except AdapterError as exc:
             _raise_adapter_error(exc, request_id)
+        except Exception as exc:
+            raise api_error(500, ADAPTER_OPERATION_FAILED, "Adapter 停用失败。", request_id) from exc
         return {"status": "ok", "active_adapter": None, "loaded_adapters": runner.list_loaded_adapters()}
 
     @app.post("/v1/adapters/{adapter_id}/unload")
@@ -744,6 +828,8 @@ def get_app(config: Config):
             await run_blocking_io(runner.unload_adapter, name)
         except AdapterError as exc:
             _raise_adapter_error(exc, request_id)
+        except Exception as exc:
+            raise api_error(500, ADAPTER_OPERATION_FAILED, "Adapter 卸载失败。", request_id) from exc
         return {"status": "ok", "unloaded_adapter": name, "loaded_adapters": runner.list_loaded_adapters()}
 
     @app.post("/v1/adapters/{adapter_id}/merge")
@@ -809,19 +895,27 @@ def get_app(config: Config):
 
         deleted = await run_blocking_io(BenchmarkRepository(config).delete, benchmark_id)
         if not deleted:
-            raise HTTPException(status_code=404, detail="Benchmark not found.")
+            raise api_error(404, BENCHMARK_FAILED, "未找到 Benchmark 结果。", _request_id())
         return {"status": "deleted", "id": benchmark_id}
 
     @app.get("/v1/storage")
     async def storage_status():
-        items = await run_blocking_io(collect_disk_usage, config)
+        request_id = _request_id()
+        try:
+            items = await run_blocking_io(collect_disk_usage, config)
+        except Exception as e:
+            raise api_error(500, STORAGE_CLEANUP_FAILED, "磁盘空间统计失败。", request_id) from e
         return {"data": [item.to_dict() for item in items]}
 
     @app.post("/v1/storage/cleanup/preview")
     async def cleanup_storage_preview(req: StorageCleanupRequest | None = None):
+        request_id = _request_id()
         manager = CacheManager(config)
         categories = set(req.categories) if req and req.categories else None
-        items = await run_blocking_io(manager.preview_cleanup, categories)
+        try:
+            items = await run_blocking_io(manager.preview_cleanup, categories)
+        except Exception as e:
+            raise api_error(500, STORAGE_CLEANUP_FAILED, "清理预览生成失败。", request_id) from e
         return {
             "items": [item.to_dict() for item in items],
             "total_size_bytes": sum(item.size_bytes for item in items),
@@ -829,17 +923,25 @@ def get_app(config: Config):
 
     @app.post("/v1/storage/cleanup")
     async def cleanup_storage(req: StorageCleanupRequest | None = None):
+        request_id = _request_id()
         manager = CacheManager(config)
         categories = set(req.categories) if req and req.categories else None
-        items = await run_blocking_io(manager.preview_cleanup, categories)
-        return await run_blocking_io(manager.cleanup_preview_items, items)
+        try:
+            items = await run_blocking_io(manager.preview_cleanup, categories)
+            return await run_blocking_io(manager.cleanup_preview_items, items)
+        except Exception as e:
+            raise api_error(500, STORAGE_CLEANUP_FAILED, "存储清理失败。", request_id) from e
 
     @app.post("/v1/diagnostics/export")
     async def diagnostics_export():
-        path = await run_blocking_io(export_diagnostics, config)
+        request_id = _request_id()
+        try:
+            path = await run_blocking_io(export_diagnostics, config)
+        except Exception as e:
+            raise api_error(500, DIAGNOSTICS_EXPORT_FAILED, "诊断包导出失败。", request_id) from e
         return {"status": "ok", "path": str(path)}
 
-    # 鈹€鈹€ Endpoints: Chat (OpenAI-compatible) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    # Chat endpoints (OpenAI-compatible)
 
     @app.post("/v1/chat/completions")
     async def chat_completions(req: ChatRequest, request: Request):
@@ -860,7 +962,7 @@ def get_app(config: Config):
         if messages[-1].role not in {"user", "tool"}:
             raise api_error(400, INVALID_MESSAGES, "至少需要一条 user 消息。", request_id)
 
-        # 鈹€鈹€ Streaming mode (SSE) 鈹€鈹€
+        # Streaming mode (SSE)
         resolved_model_id, runner = await _get_or_load_runner(req.model, request_id)
 
         if req.stream:
@@ -939,7 +1041,7 @@ def get_app(config: Config):
                 headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
             )
 
-        # 鈹€鈹€ Non-streaming mode 鈹€鈹€
+        # Non-streaming mode
         try:
             assert _concurrency is not None and _gpu_scheduler is not None
             async with _concurrency.inference(
@@ -978,21 +1080,51 @@ def get_app(config: Config):
             usage=Usage(),
         )
 
-    # 鈹€鈹€ Endpoints: RAG 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    # RAG endpoints
 
     @app.post("/v1/rag/ingest")
-    async def rag_ingest(req: RAGIngestRequest, sync: bool = False):
+    async def rag_ingest(req: RAGIngestRequest, request: Request, sync: bool = False):
         """RAG endpoint."""
+        request_id = _request_id()
         if _rag_pipeline is None:
-            raise HTTPException(status_code=500, detail="RAG pipeline not initialized")
+            raise api_error(503, RAG_INGEST_FAILED, "RAG pipeline 未初始化。", request_id)
+
+        file_path = (
+            str(
+                _resolve_admin_local_path(
+                    req.file_path,
+                    request,
+                    error_code=RAG_PATH_NOT_ALLOWED,
+                    request_id=request_id,
+                    allow_file=True,
+                    allow_dir=False,
+                )
+            )
+            if req.file_path
+            else None
+        )
+        directory_path = (
+            str(
+                _resolve_admin_local_path(
+                    req.directory_path,
+                    request,
+                    error_code=RAG_PATH_NOT_ALLOWED,
+                    request_id=request_id,
+                    allow_file=False,
+                    allow_dir=True,
+                )
+            )
+            if req.directory_path
+            else None
+        )
 
         def ingest() -> dict:
             total_chunks = 0
-            if req.file_path:
-                total_chunks = total_chunks + _rag_pipeline.ingest_file(req.file_path)
-            if req.directory_path:
+            if file_path:
+                total_chunks = total_chunks + _rag_pipeline.ingest_file(file_path)
+            if directory_path:
                 total_chunks = total_chunks + _rag_pipeline.ingest_directory(
-                    req.directory_path, recursive=req.recursive
+                    directory_path, recursive=req.recursive
                 )
             _rag_pipeline.save()
             return {
@@ -1002,20 +1134,23 @@ def get_app(config: Config):
             }
 
         if sync:
-            return await run_cpu_bound(ingest)
+            try:
+                return await run_cpu_bound(ingest)
+            except Exception as e:
+                raise api_error(500, RAG_INGEST_FAILED, "RAG 文档导入失败。", request_id) from e
 
         assert _job_queue is not None
-        payload = req.model_dump() if hasattr(req, "model_dump") else req.dict()
+        payload = {"file_path": file_path, "directory_path": directory_path, "recursive": req.recursive}
         job = _job_queue.submit(JobType.RAG_REBUILD.value, payload, lambda job, update, cancel: ingest())
         return {"job_id": job.id}
 
     @app.post("/v1/rag/ingest/upload")
     async def rag_ingest_upload(file: Annotated[UploadFile, File(...)], sync: bool = False):
         """RAG endpoint."""
+        request_id = _request_id()
         if _rag_pipeline is None:
-            raise HTTPException(status_code=500, detail="RAG pipeline not initialized")
+            raise api_error(503, RAG_INGEST_FAILED, "RAG pipeline 未初始化。", request_id)
 
-        request_id = f"req-{uuid.uuid4().hex[:12]}"
         try:
             saved = await save_upload_file_safely(file, _upload_policy("document"))
         except UploadError as exc:
@@ -1033,7 +1168,10 @@ def get_app(config: Config):
             }
 
         if sync:
-            return await run_cpu_bound(ingest_saved)
+            try:
+                return await run_cpu_bound(ingest_saved)
+            except Exception as e:
+                raise api_error(500, RAG_INGEST_FAILED, "RAG 文档导入失败。", request_id) from e
 
         assert _job_queue is not None
         job = _job_queue.submit(
@@ -1046,16 +1184,19 @@ def get_app(config: Config):
     @app.post("/v1/rag/query")
     async def rag_query(req: RAGQueryRequest):
         """RAG endpoint."""
-        request_id = f"req-{uuid.uuid4().hex[:12]}"
+        request_id = _request_id()
         try:
             question = req.resolved_question()
         except ValueError as exc:
             raise api_error(400, RAG_QUERY_INVALID, "RAG 查询问题不能为空。", request_id) from exc
         if _rag_pipeline is None:
-            raise HTTPException(status_code=500, detail="RAG pipeline not initialized")
+            raise api_error(503, RAG_QUERY_FAILED, "RAG pipeline 未初始化。", request_id)
 
         # Retrieve relevant docs
-        results = await run_cpu_bound(_rag_pipeline.query, question, top_k=req.top_k)
+        try:
+            results = await run_cpu_bound(_rag_pipeline.query, question, top_k=req.top_k)
+        except Exception as e:
+            raise api_error(500, RAG_QUERY_FAILED, "RAG 查询失败。", request_id) from e
 
         context_docs = [
             {
@@ -1104,28 +1245,36 @@ def get_app(config: Config):
             await run_blocking_io(_rag_pipeline.clear)
         return {"status": "ok"}
 
-    # 鈹€鈹€ Endpoints: Vision 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    # Vision endpoints
 
     @app.post("/v1/vision/analyze")
-    async def vision_analyze(req: VisionRequest):
+    async def vision_analyze(req: VisionRequest, request: Request):
         """Analyze an image path with a loaded vision model."""
-        vr = _get_vision_runner(req.model)
-        request_id = f"req-{uuid.uuid4().hex[:12]}"
+        request_id = _request_id()
+        image_path = _resolve_admin_local_path(
+            req.image_path,
+            request,
+            error_code=VISION_PATH_NOT_ALLOWED,
+            request_id=request_id,
+            allow_file=True,
+            allow_dir=False,
+        )
+        vr = _get_vision_runner(req.model, request_id)
         try:
             assert _gpu_scheduler is not None
             async with _gpu_scheduler.acquire(_gpu_request(GpuTaskType.VISION, "vision-analyze", request_id)):
                 response = await run_blocking_io(
                     vr.analyze_image,
-                    req.image_path,
+                    str(image_path),
                     prompt=req.prompt,
                     max_tokens=req.max_tokens,
                     temperature=req.temperature,
                 )
-            return {"image": req.image_path, "prompt": req.prompt, "response": response}
+            return {"image": str(image_path), "prompt": req.prompt, "response": response}
         except GpuTaskTimeoutError as e:
             raise api_error(409, GPU_BUSY, str(e), request_id) from e
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e)) from e
+            raise api_error(500, VISION_ANALYZE_FAILED, "视觉分析失败。", request_id) from e
 
     @app.post("/v1/vision/analyze/upload")
     async def vision_analyze_upload(
@@ -1135,8 +1284,8 @@ def get_app(config: Config):
         max_tokens: Annotated[int, Form()] = 1024,
     ):
         """Safely upload an image and analyze it with a loaded vision model."""
-        vr = _get_vision_runner(model)
-        request_id = f"req-{uuid.uuid4().hex[:12]}"
+        request_id = _request_id()
+        vr = _get_vision_runner(model, request_id)
         try:
             saved = await save_upload_file_safely(file, _upload_policy("image"))
         except UploadError as exc:
@@ -1155,7 +1304,7 @@ def get_app(config: Config):
         except GpuTaskTimeoutError as e:
             raise api_error(409, GPU_BUSY, str(e), request_id) from e
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e)) from e
+            raise api_error(500, VISION_ANALYZE_FAILED, "视觉分析失败。", request_id) from e
         finally:
             saved.path.unlink(missing_ok=True)
 
@@ -1165,8 +1314,8 @@ def get_app(config: Config):
         model: Annotated[str, Form(...)],
     ):
         """Safely upload an image and run OCR."""
-        vr = _get_vision_runner(model)
-        request_id = f"req-{uuid.uuid4().hex[:12]}"
+        request_id = _request_id()
+        vr = _get_vision_runner(model, request_id)
         try:
             saved = await save_upload_file_safely(file, _upload_policy("image"))
         except UploadError as exc:
@@ -1180,11 +1329,11 @@ def get_app(config: Config):
         except GpuTaskTimeoutError as e:
             raise api_error(409, GPU_BUSY, str(e), request_id) from e
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e)) from e
+            raise api_error(500, VISION_ANALYZE_FAILED, "OCR 识别失败。", request_id) from e
         finally:
             saved.path.unlink(missing_ok=True)
 
-    # 鈹€鈹€ Health Check 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    # Health and runtime endpoints
 
     @app.get("/health")
     async def health():
@@ -1215,11 +1364,11 @@ def get_app(config: Config):
     async def setup_initialize(req: SetupInitializeRequest):
         assert _admin is not None
         if _admin.initialized:
-            raise HTTPException(status_code=409, detail="LLM Studio 已初始化。")
+            raise api_error(409, "SETUP_ALREADY_INITIALIZED", "LLM Studio 已初始化。", _request_id())
         try:
             admin = _admin.initialize(req.admin_password, req.display_name)
         except ValueError as exc:
-            raise HTTPException(status_code=400, detail="原密码错误。") from exc
+            raise api_error(400, "SETUP_INITIALIZE_FAILED", str(exc), _request_id()) from exc
         return {"user_id": admin.user_id, "api_key": admin.plain_api_key}
 
     @app.get("/v1/gpu/scheduler")
@@ -1257,7 +1406,7 @@ def get_app(config: Config):
             "inference_concurrency": _concurrency.max_inference_concurrency if _concurrency else None,
         }
 
-    # 鈹€鈹€ Admin Backend 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    # Admin backend
 
     # Simple session token store (in-memory, cleared on restart)
     _admin_sessions: set[str] = set()
@@ -1282,13 +1431,13 @@ def get_app(config: Config):
         """Verify admin session token from cookie."""
         token = request.cookies.get("admin_token", "")
         if token not in _admin_sessions:
-            raise HTTPException(status_code=401, detail="璇峰厛鐧诲綍绠＄悊鍚庡彴")
+            raise HTTPException(status_code=401, detail="请先登录管理后台。")
 
     @app.post("/admin/api/login")
     async def admin_login(request: Request, req: AdminLoginRequest):
         """API endpoint."""
         if not _admin.verify_admin_password(req.password):
-            raise HTTPException(status_code=401, detail="瀵嗙爜閿欒")
+            raise HTTPException(status_code=401, detail="密码错误。")
         token = secrets.token_hex(32)
         _admin_sessions.add(token)
         response = JSONResponse({"status": "ok"})
@@ -1371,7 +1520,7 @@ def get_app(config: Config):
             raise HTTPException(status_code=400, detail="原密码错误。")
         return {"status": "ok"}
 
-    # 鈹€鈹€ /api/v1 alias (RemoteAssistant compatibility) 鈹€鈹€鈹€鈹€鈹€鈹€
+    # /api/v1 alias (RemoteAssistant compatibility)
     # RemoteAssistant llmstudio preset uses /api/v1/* paths
     from fastapi import APIRouter
 

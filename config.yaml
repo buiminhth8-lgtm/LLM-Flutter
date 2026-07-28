@@ -80,6 +80,13 @@ api:
 auth:
   enabled: true
 
+security:
+  local_path_access:
+    enabled: false
+    allowed_roots:
+      - "./data/imports"
+      - "./data/uploads"
+
 # Unified model repository. Legacy configs with top-level models_dir are still
 # migrated at load time, but new installs should use this section only.
 models:

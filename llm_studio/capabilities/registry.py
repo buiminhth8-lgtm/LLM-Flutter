@@ -25,7 +25,7 @@ class CapabilityInfo:
 
 _CAPABILITIES: tuple[CapabilityInfo, ...] = (
     CapabilityInfo("chat_non_stream", CapabilityStatus.AVAILABLE, "FastAPI and Flutter use the selected loaded model.", True),
-    CapabilityInfo("chat_stream", CapabilityStatus.BACKEND_ONLY, "SSE streaming is implemented in the backend; Flutter currently uses non-streaming chat.", False),
+    CapabilityInfo("chat_stream", CapabilityStatus.AVAILABLE, "SSE streaming chat is available in the backend and Flutter Windows client.", True),
     CapabilityInfo("model_scan", CapabilityStatus.AVAILABLE, "Scans the unified LocalModelRepository without loading weights.", True),
     CapabilityInfo("model_load", CapabilityStatus.AVAILABLE, "Loads a selected repository model through the runtime policy and GPU scheduler.", True),
     CapabilityInfo("model_unload", CapabilityStatus.AVAILABLE, "Unloads the selected runtime model and releases CUDA cache via the backend.", True),

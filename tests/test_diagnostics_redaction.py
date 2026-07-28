@@ -1,4 +1,7 @@
+import importlib
 import zipfile
+
+import pytest
 
 from llm_studio.diagnostics import export_diagnostics
 
@@ -29,6 +32,7 @@ class Config:
 
 def test_diagnostics_export_redacts_secrets(tmp_path):
     output = export_diagnostics(Config(tmp_path), tmp_path / "diag.zip")
+    assert not (tmp_path / "diag.zip.tmp").exists()
 
     with zipfile.ZipFile(output) as archive:
         names = set(archive.namelist())
@@ -39,3 +43,31 @@ def test_diagnostics_export_redacts_secrets(tmp_path):
     assert "hf-secret" not in text
     assert "plain-password" not in text
     assert "model.safetensors" not in names
+
+
+def test_diagnostics_export_failure_cleans_tmp_and_keeps_existing_output(monkeypatch, tmp_path):
+    export_module = importlib.import_module("llm_studio.diagnostics.export")
+    output = tmp_path / "diag.zip"
+    output.write_bytes(b"old")
+
+    class FailingZipFile:
+        def __init__(self, path, *args, **kwargs):
+            self.path = path
+
+        def __enter__(self):
+            self.path.write_bytes(b"partial")
+            return self
+
+        def __exit__(self, exc_type, exc, traceback):
+            return False
+
+        def writestr(self, *args, **kwargs):
+            raise RuntimeError("zip write failed")
+
+    monkeypatch.setattr(export_module.zipfile, "ZipFile", FailingZipFile)
+
+    with pytest.raises(RuntimeError, match="zip write failed"):
+        export_module.export_diagnostics(Config(tmp_path), output)
+
+    assert output.read_bytes() == b"old"
+    assert not (tmp_path / "diag.zip.tmp").exists()

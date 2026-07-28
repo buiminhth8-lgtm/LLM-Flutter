@@ -77,6 +77,12 @@ DEFAULT_CONFIG: dict[str, Any] = {
         ],
     },
     "auth": {"enabled": True},
+    "security": {
+        "local_path_access": {
+            "enabled": False,
+            "allowed_roots": ["./data/imports", "./data/uploads"],
+        },
+    },
     "finetune": {
         "method": "qlora",
         "lora_r": 16,

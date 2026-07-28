@@ -97,7 +97,7 @@ class RAGPipeline:
         self.vector_store.clear()
         if self.store_dir.exists():
             if self.store_dir == self.store_dir.parent:
-                raise ValueError("????????????")
+                raise ValueError("拒绝清理不安全的 RAG 存储目录。")
             ensure_within(self.store_dir, self.store_dir.parent)
             shutil.rmtree(self.store_dir)
 

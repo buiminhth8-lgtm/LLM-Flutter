@@ -146,12 +146,12 @@ class AdminManager:
     def initialize(self, admin_password: str, display_name: str = "Admin") -> UserRecord:
         """Initialize the local admin account and return the first API key once."""
         if self.initialized:
-            raise ValueError("LLM Studio ?????????????")
+            raise ValueError("LLM Studio 已经完成初始化。")
         password = (admin_password or "").strip()
         if not password:
-            raise ValueError("??????????")
+            raise ValueError("管理员密码不能为空。")
         if password.lower() in WEAK_PASSWORDS or len(password) < 8:
-            raise ValueError("????????????? 8 ?????????")
+            raise ValueError("管理员密码太弱，至少需要 8 个字符，且不能使用常见弱密码。")
 
         self._admin_password_hash = _hash_secret(password)
         api_key = generate_api_key()

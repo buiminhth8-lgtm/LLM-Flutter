@@ -469,6 +469,8 @@ rag:
 
 索引保存会记录 schema version、embedding model、embedding dimension、documents、chunks。模型或维度不一致时会拒绝读取旧索引并提示重建。
 
+RAG 上传文件继续走安全上传模块。`file_path` / `directory_path` 这类读取后端本机路径的接口默认禁用；如确需使用，必须由管理员启用 `security.local_path_access.enabled`，并把路径限制在 `allowed_roots` 之内。越界路径会返回 `RAG_PATH_NOT_ALLOWED`，不会读取任意系统文件。
+
 ## LoRA Adapter
 
 Adapter 目录默认：
@@ -577,14 +579,14 @@ C:\Users\zkjr\...
 | 能力 | 状态 | Flutter | 说明 |
 | --- | --- | --- | --- |
 | `chat_non_stream` | available | yes | 使用已选择/已加载模型 ID |
-| `chat_stream` | backend_only / partial | partial | 后端 SSE 已有，Flutter 有基础 SSE/停止生成能力 |
+| `chat_stream` | available | yes | 后端 SSE 与 Flutter Windows 基础流式/停止生成能力已接入 |
 | `model_scan` | available | yes | 使用统一模型仓库，不加载权重 |
 | `model_load` | available | yes | 经过 runtime policy 和 GPU scheduler |
 | `model_unload` | available | yes | 释放 runtime 状态 |
 | `model_download` | backend_only | partial | 后端任务存在，Flutter 有最小任务页 |
 | `model_download_cancel` | partial | yes | 协作式取消，不声明严格暂停 |
 | `model_download_resume` | partial | partial | retry 复用 Hugging Face cache |
-| `rag_query` | backend_only / partial | partial | Flutter 有最小查询页面 |
+| `rag_query` | backend_only / partial | partial | Flutter 有最小查询页面；本地路径导入默认禁用并仅限管理员 allowlist |
 | `rag_import` | backend_only | partial | 后台任务导入 |
 | `vision_ocr` | backend_only | no | 后端受 GPU scheduler 保护 |
 | `lora_scan` | backend_only / partial | partial | Flutter 有 Adapter 页面 |

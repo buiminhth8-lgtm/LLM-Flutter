@@ -58,16 +58,23 @@ def export_diagnostics(config, output_path: str | Path | None = None) -> Path:
 
     import yaml
 
-    with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        archive.writestr("runtime.json", json.dumps(runtime, ensure_ascii=False, indent=2, default=str))
-        archive.writestr("version.json", json.dumps(version, ensure_ascii=False, indent=2, default=str))
-        archive.writestr("pip-freeze.txt", pip_freeze)
-        archive.writestr(
-            "config-redacted.yaml",
-            yaml.safe_dump(redact_config(config._data), allow_unicode=True, sort_keys=False),
-        )
-        archive.writestr("models-summary.json", json.dumps(models, ensure_ascii=False, indent=2))
-        archive.writestr("disk-usage.json", json.dumps(disk, ensure_ascii=False, indent=2))
-        archive.writestr("capabilities.json", json.dumps(capabilities, ensure_ascii=False, indent=2))
-    os.replace(output, output)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    tmp_output = output.with_suffix(output.suffix + ".tmp")
+    try:
+        with zipfile.ZipFile(tmp_output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr("runtime.json", json.dumps(runtime, ensure_ascii=False, indent=2, default=str))
+            archive.writestr("version.json", json.dumps(version, ensure_ascii=False, indent=2, default=str))
+            archive.writestr("pip-freeze.txt", pip_freeze)
+            archive.writestr(
+                "config-redacted.yaml",
+                yaml.safe_dump(redact_config(config._data), allow_unicode=True, sort_keys=False),
+            )
+            archive.writestr("models-summary.json", json.dumps(models, ensure_ascii=False, indent=2))
+            archive.writestr("disk-usage.json", json.dumps(disk, ensure_ascii=False, indent=2))
+            archive.writestr("capabilities.json", json.dumps(capabilities, ensure_ascii=False, indent=2))
+        os.replace(tmp_output, output)
+    except Exception:
+        if tmp_output.exists():
+            tmp_output.unlink()
+        raise
     return output
