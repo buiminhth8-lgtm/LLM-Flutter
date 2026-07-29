@@ -12,13 +12,18 @@ import 'package:flutter_studio/features/storage/storage_page.dart';
 Widget _wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
 
 void main() {
-  testWidgets('Downloads totalBytes=null shows indeterminate progress and cancel request text', (tester) async {
+  testWidgets('Downloads shows provider and unknown total progress state', (
+    tester,
+  ) async {
+    String selectedProvider = 'modelscope';
+
     await tester.pumpWidget(
       _wrap(
         DownloadsPage(
           downloads: [
             DownloadTaskDto.fromMap({
               'job_id': 'job-1',
+              'provider': 'modelscope',
               'repo_id': 'org/model',
               'status': 'running',
               'downloaded_bytes': 1024,
@@ -29,10 +34,12 @@ void main() {
             }),
           ],
           repoController: TextEditingController(),
+          provider: selectedProvider,
           revisionController: TextEditingController(),
           allowPatternsController: TextEditingController(),
           ignorePatternsController: TextEditingController(),
           onStart: () {},
+          onProviderChanged: (value) => selectedProvider = value,
           onCancel: (_) async {},
           onRetry: (_) async {},
           onViewModel: (_) async {},
@@ -41,6 +48,8 @@ void main() {
       ),
     );
 
+    expect(find.text('ModelScope'), findsOneWidget);
+    expect(find.text('ModelScope: org/model'), findsOneWidget);
     expect(find.text('1.0 KB / 总大小未知'), findsOneWidget);
     expect(find.text('取消请求已提交'), findsOneWidget);
     expect(find.text('进度未知'), findsOneWidget);
@@ -52,7 +61,12 @@ void main() {
       _wrap(
         ModelsPage(
           models: const [
-            {'id': 'model-a', 'status': 'ready', 'format': 'gguf', 'display_name': 'Model A'},
+            {
+              'id': 'model-a',
+              'status': 'ready',
+              'format': 'gguf',
+              'display_name': 'Model A',
+            },
           ],
           currentModel: const {'loaded': false},
           selectedModelId: null,
@@ -76,7 +90,9 @@ void main() {
     expect(deleted, isTrue);
   });
 
-  testWidgets('Adapter load and activate are disabled without model context', (tester) async {
+  testWidgets('Adapter load and activate are disabled without model context', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _wrap(
         AdaptersPage(
@@ -94,15 +110,26 @@ void main() {
       ),
     );
 
-    final load = tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Load'));
-    final activate = tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Activate'));
+    final load = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Load'),
+    );
+    final activate = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Activate'),
+    );
     expect(load.onPressed, isNull);
     expect(activate.onPressed, isNull);
   });
 
   testWidgets('Benchmark page shows experimental notice', (tester) async {
     await tester.pumpWidget(
-      _wrap(BenchmarksPage(benchmarks: const [], currentModel: const {}, onStart: () {}, onRefresh: () {})),
+      _wrap(
+        BenchmarksPage(
+          benchmarks: const [],
+          currentModel: const {},
+          onStart: () {},
+          onRefresh: () {},
+        ),
+      ),
     );
 
     expect(find.text('Experimental'), findsOneWidget);
@@ -111,17 +138,34 @@ void main() {
 
   testWidgets('Storage cleanup requires preview first', (tester) async {
     await tester.pumpWidget(
-      _wrap(StoragePage(storage: const {'categories': []}, cleanupPreview: null, onRefresh: () {}, onPreview: () {}, onCleanup: () {})),
+      _wrap(
+        StoragePage(
+          storage: const {'categories': []},
+          cleanupPreview: null,
+          onRefresh: () {},
+          onPreview: () {},
+          onCleanup: () {},
+        ),
+      ),
     );
 
-    final cleanup = tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Execute cleanup'));
+    final cleanup = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Execute cleanup'),
+    );
     expect(cleanup.onPressed, isNull);
     expect(find.text('未生成清理预览'), findsOneWidget);
   });
 
   testWidgets('Diagnostics page shows redaction policy', (tester) async {
     await tester.pumpWidget(
-      _wrap(DiagnosticsPage(runtime: const {}, capabilities: const [], exportResult: null, onExport: () {})),
+      _wrap(
+        DiagnosticsPage(
+          runtime: const {},
+          capabilities: const [],
+          exportResult: null,
+          onExport: () {},
+        ),
+      ),
     );
 
     expect(find.text('Redacted'), findsOneWidget);
@@ -130,7 +174,13 @@ void main() {
 
   testWidgets('RAG page mentions local path restriction', (tester) async {
     await tester.pumpWidget(
-      _wrap(RagPage(queryController: TextEditingController(), result: null, onQuery: () {})),
+      _wrap(
+        RagPage(
+          queryController: TextEditingController(),
+          result: null,
+          onQuery: () {},
+        ),
+      ),
     );
 
     expect(find.text('Local paths restricted'), findsOneWidget);

@@ -10,6 +10,7 @@ from llm_studio.jobs import Job, JobStatus
 @dataclass(frozen=True)
 class DownloadRequest:
     repo_id: str
+    provider: str | None = None
     revision: str | None = None
     allow_patterns: tuple[str, ...] | None = None
     ignore_patterns: tuple[str, ...] | None = None
@@ -39,6 +40,7 @@ class DownloadProgress:
 @dataclass(frozen=True)
 class DownloadTaskState:
     job_id: str
+    provider: str
     repo_id: str
     revision: str | None
     status: str
@@ -78,6 +80,7 @@ class DownloadTaskState:
             percent = min(100.0, max(0.0, int(downloaded_bytes) / int(total_bytes) * 100.0))
         return cls(
             job_id=job.id,
+            provider=str(payload.get("provider", "huggingface")),
             repo_id=str(payload.get("repo_id", "")),
             revision=payload.get("revision"),
             status=status,

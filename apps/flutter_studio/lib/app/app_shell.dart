@@ -62,6 +62,7 @@ class _StudioShellState extends State<StudioShell> {
   final _downloadRevisionController = TextEditingController();
   final _downloadAllowController = TextEditingController();
   final _downloadIgnoreController = TextEditingController();
+  String _downloadProvider = 'huggingface';
   final _systemController = TextEditingController(
     text: 'You are a concise and reliable local assistant.',
   );
@@ -294,6 +295,7 @@ class _StudioShellState extends State<StudioShell> {
   Future<void> _startDownload() async => _guarded(() async {
     await _downloads.start(
       repoId: _downloadRepoController.text.trim(),
+      provider: _downloadProvider,
       revision: _downloadRevisionController.text.trim(),
       allowPatterns: _splitPatterns(_downloadAllowController.text),
       ignorePatterns: _splitPatterns(_downloadIgnoreController.text),
@@ -548,10 +550,12 @@ class _StudioShellState extends State<StudioShell> {
       DownloadsPage(
         downloads: _downloads.state.downloads,
         repoController: _downloadRepoController,
+        provider: _downloadProvider,
         revisionController: _downloadRevisionController,
         allowPatternsController: _downloadAllowController,
         ignorePatternsController: _downloadIgnoreController,
         onStart: _startDownload,
+        onProviderChanged: (value) => setState(() => _downloadProvider = value),
         onCancel: _cancelDownload,
         onRetry: _retryDownload,
         onViewModel: _viewDownloadedModel,

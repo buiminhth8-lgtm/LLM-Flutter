@@ -32,6 +32,7 @@ router = APIRouter()
 
 class DownloadModelRequest(BaseModel):
     repo_id: str
+    provider: str | None = None
     revision: str | None = None
     allow_patterns: list[str] | None = None
     ignore_patterns: list[str] | None = None
@@ -51,6 +52,7 @@ async def create_download(req: DownloadModelRequest):
         job = state.download_manager.create_download(
             DownloadRequest(
                 repo_id=req.repo_id,
+                provider=req.provider,
                 revision=req.revision,
                 allow_patterns=tuple(req.allow_patterns) if req.allow_patterns else None,
                 ignore_patterns=tuple(req.ignore_patterns) if req.ignore_patterns else None,

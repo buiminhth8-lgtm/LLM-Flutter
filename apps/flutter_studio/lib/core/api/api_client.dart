@@ -9,7 +9,7 @@ import 'sse_client.dart';
 
 class LlmStudioClient {
   LlmStudioClient(this.baseUrl, {http.Client? httpClient, this._sseClient})
-      : _httpClient = httpClient ?? http.Client();
+    : _httpClient = httpClient ?? http.Client();
 
   String baseUrl;
   String userId = 'admin';
@@ -17,11 +17,15 @@ class LlmStudioClient {
   final http.Client _httpClient;
   final SseClient? _sseClient;
 
-  Future<Map<String, dynamic>> health() async => _getMap('/health', authenticated: false);
+  Future<Map<String, dynamic>> health() async =>
+      _getMap('/health', authenticated: false);
 
-  Future<Map<String, dynamic>> setupStatus() async => _getMap('/v1/setup/status', authenticated: false);
+  Future<Map<String, dynamic>> setupStatus() async =>
+      _getMap('/v1/setup/status', authenticated: false);
 
-  Future<Map<String, dynamic>> initialize({required String adminPassword}) async {
+  Future<Map<String, dynamic>> initialize({
+    required String adminPassword,
+  }) async {
     return _postMap(
       '/v1/setup/initialize',
       authenticated: false,
@@ -55,12 +59,18 @@ class LlmStudioClient {
   }
 
   Future<void> unloadModel(String modelId) async {
-    await _postMap('/v1/models/unload', body: {'model': modelId}, timeout: const Duration(seconds: 30));
+    await _postMap(
+      '/v1/models/unload',
+      body: {'model': modelId},
+      timeout: const Duration(seconds: 30),
+    );
   }
 
-  Future<Map<String, dynamic>> currentModel() async => _getMap('/v1/models/current');
+  Future<Map<String, dynamic>> currentModel() async =>
+      _getMap('/v1/models/current');
 
-  Future<Map<String, dynamic>> gpuScheduler() async => _getMap('/v1/gpu/scheduler');
+  Future<Map<String, dynamic>> gpuScheduler() async =>
+      _getMap('/v1/gpu/scheduler');
 
   Future<List<dynamic>> jobs({int limit = 20}) async {
     final body = await _getMap('/v1/jobs?limit=$limit');
@@ -78,21 +88,30 @@ class LlmStudioClient {
 
   Future<Map<String, dynamic>> startDownload({
     required String repoId,
+    String provider = 'huggingface',
     String? revision,
     List<String>? allowPatterns,
     List<String>? ignorePatterns,
   }) {
-    return _postMap('/v1/downloads', body: {
-      'repo_id': repoId,
-      if (revision != null && revision.isNotEmpty) 'revision': revision,
-      if (allowPatterns != null && allowPatterns.isNotEmpty) 'allow_patterns': allowPatterns,
-      if (ignorePatterns != null && ignorePatterns.isNotEmpty) 'ignore_patterns': ignorePatterns,
-    });
+    return _postMap(
+      '/v1/downloads',
+      body: {
+        'provider': provider,
+        'repo_id': repoId,
+        if (revision != null && revision.isNotEmpty) 'revision': revision,
+        if (allowPatterns != null && allowPatterns.isNotEmpty)
+          'allow_patterns': allowPatterns,
+        if (ignorePatterns != null && ignorePatterns.isNotEmpty)
+          'ignore_patterns': ignorePatterns,
+      },
+    );
   }
 
-  Future<void> cancelDownload(String id) async => _postMap('/v1/downloads/${Uri.encodeComponent(id)}/cancel');
+  Future<void> cancelDownload(String id) async =>
+      _postMap('/v1/downloads/${Uri.encodeComponent(id)}/cancel');
 
-  Future<void> retryDownload(String id) async => _postMap('/v1/downloads/${Uri.encodeComponent(id)}/retry');
+  Future<void> retryDownload(String id) async =>
+      _postMap('/v1/downloads/${Uri.encodeComponent(id)}/retry');
 
   Future<List<dynamic>> adapters() async {
     final body = await _getMap('/v1/adapters');
@@ -102,56 +121,75 @@ class LlmStudioClient {
   Future<void> scanAdapters() async => _postMap('/v1/adapters/scan');
 
   Future<void> loadAdapter(String id, String modelId) async => _postMap(
-        '/v1/adapters/${Uri.encodeComponent(id)}/load',
-        body: {'model': modelId},
-      );
+    '/v1/adapters/${Uri.encodeComponent(id)}/load',
+    body: {'model': modelId},
+  );
 
   Future<void> activateAdapter(String id, String modelId) async => _postMap(
-        '/v1/adapters/${Uri.encodeComponent(id)}/activate',
-        body: {'model': modelId},
-      );
+    '/v1/adapters/${Uri.encodeComponent(id)}/activate',
+    body: {'model': modelId},
+  );
 
-  Future<void> deactivateAdapter(String id, {String? modelId}) async => _postMap(
+  Future<void> deactivateAdapter(String id, {String? modelId}) async =>
+      _postMap(
         '/v1/adapters/${Uri.encodeComponent(id)}/deactivate',
-        body: modelId == null || modelId.isEmpty ? const {} : {'model': modelId},
+        body: modelId == null || modelId.isEmpty
+            ? const {}
+            : {'model': modelId},
       );
 
   Future<void> unloadAdapter(String id, {String? modelId}) async => _postMap(
-        '/v1/adapters/${Uri.encodeComponent(id)}/unload',
-        body: modelId == null || modelId.isEmpty ? const {} : {'model': modelId},
-      );
+    '/v1/adapters/${Uri.encodeComponent(id)}/unload',
+    body: modelId == null || modelId.isEmpty ? const {} : {'model': modelId},
+  );
 
   Future<List<dynamic>> benchmarks() async {
     final body = await _getMap('/v1/benchmarks');
     return (body['data'] as List?) ?? const [];
   }
 
-  Future<Map<String, dynamic>> startBenchmark({required String modelId, int maxNewTokens = 128, int contextLength = 512}) {
-    return _postMap('/v1/benchmarks', body: {
-      'model_id': modelId,
-      'prompt_set': 'default',
-      'warmup_runs': 1,
-      'measured_runs': 3,
-      'max_new_tokens': maxNewTokens,
-      'context_lengths': [contextLength],
-      'seed': 42,
-    });
+  Future<Map<String, dynamic>> startBenchmark({
+    required String modelId,
+    int maxNewTokens = 128,
+    int contextLength = 512,
+  }) {
+    return _postMap(
+      '/v1/benchmarks',
+      body: {
+        'model_id': modelId,
+        'prompt_set': 'default',
+        'warmup_runs': 1,
+        'measured_runs': 3,
+        'max_new_tokens': maxNewTokens,
+        'context_lengths': [contextLength],
+        'seed': 42,
+      },
+    );
   }
 
   Future<Map<String, dynamic>> storage() async => _getMap('/v1/storage');
 
-  Future<Map<String, dynamic>> cleanupPreview() async => _postMap('/v1/storage/cleanup/preview');
+  Future<Map<String, dynamic>> cleanupPreview() async =>
+      _postMap('/v1/storage/cleanup/preview');
 
-  Future<Map<String, dynamic>> cleanupStorage() async => _postMap('/v1/storage/cleanup');
+  Future<Map<String, dynamic>> cleanupStorage() async =>
+      _postMap('/v1/storage/cleanup');
 
-  Future<Map<String, dynamic>> exportDiagnostics() async => _postMap('/v1/diagnostics/export');
+  Future<Map<String, dynamic>> exportDiagnostics() async =>
+      _postMap('/v1/diagnostics/export');
 
   Future<String> ragQuery(String query, {int topK = 5}) async {
-    final body = await _postMap('/v1/rag/query', body: {'question': query, 'top_k': topK});
+    final body = await _postMap(
+      '/v1/rag/query',
+      body: {'question': query, 'top_k': topK},
+    );
     return jsonEncode(body);
   }
 
-  Future<String> chat(String modelId, List<Map<String, String>> messages) async {
+  Future<String> chat(
+    String modelId,
+    List<Map<String, String>> messages,
+  ) async {
     final body = await _postMap(
       '/v1/chat/completions',
       body: {'model': modelId, 'messages': messages, 'stream': false},
@@ -167,7 +205,10 @@ class LlmStudioClient {
     return jsonEncode(body);
   }
 
-  Stream<String> chatStream(String modelId, List<Map<String, String>> messages) {
+  Stream<String> chatStream(
+    String modelId,
+    List<Map<String, String>> messages,
+  ) {
     final sse = _sseClient ?? SseClient();
     return sse.postJsonTokens(
       uri: Uri.parse('$baseUrl/v1/chat/completions'),
@@ -176,17 +217,17 @@ class LlmStudioClient {
     );
   }
 
-
-  Future<void> cancelJob(String id) async => _postMap('/v1/jobs/${Uri.encodeComponent(id)}/cancel');
+  Future<void> cancelJob(String id) async =>
+      _postMap('/v1/jobs/${Uri.encodeComponent(id)}/cancel');
 
   Future<Map<String, dynamic>> registerExternalModel(String path) async {
     return _postMap('/v1/models/register', body: {'path': path});
   }
 
   Future<void> deleteModel(String modelId, {required bool confirm}) async {
-    final uri = Uri.parse('$baseUrl/v1/models/${Uri.encodeComponent(modelId)}').replace(
-      queryParameters: {'confirm': confirm ? 'true' : 'false'},
-    );
+    final uri = Uri.parse(
+      '$baseUrl/v1/models/${Uri.encodeComponent(modelId)}',
+    ).replace(queryParameters: {'confirm': confirm ? 'true' : 'false'});
     final response = await _httpClient
         .delete(uri, headers: _authHeaders())
         .timeout(const Duration(seconds: 30));
@@ -195,14 +236,25 @@ class LlmStudioClient {
 
   Map<String, String> authHeadersForTesting() => _authHeaders();
 
-  Future<Map<String, dynamic>> _getMap(String path, {bool authenticated = true}) async {
+  Future<Map<String, dynamic>> _getMap(
+    String path, {
+    bool authenticated = true,
+  }) async {
     final response = await _httpClient
-        .get(Uri.parse('$baseUrl$path'), headers: authenticated ? _authHeaders() : const {})
+        .get(
+          Uri.parse('$baseUrl$path'),
+          headers: authenticated ? _authHeaders() : const {},
+        )
         .timeout(const Duration(seconds: 8));
     return _decodeMap(response);
   }
 
-  Future<Map<String, dynamic>> _postMap(String path, {Map<String, Object?>? body, bool authenticated = true, Duration timeout = const Duration(seconds: 30)}) async {
+  Future<Map<String, dynamic>> _postMap(
+    String path, {
+    Map<String, Object?>? body,
+    bool authenticated = true,
+    Duration timeout = const Duration(seconds: 30),
+  }) async {
     final response = await _httpClient
         .post(
           Uri.parse('$baseUrl$path'),
@@ -217,15 +269,24 @@ class LlmStudioClient {
   }
 
   Map<String, dynamic> _decodeMap(http.Response response) {
-    final dynamic body = response.body.isEmpty ? <String, dynamic>{} : jsonDecode(response.body);
+    final dynamic body = response.body.isEmpty
+        ? <String, dynamic>{}
+        : jsonDecode(response.body);
     if (response.statusCode >= 400) {
       if (body is Map && body['error'] is Map) {
         final error = body['error'] as Map;
         final code = '${error['code']}';
         final message = '${error['message']}';
-        throw exceptionForApiError(statusCode: response.statusCode, code: code, message: message);
+        throw exceptionForApiError(
+          statusCode: response.statusCode,
+          code: code,
+          message: message,
+        );
       }
-      throw StudioApiException('HTTP ${response.statusCode}: ${response.body}', statusCode: response.statusCode);
+      throw StudioApiException(
+        'HTTP ${response.statusCode}: ${response.body}',
+        statusCode: response.statusCode,
+      );
     }
     if (body is Map<String, dynamic>) {
       return body;
@@ -237,6 +298,10 @@ class LlmStudioClient {
     if (apiKey.isEmpty) {
       return const {};
     }
-    return {'X-User-ID': userId, 'X-API-Key': apiKey, 'Authorization': 'Bearer $apiKey'};
+    return {
+      'X-User-ID': userId,
+      'X-API-Key': apiKey,
+      'Authorization': 'Bearer $apiKey',
+    };
   }
 }

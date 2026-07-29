@@ -33,56 +33,75 @@ class DownloadHttpClient extends http.BaseClient {
 }
 
 void main() {
-  test('startDownload body supports revision and pattern filters', () async {
-    final httpClient = DownloadHttpClient();
-    final client = LlmStudioClient('http://127.0.0.1:8000', httpClient: httpClient);
+  test(
+    'startDownload body supports provider revision and pattern filters',
+    () async {
+      final httpClient = DownloadHttpClient();
+      final client = LlmStudioClient(
+        'http://127.0.0.1:8000',
+        httpClient: httpClient,
+      );
 
-    await client.startDownload(
-      repoId: 'org/model',
-      revision: 'main',
-      allowPatterns: ['*.json'],
-      ignorePatterns: ['*.md'],
-    );
+      await client.startDownload(
+        provider: 'modelscope',
+        repoId: 'org/model',
+        revision: 'main',
+        allowPatterns: ['*.json'],
+        ignorePatterns: ['*.md'],
+      );
 
-    final request = httpClient.requests.single;
-    final body = jsonDecode(request.body) as Map<String, dynamic>;
-    expect(request.url.path, '/v1/downloads');
-    expect(body['repo_id'], 'org/model');
-    expect(body['revision'], 'main');
-    expect(body['allow_patterns'], ['*.json']);
-    expect(body['ignore_patterns'], ['*.md']);
-  });
+      final request = httpClient.requests.single;
+      final body = jsonDecode(request.body) as Map<String, dynamic>;
+      expect(request.url.path, '/v1/downloads');
+      expect(body['provider'], 'modelscope');
+      expect(body['repo_id'], 'org/model');
+      expect(body['revision'], 'main');
+      expect(body['allow_patterns'], ['*.json']);
+      expect(body['ignore_patterns'], ['*.md']);
+    },
+  );
 
-  test('downloads parse null total bytes and nullable percent', () async {
-    final httpClient = DownloadHttpClient(
-      responseBody: {
-        'data': [
-          {
-            'job_id': 'job-a',
-            'repo_id': 'org/model',
-            'status': 'running',
-            'downloaded_bytes': 128,
-            'total_bytes': null,
-            'percent': null,
-            'can_cancel': true,
-            'can_retry': false,
-          },
-        ],
-      },
-    );
-    final client = LlmStudioClient('http://127.0.0.1:8000', httpClient: httpClient);
+  test(
+    'downloads parse provider null total bytes and nullable percent',
+    () async {
+      final httpClient = DownloadHttpClient(
+        responseBody: {
+          'data': [
+            {
+              'job_id': 'job-a',
+              'provider': 'modelscope',
+              'repo_id': 'org/model',
+              'status': 'running',
+              'downloaded_bytes': 128,
+              'total_bytes': null,
+              'percent': null,
+              'can_cancel': true,
+              'can_retry': false,
+            },
+          ],
+        },
+      );
+      final client = LlmStudioClient(
+        'http://127.0.0.1:8000',
+        httpClient: httpClient,
+      );
 
-    final downloads = await client.downloads();
+      final downloads = await client.downloads();
 
-    expect(downloads.single, isA<DownloadTaskDto>());
-    expect(downloads.single.totalBytes, isNull);
-    expect(downloads.single.percent, isNull);
-    expect(downloads.single.canCancel, isTrue);
-  });
+      expect(downloads.single, isA<DownloadTaskDto>());
+      expect(downloads.single.provider, 'modelscope');
+      expect(downloads.single.totalBytes, isNull);
+      expect(downloads.single.percent, isNull);
+      expect(downloads.single.canCancel, isTrue);
+    },
+  );
 
   test('cancel and retry use stable endpoints', () async {
     final httpClient = DownloadHttpClient();
-    final client = LlmStudioClient('http://127.0.0.1:8000', httpClient: httpClient);
+    final client = LlmStudioClient(
+      'http://127.0.0.1:8000',
+      httpClient: httpClient,
+    );
 
     await client.cancelDownload('job-a');
     await client.retryDownload('job-b');
@@ -94,7 +113,13 @@ void main() {
   test('download error codes map to Chinese messages', () {
     expect(mapApiErrorMessage('DOWNLOAD_DISK_FULL', ''), contains('磁盘空间不足'));
     expect(mapApiErrorMessage('DOWNLOAD_NETWORK_ERROR', ''), contains('网络错误'));
-    expect(mapApiErrorMessage('DOWNLOAD_MODEL_SCAN_FAILED', ''), contains('扫描注册失败'));
+    expect(
+      mapApiErrorMessage('DOWNLOAD_MODEL_SCAN_FAILED', ''),
+      contains('模型扫描注册失败'),
+    );
+    expect(
+      mapApiErrorMessage('MODELSCOPE_DOWNLOAD_FAILED', ''),
+      contains('魔塔模型下载失败'),
+    );
   });
 }
-
