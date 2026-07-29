@@ -6,6 +6,8 @@
 curl http://127.0.0.1:8000/v1/capabilities
 ```
 
+下载生命周期说明见 [docs/DOWNLOADS.md](DOWNLOADS.md)。
+
 关键状态：
 
 - `chat_non_stream`：available，Flutter 已接入。
