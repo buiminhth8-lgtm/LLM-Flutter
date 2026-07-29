@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/models/dto.dart';
 import '../../core/ui/app_confirm_dialog.dart';
@@ -191,6 +192,12 @@ class _DownloadCard extends StatelessWidget {
     final progressValue = hasPercent
         ? (task.percent! / 100).clamp(0.0, 1.0)
         : null;
+    final displayedProgressValue = task.isRunning
+        ? progressValue
+        : (hasPercent ? progressValue : 0.0);
+    final progressLabel = hasPercent
+        ? '${task.percent!.toStringAsFixed(1)}%'
+        : _progressLabel(task);
     final totalText = task.totalBytes == null
         ? '总大小未知'
         : formatBytes(task.totalBytes);
@@ -232,14 +239,7 @@ class _DownloadCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            AppProgressBar(
-              value: task.isRunning
-                  ? progressValue
-                  : (hasPercent ? progressValue : null),
-              label: hasPercent
-                  ? '${task.percent!.toStringAsFixed(1)}%'
-                  : '进度未知',
-            ),
+            AppProgressBar(value: displayedProgressValue, label: progressLabel),
             const SizedBox(height: 8),
             Wrap(
               spacing: 16,
@@ -269,9 +269,28 @@ class _DownloadCard extends StatelessWidget {
             ],
             if (task.errorMessage != null && task.errorMessage!.isNotEmpty) ...[
               const SizedBox(height: 6),
-              Text(
-                '${task.errorCode ?? 'DOWNLOAD_FAILED'}: ${task.errorMessage}',
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: SelectableText(
+                      '${task.errorCode ?? 'DOWNLOAD_FAILED'}: ${task.errorMessage}',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: '复制错误信息',
+                    onPressed: () => Clipboard.setData(
+                      ClipboardData(
+                        text:
+                            '${task.errorCode ?? 'DOWNLOAD_FAILED'}: ${task.errorMessage}',
+                      ),
+                    ),
+                    icon: const Icon(Icons.copy),
+                  ),
+                ],
               ),
             ],
             const SizedBox(height: 10),
@@ -335,5 +354,21 @@ class _DownloadCard extends StatelessWidget {
 
   String _providerLabel(String provider) {
     return provider == 'modelscope' ? 'ModelScope' : 'Hugging Face';
+  }
+
+  String _progressLabel(DownloadTaskDto task) {
+    if (task.isFailed) {
+      return '下载失败';
+    }
+    if (task.isCancelled) {
+      return '已取消';
+    }
+    if (task.isInterrupted) {
+      return '已中断';
+    }
+    if (task.isSucceeded) {
+      return '已完成';
+    }
+    return '进度未知';
   }
 }

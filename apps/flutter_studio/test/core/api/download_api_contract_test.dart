@@ -96,6 +96,23 @@ void main() {
     },
   );
 
+  test('downloads infer actions for legacy records without can_* fields', () {
+    final running = DownloadTaskDto.fromMap({
+      'job_id': 'running',
+      'status': 'running',
+    });
+    final failed = DownloadTaskDto.fromMap({
+      'job_id': 'failed',
+      'status': 'failed',
+    });
+
+    expect(running.canCancel, isTrue);
+    expect(running.canDelete, isFalse);
+    expect(failed.canCancel, isFalse);
+    expect(failed.canRetry, isTrue);
+    expect(failed.canDelete, isTrue);
+  });
+
   test('cancel retry and delete use stable endpoints', () async {
     final httpClient = DownloadHttpClient();
     final client = LlmStudioClient(

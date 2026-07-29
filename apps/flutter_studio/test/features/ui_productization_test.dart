@@ -68,6 +68,55 @@ void main() {
     expect(find.text('删除记录'), findsNWidgets(2));
   });
 
+  testWidgets('Downloads can delete terminal records and copy errors', (
+    tester,
+  ) async {
+    var deletedJobId = '';
+
+    await tester.pumpWidget(
+      _wrap(
+        DownloadsPage(
+          downloads: [
+            DownloadTaskDto.fromMap({
+              'job_id': 'job-failed',
+              'provider': 'huggingface',
+              'repo_id': 'org/failed',
+              'status': 'failed',
+              'downloaded_bytes': 0,
+              'total_bytes': null,
+              'error_code': 'DOWNLOAD_NETWORK_ERROR',
+              'error_message': 'network failed',
+            }),
+          ],
+          repoController: TextEditingController(),
+          provider: 'huggingface',
+          revisionController: TextEditingController(),
+          allowPatternsController: TextEditingController(),
+          ignorePatternsController: TextEditingController(),
+          onStart: () {},
+          onProviderChanged: (_) {},
+          onCancel: (_) async {},
+          onRetry: (_) async {},
+          onDelete: (id) async => deletedJobId = id,
+          onViewModel: (_) async {},
+          onRefresh: () {},
+        ),
+      ),
+    );
+
+    expect(find.text('下载失败'), findsOneWidget);
+    expect(find.textContaining('DOWNLOAD_NETWORK_ERROR'), findsOneWidget);
+
+    expect(find.byIcon(Icons.copy), findsOneWidget);
+
+    await tester.tap(find.text('删除记录'));
+    await tester.pumpAndSettle();
+    expect(find.text('删除下载记录？'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, '删除记录').last);
+    await tester.pumpAndSettle();
+    expect(deletedJobId, 'job-failed');
+  });
+
   testWidgets('Models move to trash uses confirmation dialog', (tester) async {
     var deleted = false;
     await tester.pumpWidget(
