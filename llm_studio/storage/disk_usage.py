@@ -57,6 +57,7 @@ def collect_disk_usage(config) -> list[DiskUsageItem]:
         ("rag_indexes", rag_index, False),
         ("rag_documents", rag_index / "documents", False),
         ("downloads_active", layout.temp_dir, False),
+        ("download_temp", layout.temp_dir, True),
         ("downloads_failed", layout.temp_dir, True),
         ("uploads_temp", upload_root, True),
         ("benchmarks", layout.benchmarks_dir, True),

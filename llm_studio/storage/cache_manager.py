@@ -26,23 +26,16 @@ class CacheManager:
 
     def preview_cleanup(self, categories: set[str] | None = None) -> list[CleanupPreviewItem]:
         selected = categories or {
-            "downloads_failed",
+            "download_temp",
             "uploads_temp",
             "benchmarks",
             "diagnostics",
             "trash",
         }
         items: list[CleanupPreviewItem] = []
-        if "downloads_failed" in selected:
-            items.extend(
-                self._preview_old_dirs(
-                    self.layout.temp_dir,
-                    self.policy.incomplete_download_days,
-                    category="downloads_failed",
-                    prefix="job-",
-                    reason="older_than_retention",
-                )
-            )
+        if "download_temp" in selected or "downloads_failed" in selected:
+            category = "download_temp" if "download_temp" in selected else "downloads_failed"
+            items.extend(self._preview_download_temp_dirs(category=category))
         if "benchmarks" in selected:
             items.extend(
                 self._preview_old_files(
@@ -111,7 +104,8 @@ class CacheManager:
                     path.unlink()
                 removed.append(item.to_dict())
             except Exception as exc:
-                errors.append({**item.to_dict(), "error": str(exc)})
+                error_code = "DOWNLOAD_TEMP_CLEANUP_FAILED" if item.category == "download_temp" else "STORAGE_CLEANUP_FAILED"
+                errors.append({**item.to_dict(), "error": str(exc), "error_code": error_code})
         return {
             "removed": removed,
             "errors": errors,
@@ -169,6 +163,29 @@ class CacheManager:
                 items.append(CleanupPreviewItem(str(item), category, _path_size(item), reason))
         return items
 
+    def _preview_download_temp_dirs(self, *, category: str) -> list[CleanupPreviewItem]:
+        if not self.layout.temp_dir.exists():
+            return []
+        cutoff = time.time() - self.policy.incomplete_download_days * 86400
+        items: list[CleanupPreviewItem] = []
+        for item in self.layout.temp_dir.iterdir():
+            if not item.name.startswith("job-"):
+                continue
+            if item.is_dir() and item.stat().st_mtime <= cutoff:
+                self._assert_cleanable_path(item, category)
+                job_id = _job_id_from_download_temp(item.name)
+                items.append(
+                    CleanupPreviewItem(
+                        str(item),
+                        category,
+                        _path_size(item),
+                        "stale_download_temp",
+                        job_id=job_id,
+                        protected=False,
+                    )
+                )
+        return items
+
     def _preview_old_files(
         self,
         root: Path,
@@ -192,6 +209,7 @@ class CacheManager:
 
     def _assert_cleanable_path(self, path: Path, category: str) -> None:
         allowed_roots = {
+            "download_temp": self.layout.temp_dir,
             "downloads_failed": self.layout.temp_dir,
             "benchmarks": self.layout.benchmarks_dir,
             "diagnostics": self.layout.diagnostics_dir,
@@ -213,14 +231,20 @@ class CleanupPreviewItem:
     category: str
     size_bytes: int
     reason: str
+    job_id: str | None = None
+    protected: bool = False
 
     def to_dict(self) -> dict[str, object]:
-        return {
+        data: dict[str, object] = {
             "path": self.path,
             "category": self.category,
             "size_bytes": self.size_bytes,
             "reason": self.reason,
+            "protected": self.protected,
         }
+        if self.job_id:
+            data["job_id"] = self.job_id
+        return data
 
 
 def _path_size(path: Path) -> int:
@@ -234,3 +258,12 @@ def _path_size(path: Path) -> int:
             except OSError:
                 continue
     return total
+
+
+def _job_id_from_download_temp(name: str) -> str | None:
+    if not name.startswith("job-"):
+        return None
+    parts = name.split("-", 2)
+    if len(parts) < 2:
+        return None
+    return f"job-{parts[1]}"

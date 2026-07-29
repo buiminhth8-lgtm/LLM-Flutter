@@ -124,6 +124,7 @@ class DownloadManager:
 
         temp_dir = self.layout.temp_dir / f"{job.id}-{local_name}"
         final_dir = self.layout.root_dir / "transformers" / local_name
+        self._merge_payload(job.id, {"temp_dir": str(temp_dir), "download_temp_dir": str(temp_dir)})
         if final_dir.exists():
             raise DownloadValidationError(f"目标模型已存在，拒绝覆盖: {final_dir}")
         temp_dir.mkdir(parents=True, exist_ok=True)
