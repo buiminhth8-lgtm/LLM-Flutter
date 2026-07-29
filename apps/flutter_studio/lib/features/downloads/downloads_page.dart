@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../core/models/dto.dart';
+import '../../core/ui/app_empty_state.dart';
+import '../../core/ui/app_progress_bar.dart';
+import '../../core/ui/app_section_header.dart';
+import '../../core/ui/app_status_badge.dart';
 import '../../core/utils/formatters.dart';
 
 class DownloadsPage extends StatelessWidget {
@@ -36,29 +40,43 @@ class DownloadsPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [
-            const Text('Downloads', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-            const Spacer(),
-            IconButton.filledTonal(onPressed: onRefresh, icon: const Icon(Icons.refresh), tooltip: 'Refresh'),
-          ]),
+          AppSectionHeader(
+            title: 'Downloads',
+            subtitle: '下载作为后台 Job 运行；总大小未知时不显示百分比，取消为协作式请求。',
+            actions: [
+              IconButton.filledTonal(onPressed: onRefresh, icon: const Icon(Icons.refresh), tooltip: '刷新'),
+            ],
+          ),
           const SizedBox(height: 12),
           Row(children: [
-            Expanded(child: TextField(controller: repoController, decoration: const InputDecoration(labelText: 'Hugging Face repo_id', border: OutlineInputBorder()))),
+            Expanded(
+              child: TextField(
+                controller: repoController,
+                decoration: const InputDecoration(labelText: 'Hugging Face repo_id', border: OutlineInputBorder()),
+              ),
+            ),
             const SizedBox(width: 8),
-            SizedBox(width: 180, child: TextField(controller: revisionController, decoration: const InputDecoration(labelText: 'Revision', border: OutlineInputBorder()))),
+            SizedBox(
+              width: 180,
+              child: TextField(controller: revisionController, decoration: const InputDecoration(labelText: 'Revision', border: OutlineInputBorder())),
+            ),
             const SizedBox(width: 8),
-            FilledButton.icon(onPressed: onStart, icon: const Icon(Icons.download), label: const Text('Start')),
+            FilledButton.icon(onPressed: onStart, icon: const Icon(Icons.download), label: const Text('开始下载')),
           ]),
           const SizedBox(height: 8),
           Row(children: [
-            Expanded(child: TextField(controller: allowPatternsController, decoration: const InputDecoration(labelText: 'Allow patterns, comma separated', border: OutlineInputBorder()))),
+            Expanded(child: TextField(controller: allowPatternsController, decoration: const InputDecoration(labelText: 'Allow patterns，用逗号分隔', border: OutlineInputBorder()))),
             const SizedBox(width: 8),
-            Expanded(child: TextField(controller: ignorePatternsController, decoration: const InputDecoration(labelText: 'Ignore patterns, comma separated', border: OutlineInputBorder()))),
+            Expanded(child: TextField(controller: ignorePatternsController, decoration: const InputDecoration(labelText: 'Ignore patterns，用逗号分隔', border: OutlineInputBorder()))),
           ]),
           const SizedBox(height: 12),
           Expanded(
             child: downloads.isEmpty
-                ? const Center(child: Text('No download tasks.'))
+                ? const AppEmptyState(
+                    title: '没有下载任务',
+                    message: '输入 Hugging Face repo_id 后创建后台下载任务。',
+                    icon: Icons.cloud_download_outlined,
+                  )
                 : ListView.separated(
                     itemCount: downloads.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 8),
@@ -98,7 +116,7 @@ class _DownloadCard extends StatelessWidget {
     final statusText = task.cancelRequested ? '取消请求已提交' : task.status;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -107,33 +125,37 @@ class _DownloadCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '${task.repoId.isEmpty ? 'download' : task.repoId} - $statusText',
+                  task.repoId.isEmpty ? 'download' : task.repoId,
                   style: const TextStyle(fontWeight: FontWeight.w700),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              if (task.revision != null && task.revision!.isNotEmpty)
-                Text(task.revision!, style: const TextStyle(color: Colors.black54)),
+              AppStatusBadge(label: statusText, tone: _statusTone(task.status)),
+              if (task.revision != null && task.revision!.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Text(task.revision!, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              ],
             ]),
             const SizedBox(height: 10),
-            LinearProgressIndicator(value: task.isRunning ? progressValue : (hasPercent ? progressValue : null)),
+            AppProgressBar(
+              value: task.isRunning ? progressValue : (hasPercent ? progressValue : null),
+              label: hasPercent ? '${task.percent!.toStringAsFixed(1)}%' : '进度未知',
+            ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 16,
               runSpacing: 6,
               children: [
-                Text(hasPercent ? '${task.percent!.toStringAsFixed(1)}%' : '进度未知'),
                 Text('${formatBytes(task.downloadedBytes)} / $totalText'),
                 Text(formatSpeed(task.speedBytesPerSecond)),
                 Text(etaText),
-                if (task.totalFiles != null)
-                  Text('${task.completedFiles ?? 0} / ${task.totalFiles} files'),
-                if (task.resumeSupported) const Text('retry 可复用缓存'),
+                if (task.totalFiles != null) Text('${task.completedFiles ?? 0} / ${task.totalFiles} files'),
+                if (task.resumeSupported) const Text('重试会复用 Hugging Face cache'),
               ],
             ),
             if (task.currentFile != null && task.currentFile!.isNotEmpty) ...[
               const SizedBox(height: 6),
-              Text('当前文件: ${task.currentFile}', maxLines: 1, overflow: TextOverflow.ellipsis),
+              Text('当前文件：${task.currentFile}', maxLines: 1, overflow: TextOverflow.ellipsis),
             ],
             if (task.message != null && task.message!.isNotEmpty) ...[
               const SizedBox(height: 6),
@@ -150,11 +172,11 @@ class _DownloadCard extends StatelessWidget {
             Wrap(spacing: 8, children: [
               TextButton(
                 onPressed: task.jobId.isEmpty || !task.canCancel ? null : () => onCancel(task.jobId),
-                child: const Text('Cancel'),
+                child: const Text('取消'),
               ),
               TextButton(
                 onPressed: task.jobId.isEmpty || !task.canRetry ? null : () => onRetry(task.jobId),
-                child: const Text('Retry'),
+                child: const Text('重试'),
               ),
               if (task.isSucceeded && task.modelId != null && task.modelId!.isNotEmpty)
                 FilledButton.tonal(
@@ -167,5 +189,14 @@ class _DownloadCard extends StatelessWidget {
       ),
     );
   }
-}
 
+  AppStatusTone _statusTone(String status) {
+    return switch (status) {
+      'succeeded' => AppStatusTone.success,
+      'failed' => AppStatusTone.danger,
+      'cancelled' => AppStatusTone.warning,
+      'running' || 'pending' || 'cancelling' => AppStatusTone.info,
+      _ => AppStatusTone.neutral,
+    };
+  }
+}

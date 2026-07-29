@@ -27,6 +27,7 @@ import '../features/status/status_controller.dart';
 import '../features/status/status_page.dart';
 import '../features/storage/storage_controller.dart';
 import '../features/storage/storage_page.dart';
+import 'app_routes.dart';
 import 'app_shell_widgets.dart';
 
 class StudioShell extends StatefulWidget {
@@ -480,6 +481,37 @@ class _StudioShellState extends State<StudioShell> {
     });
   }
 
+
+  String _topModelLabel() {
+    final loaded = _models.currentModel?['loaded'] == true;
+    final modelId = _models.selectedModelId ?? (loaded ? '${_models.currentModel?['model_id'] ?? ''}' : '');
+    return modelId.isEmpty ? 'No model loaded' : modelId;
+  }
+
+  String _topAdapterLabel() {
+    final adapter = _models.currentModel?['adapter_id'] ?? _models.currentModel?['adapter'];
+    final label = '${adapter ?? ''}'.trim();
+    return label.isEmpty ? 'None' : label;
+  }
+
+  String _topGpuLabel() {
+    final running = _status.state.gpuScheduler?['running'];
+    if (running is List && running.isNotEmpty) {
+      return 'Busy';
+    }
+    return 'Idle';
+  }
+
+  int _runningJobCount() {
+    return _jobs.state.jobs.where((job) {
+      if (job is! Map) {
+        return false;
+      }
+      final status = '${job['status'] ?? ''}';
+      return status == 'pending' || status == 'running' || status == 'cancelling';
+    }).length;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_initialSetupCheckDone && widget.autoRefresh) {
@@ -547,7 +579,7 @@ class _StudioShellState extends State<StudioShell> {
         onSelect: _selectModel,
         onRegisterExternal: () => setState(
           () => _error =
-              'External model registration will use the backend register API in the next UI pass.',
+              '外部模型注册入口将在后续 UI 迭代中接入，请先使用后端 API 注册。',
         ),
         onMoveToTrash: _deleteModel,
       ),
@@ -650,81 +682,10 @@ class _StudioShellState extends State<StudioShell> {
       body: Row(
         children: [
           SizedBox(
-            width: 176,
-            child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-              children: [
-                SideNavItem(
-                  index: 0,
-                  selectedIndex: _pageIndex,
-                  icon: Icons.monitor_heart_outlined,
-                  label: 'Status',
-                  onSelected: (index) => setState(() => _pageIndex = index),
-                ),
-                SideNavItem(
-                  index: 1,
-                  selectedIndex: _pageIndex,
-                  icon: Icons.storage_outlined,
-                  label: 'Models',
-                  onSelected: (index) => setState(() => _pageIndex = index),
-                ),
-                SideNavItem(
-                  index: 2,
-                  selectedIndex: _pageIndex,
-                  icon: Icons.chat_bubble_outline,
-                  label: 'Chat',
-                  onSelected: (index) => setState(() => _pageIndex = index),
-                ),
-                SideNavItem(
-                  index: 3,
-                  selectedIndex: _pageIndex,
-                  icon: Icons.cloud_download_outlined,
-                  label: 'Downloads',
-                  onSelected: (index) => setState(() => _pageIndex = index),
-                ),
-                SideNavItem(
-                  index: 4,
-                  selectedIndex: _pageIndex,
-                  icon: Icons.article_outlined,
-                  label: 'RAG',
-                  onSelected: (index) => setState(() => _pageIndex = index),
-                ),
-                SideNavItem(
-                  index: 5,
-                  selectedIndex: _pageIndex,
-                  icon: Icons.extension_outlined,
-                  label: 'Adapters',
-                  onSelected: (index) => setState(() => _pageIndex = index),
-                ),
-                SideNavItem(
-                  index: 6,
-                  selectedIndex: _pageIndex,
-                  icon: Icons.speed_outlined,
-                  label: 'Benchmark',
-                  onSelected: (index) => setState(() => _pageIndex = index),
-                ),
-                SideNavItem(
-                  index: 7,
-                  selectedIndex: _pageIndex,
-                  icon: Icons.cleaning_services_outlined,
-                  label: 'Storage',
-                  onSelected: (index) => setState(() => _pageIndex = index),
-                ),
-                SideNavItem(
-                  index: 8,
-                  selectedIndex: _pageIndex,
-                  icon: Icons.bug_report_outlined,
-                  label: 'Diagnostics',
-                  onSelected: (index) => setState(() => _pageIndex = index),
-                ),
-                SideNavItem(
-                  index: 9,
-                  selectedIndex: _pageIndex,
-                  icon: Icons.settings_outlined,
-                  label: 'Settings',
-                  onSelected: (index) => setState(() => _pageIndex = index),
-                ),
-              ],
+            width: 188,
+            child: buildShellNavigation(
+              selectedIndex: _pageIndex,
+              onSelected: (index) => setState(() => _pageIndex = index),
             ),
           ),
           const VerticalDivider(width: 1),
@@ -734,12 +695,16 @@ class _StudioShellState extends State<StudioShell> {
                 TopBar(
                   loading: _loading,
                   backendStatus: _backendStatus,
+                  modelLabel: _topModelLabel(),
+                  adapterLabel: _topAdapterLabel(),
+                  gpuLabel: _topGpuLabel(),
+                  runningJobs: _runningJobCount(),
                   onRefresh: _refreshAll,
                 ),
                 if (_authRequired)
                   MaterialBanner(
                     content: const Text(
-                      '后端已经初始化，但当前客户端没有可用 API Key。请在 Settings 中填写 API Key，或使用管理员密码恢复/重新生成 API Key。',
+                      '后端已经初始化，但当前客户端没有可用 API Key。请在 Settings 中填写 API Key，或重新生成 API Key。',
                     ),
                     leading: const Icon(Icons.lock_outline),
                     actions: [
@@ -756,7 +721,7 @@ class _StudioShellState extends State<StudioShell> {
                     actions: [
                       TextButton(
                         onPressed: () => setState(() => _error = null),
-                        child: const Text('Dismiss'),
+                        child: const Text('关闭'),
                       ),
                     ],
                   ),

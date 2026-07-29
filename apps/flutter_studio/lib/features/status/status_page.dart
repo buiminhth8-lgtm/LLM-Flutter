@@ -24,25 +24,25 @@ class StatusPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = runtime ?? const <String, dynamic>{};
     return _PagePadding(
-      child: Column(
+      child: ListView(
         children: [
-          Expanded(
-            child: GridView.count(
-              crossAxisCount: MediaQuery.sizeOf(context).width > 1100 ? 4 : 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 2.4,
-              children: [
-                _MetricTile(label: 'CUDA', value: '${data['cuda_available'] ?? 'unknown'}'),
-                _MetricTile(label: 'GPU', value: '${data['gpu_name'] ?? 'not detected'}'),
-                _MetricTile(label: 'BF16', value: '${data['bf16_supported'] ?? 'unknown'}'),
-                _MetricTile(label: 'Models', value: '${models.length}'),
-                _MetricTile(label: 'Current model', value: '${data['current_model'] ?? 'none'}'),
-                _MetricTile(label: 'Backend', value: '${data['backend'] ?? 'none'}'),
-                _MetricTile(label: 'Queue', value: '${data['queue_length'] ?? 0}'),
-                _MetricTile(label: 'GPU tasks', value: '${gpuScheduler?['running'] is List ? (gpuScheduler?['running'] as List).length : 0} running'),
-              ],
-            ),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: MediaQuery.sizeOf(context).width > 1100 ? 4 : 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 2.4,
+            children: [
+              _MetricTile(label: 'CUDA', value: '${data['cuda_available'] ?? 'unknown'}'),
+              _MetricTile(label: 'GPU', value: '${data['gpu_name'] ?? 'not detected'}'),
+              _MetricTile(label: 'BF16', value: '${data['bf16_supported'] ?? 'unknown'}'),
+              _MetricTile(label: 'Models', value: '${models.length}'),
+              _MetricTile(label: 'Current model', value: '${data['current_model'] ?? 'none'}'),
+              _MetricTile(label: 'Backend', value: '${data['backend'] ?? 'none'}'),
+              _MetricTile(label: 'Queue', value: '${data['queue_length'] ?? 0}'),
+              _MetricTile(label: 'GPU tasks', value: '${gpuScheduler?['running'] is List ? (gpuScheduler?['running'] as List).length : 0} running'),
+            ],
           ),
           const SizedBox(height: 12),
           SizedBox(
