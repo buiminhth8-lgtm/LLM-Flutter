@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from llm_studio.jobs import Job, JobStatus
+from llm_studio.jobs.entities import TERMINAL_JOB_STATUSES
 
 
 @dataclass(frozen=True)
@@ -54,6 +55,7 @@ class DownloadTaskState:
     current_file: str | None
     can_cancel: bool
     can_retry: bool
+    can_delete: bool
     resume_supported: bool
     cancel_requested: bool
     message: str | None
@@ -73,6 +75,7 @@ class DownloadTaskState:
             JobStatus.CANCELLED.value,
             JobStatus.INTERRUPTED.value,
         }
+        can_delete = status in TERMINAL_JOB_STATUSES
         total_bytes = payload.get("total_bytes")
         downloaded_bytes = payload.get("downloaded_bytes")
         percent = None
@@ -94,6 +97,7 @@ class DownloadTaskState:
             current_file=payload.get("current_file"),
             can_cancel=can_cancel,
             can_retry=can_retry,
+            can_delete=can_delete,
             resume_supported=bool(payload.get("resume_supported", True)),
             cancel_requested=status == JobStatus.CANCELLING.value or bool(payload.get("cancel_requested", False)),
             message=job.message,

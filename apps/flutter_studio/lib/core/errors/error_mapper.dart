@@ -17,6 +17,7 @@ String mapApiErrorMessage(String code, String fallback) {
     'DOWNLOAD_CANCELLED' => '下载已取消。',
     'JOB_CANCEL_NOT_ALLOWED' => '该任务已结束，不能取消。',
     'DOWNLOAD_CANCEL_NOT_ALLOWED' => '该下载任务当前不能取消。',
+    'DOWNLOAD_RECORD_DELETE_NOT_ALLOWED' => '下载任务仍在运行，不能删除记录。',
     'DOWNLOAD_LOCAL_FILES_NOT_FOUND' => '本地缓存中未找到该模型文件。',
     'DOWNLOAD_TEMP_CLEANUP_FAILED' => '下载临时目录清理失败。',
     'DOWNLOAD_RETRY_NOT_ALLOWED' => '当前下载状态不允许重试。',

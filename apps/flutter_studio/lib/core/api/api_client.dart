@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../errors/error_mapper.dart';
+import '../logging/client_logger.dart';
 import '../models/dto.dart';
 import 'api_exception.dart';
 import 'sse_client.dart';
@@ -112,6 +113,16 @@ class LlmStudioClient {
 
   Future<void> retryDownload(String id) async =>
       _postMap('/v1/downloads/${Uri.encodeComponent(id)}/retry');
+
+  Future<void> deleteDownloadRecord(String id) async {
+    final response = await _httpClient
+        .delete(
+          Uri.parse('$baseUrl/v1/downloads/${Uri.encodeComponent(id)}'),
+          headers: _authHeaders(),
+        )
+        .timeout(const Duration(seconds: 30));
+    _decodeMap(response);
+  }
 
   Future<List<dynamic>> adapters() async {
     final body = await _getMap('/v1/adapters');
@@ -277,12 +288,14 @@ class LlmStudioClient {
         final error = body['error'] as Map;
         final code = '${error['code']}';
         final message = '${error['message']}';
+        logClientError('API ${response.statusCode} $code: $message');
         throw exceptionForApiError(
           statusCode: response.statusCode,
           code: code,
           message: message,
         );
       }
+      logClientError('HTTP ${response.statusCode}: ${response.body}');
       throw StudioApiException(
         'HTTP ${response.statusCode}: ${response.body}',
         statusCode: response.statusCode,

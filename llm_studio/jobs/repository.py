@@ -87,6 +87,11 @@ class JobRepository:
             raise JobNotFoundError(job_id)
         return self._row_to_job(row)
 
+    def delete(self, job_id: str) -> bool:
+        with self._lock, self._connect() as conn:
+            cursor = conn.execute("DELETE FROM jobs WHERE id = ?", (job_id,))
+        return cursor.rowcount > 0
+
     def list(self, *, limit: int = 50, offset: int = 0) -> list[Job]:
         with self._connect() as conn:
             rows = conn.execute(

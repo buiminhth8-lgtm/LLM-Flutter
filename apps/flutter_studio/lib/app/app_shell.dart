@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../core/api/api_client.dart';
 import '../core/api/api_exception.dart';
 import '../core/config/app_settings_store.dart';
+import '../core/logging/client_logger.dart';
 import '../features/adapters/adapter_controller.dart';
 import '../features/adapters/adapters_page.dart';
 import '../features/benchmarks/benchmark_controller.dart';
@@ -322,6 +323,11 @@ class _StudioShellState extends State<StudioShell> {
     await _refreshAll();
   });
 
+  Future<void> _deleteDownloadRecord(String id) async => _guarded(() async {
+    await _downloads.deleteRecord(id);
+    await _refreshAll();
+  });
+
   Future<void> _viewDownloadedModel(String modelId) async => _guarded(() async {
     await _models.select(modelId);
     _navigation.select(1);
@@ -402,6 +408,7 @@ class _StudioShellState extends State<StudioShell> {
     try {
       await action();
     } catch (error) {
+      logClientError(error);
       if (error is AuthRequiredException) {
         await _handleAuthRequired(error);
       } else {
@@ -558,6 +565,7 @@ class _StudioShellState extends State<StudioShell> {
         onProviderChanged: (value) => setState(() => _downloadProvider = value),
         onCancel: _cancelDownload,
         onRetry: _retryDownload,
+        onDelete: _deleteDownloadRecord,
         onViewModel: _viewDownloadedModel,
         onRefresh: _refreshAll,
       ),

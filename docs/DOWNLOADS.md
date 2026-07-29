@@ -87,6 +87,14 @@ Hugging Face Token 和 ModelScope Token 都不会写入 Job payload、日志或�
 - retry 会尽量复用底层缓存。
 - 当前不声明严格暂停/断点续传，只复用 Hugging Face 或 ModelScope SDK 的缓存能力。
 
+## 删除下载记录
+
+`DELETE /v1/downloads/{job_id}` 只删除下载 Job 记录，不删除模型文件、下载缓存、全局 Hugging Face cache、ModelScope cache 或失败任务留下的项目临时目录。
+
+- 仅终态下载任务记录可以删除：`succeeded/failed/cancelled/interrupted`。
+- `pending/running/cancelling` 记录不能删除，返回 `DOWNLOAD_RECORD_DELETE_NOT_ALLOWED`。
+- 如需清理失败或取消后的临时目录，使用 Storage cleanup preview / cleanup。
+
 ## local_files_only
 
 `local_files_only=true` 表示只使用本地缓存：

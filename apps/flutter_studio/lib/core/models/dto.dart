@@ -58,6 +58,7 @@ class DownloadTaskDto {
     this.etaSeconds,
     this.canCancel = false,
     this.canRetry = false,
+    this.canDelete = false,
     this.resumeSupported = false,
     this.cancelRequested = false,
     this.message,
@@ -90,6 +91,7 @@ class DownloadTaskDto {
       etaSeconds: asDouble(map['eta_seconds']),
       canCancel: map['can_cancel'] == true,
       canRetry: map['can_retry'] == true,
+      canDelete: map['can_delete'] == true,
       resumeSupported: map['resume_supported'] == true,
       cancelRequested: map['cancel_requested'] == true,
       message: asString(map['message']),
@@ -114,6 +116,7 @@ class DownloadTaskDto {
   final double? etaSeconds;
   final bool canCancel;
   final bool canRetry;
+  final bool canDelete;
   final bool resumeSupported;
   final bool cancelRequested;
   final String? message;

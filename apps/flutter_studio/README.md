@@ -49,5 +49,6 @@ flutter run -d windows
 - 删除模型在确认后调用 `confirm=true`。
 - 功能展示以 `GET /v1/capabilities` 为准。
 - 后端日志显示和复制前会脱敏，不应包含 API Key、Authorization、Cookie 或 Token。
+- Flutter 客户端启动信息、API 错误和未捕获异常会输出到 Flutter debug console；输出前会脱敏 API Key、Authorization、Cookie、password 和 token。
 
 Windows 真实运行验收见 [../../docs/WINDOWS_ACCEPTANCE.md](../../docs/WINDOWS_ACCEPTANCE.md)。

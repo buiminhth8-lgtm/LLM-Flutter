@@ -14,6 +14,7 @@ from llm_studio.api.errors import (
     DOWNLOAD_CANCEL_REQUESTED,
     DOWNLOAD_FAILED,
     DOWNLOAD_NOT_FOUND,
+    DOWNLOAD_RECORD_DELETE_NOT_ALLOWED,
     DOWNLOAD_RETRY_NOT_ALLOWED,
     api_error,
 )
@@ -25,6 +26,7 @@ from llm_studio.downloads.exceptions import (
     DownloadRetryNotAllowedError,
 )
 from llm_studio.jobs import JobType
+from llm_studio.jobs.entities import TERMINAL_JOB_STATUSES
 from llm_studio.jobs.exceptions import JobNotFoundError
 
 router = APIRouter()
@@ -123,3 +125,24 @@ async def retry_download(job_id: str):
         "resume_supported": True,
         "message": "Retry reuses the Hugging Face cache; strict pause/resume is not claimed.",
     }
+
+
+@router.delete("/v1/downloads/{job_id}")
+async def delete_download_record(job_id: str):
+    state = get_api_state()
+    assert state.job_repository is not None
+    try:
+        job = state.job_repository.get(job_id)
+    except JobNotFoundError as exc:
+        raise api_error(404, DOWNLOAD_NOT_FOUND, "下载记录不存在。", _request_id()) from exc
+    if job.type != JobType.MODEL_DOWNLOAD.value:
+        raise api_error(404, DOWNLOAD_NOT_FOUND, "下载记录不存在。", _request_id())
+    if job.status not in TERMINAL_JOB_STATUSES:
+        raise api_error(
+            409,
+            DOWNLOAD_RECORD_DELETE_NOT_ALLOWED,
+            "下载任务仍在运行，不能删除记录；请先取消或等待任务结束。",
+            _request_id(),
+        )
+    state.job_repository.delete(job_id)
+    return {"status": "deleted", "job_id": job_id}

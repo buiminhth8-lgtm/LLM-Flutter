@@ -54,6 +54,11 @@ class DownloadController extends ChangeNotifier {
     await refresh();
   }
 
+  Future<void> deleteRecord(String id) async {
+    await _client.deleteDownloadRecord(id);
+    await refresh();
+  }
+
   void _syncPolling() {
     if (state.hasRunningDownloads) {
       _pollTimer ??= Timer.periodic(const Duration(seconds: 1), (_) {

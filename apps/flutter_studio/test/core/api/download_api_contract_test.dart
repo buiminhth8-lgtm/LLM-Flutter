@@ -96,7 +96,7 @@ void main() {
     },
   );
 
-  test('cancel and retry use stable endpoints', () async {
+  test('cancel retry and delete use stable endpoints', () async {
     final httpClient = DownloadHttpClient();
     final client = LlmStudioClient(
       'http://127.0.0.1:8000',
@@ -105,9 +105,12 @@ void main() {
 
     await client.cancelDownload('job-a');
     await client.retryDownload('job-b');
+    await client.deleteDownloadRecord('job-c');
 
     expect(httpClient.requests[0].url.path, '/v1/downloads/job-a/cancel');
     expect(httpClient.requests[1].url.path, '/v1/downloads/job-b/retry');
+    expect(httpClient.requests[2].method, 'DELETE');
+    expect(httpClient.requests[2].url.path, '/v1/downloads/job-c');
   });
 
   test('download error codes map to Chinese messages', () {

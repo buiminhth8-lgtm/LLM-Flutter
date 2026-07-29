@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/models/dto.dart';
+import '../../core/ui/app_confirm_dialog.dart';
 import '../../core/ui/app_empty_state.dart';
 import '../../core/ui/app_progress_bar.dart';
 import '../../core/ui/app_section_header.dart';
@@ -20,6 +21,7 @@ class DownloadsPage extends StatelessWidget {
     required this.onProviderChanged,
     required this.onCancel,
     required this.onRetry,
+    required this.onDelete,
     required this.onViewModel,
     required this.onRefresh,
   });
@@ -34,6 +36,7 @@ class DownloadsPage extends StatelessWidget {
   final ValueChanged<String> onProviderChanged;
   final Future<void> Function(String id) onCancel;
   final Future<void> Function(String id) onRetry;
+  final Future<void> Function(String id) onDelete;
   final Future<void> Function(String modelId) onViewModel;
   final VoidCallback onRefresh;
 
@@ -156,6 +159,7 @@ class DownloadsPage extends StatelessWidget {
                       task: downloads[index],
                       onCancel: onCancel,
                       onRetry: onRetry,
+                      onDelete: onDelete,
                       onViewModel: onViewModel,
                     ),
                   ),
@@ -171,12 +175,14 @@ class _DownloadCard extends StatelessWidget {
     required this.task,
     required this.onCancel,
     required this.onRetry,
+    required this.onDelete,
     required this.onViewModel,
   });
 
   final DownloadTaskDto task;
   final Future<void> Function(String id) onCancel;
   final Future<void> Function(String id) onRetry;
+  final Future<void> Function(String id) onDelete;
   final Future<void> Function(String modelId) onViewModel;
 
   @override
@@ -283,6 +289,24 @@ class _DownloadCard extends StatelessWidget {
                       ? null
                       : () => onRetry(task.jobId),
                   child: const Text('重试'),
+                ),
+                TextButton.icon(
+                  onPressed: task.jobId.isEmpty || !task.canDelete
+                      ? null
+                      : () async {
+                          final confirmed = await showAppConfirmDialog(
+                            context,
+                            title: '删除下载记录？',
+                            message: '只会删除这条下载历史记录，不会删除模型文件、下载缓存或临时目录。',
+                            confirmLabel: '删除记录',
+                            destructive: true,
+                          );
+                          if (confirmed) {
+                            await onDelete(task.jobId);
+                          }
+                        },
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('删除记录'),
                 ),
                 if (task.isSucceeded &&
                     task.modelId != null &&

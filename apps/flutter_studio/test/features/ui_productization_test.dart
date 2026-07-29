@@ -31,6 +31,17 @@ void main() {
               'percent': null,
               'cancel_requested': true,
               'can_cancel': true,
+              'can_delete': false,
+            }),
+            DownloadTaskDto.fromMap({
+              'job_id': 'job-2',
+              'provider': 'huggingface',
+              'repo_id': 'org/done',
+              'status': 'succeeded',
+              'downloaded_bytes': 1024,
+              'total_bytes': 1024,
+              'percent': 100.0,
+              'can_delete': true,
             }),
           ],
           repoController: TextEditingController(),
@@ -42,6 +53,7 @@ void main() {
           onProviderChanged: (value) => selectedProvider = value,
           onCancel: (_) async {},
           onRetry: (_) async {},
+          onDelete: (_) async {},
           onViewModel: (_) async {},
           onRefresh: () {},
         ),
@@ -53,6 +65,7 @@ void main() {
     expect(find.text('1.0 KB / 总大小未知'), findsOneWidget);
     expect(find.text('取消请求已提交'), findsOneWidget);
     expect(find.text('进度未知'), findsOneWidget);
+    expect(find.text('删除记录'), findsNWidgets(2));
   });
 
   testWidgets('Models move to trash uses confirmation dialog', (tester) async {
