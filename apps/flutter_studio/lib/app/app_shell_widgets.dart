@@ -46,9 +46,9 @@ class SideNavSection extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w700,
-            ),
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -94,11 +94,31 @@ class TopBar extends StatelessWidget {
               spacing: 8,
               runSpacing: 6,
               children: [
-                _TopPill(icon: Icons.dns_outlined, label: 'Backend', value: backendStatus),
-                _TopPill(icon: Icons.memory_outlined, label: 'Model', value: modelLabel),
-                _TopPill(icon: Icons.extension_outlined, label: 'Adapter', value: adapterLabel),
-                _TopPill(icon: Icons.bolt_outlined, label: 'GPU', value: gpuLabel),
-                _TopPill(icon: Icons.task_alt_outlined, label: 'Jobs', value: '$runningJobs running'),
+                _TopPill(
+                  icon: Icons.dns_outlined,
+                  label: 'Backend',
+                  value: backendStatus,
+                ),
+                _TopPill(
+                  icon: Icons.memory_outlined,
+                  label: 'Model',
+                  value: modelLabel,
+                ),
+                _TopPill(
+                  icon: Icons.extension_outlined,
+                  label: 'Adapter',
+                  value: adapterLabel,
+                ),
+                _TopPill(
+                  icon: Icons.bolt_outlined,
+                  label: 'GPU',
+                  value: gpuLabel,
+                ),
+                _TopPill(
+                  icon: Icons.task_alt_outlined,
+                  label: 'Jobs',
+                  value: '$runningJobs running',
+                ),
               ],
             ),
           ),
@@ -121,7 +141,11 @@ class TopBar extends StatelessWidget {
 }
 
 class _TopPill extends StatelessWidget {
-  const _TopPill({required this.icon, required this.label, required this.value});
+  const _TopPill({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
   final IconData icon;
   final String label;
@@ -147,7 +171,10 @@ class _TopPill extends StatelessWidget {
                 child: Text(
                   '$label: $value',
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: scheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],

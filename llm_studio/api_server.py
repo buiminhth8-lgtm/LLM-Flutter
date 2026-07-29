@@ -15,6 +15,7 @@ from typing import Annotated
 from .adapters import AdapterRepository
 from .adapters.exceptions import AdapterCompatibilityError, AdapterError, AdapterNotFoundError
 from .admin import AdminManager
+from .api.deps import configure_api_state
 from .api.errors import (
     ADAPTER_INCOMPATIBLE,
     ADAPTER_MODEL_REQUIRED,
@@ -23,20 +24,11 @@ from .api.errors import (
     AUTH_REQUIRED,
     BENCHMARK_FAILED,
     CUDA_OUT_OF_MEMORY,
-    DIAGNOSTICS_EXPORT_FAILED,
-    DOWNLOAD_ALREADY_RUNNING,
-    DOWNLOAD_CANCEL_NOT_ALLOWED,
-    DOWNLOAD_CANCEL_REQUESTED,
-    DOWNLOAD_FAILED,
-    DOWNLOAD_NOT_FOUND,
-    DOWNLOAD_RETRY_NOT_ALLOWED,
     GENERATION_CANCELLED,
     GENERATION_TIMEOUT,
     GPU_BUSY,
     INTERNAL_ERROR,
     INVALID_MESSAGES,
-    JOB_CANCEL_NOT_ALLOWED,
-    JOB_NOT_FOUND,
     MODEL_DELETE_CONFIRM_REQUIRED,
     MODEL_DELETE_FAILED,
     MODEL_LOAD_BUSY,
@@ -50,13 +42,16 @@ from .api.errors import (
     RAG_PATH_NOT_ALLOWED,
     RAG_QUERY_FAILED,
     RAG_QUERY_INVALID,
-    STORAGE_CLEANUP_FAILED,
     VISION_ANALYZE_FAILED,
     VISION_PATH_NOT_ALLOWED,
     api_error,
     error_payload,
 )
 from .api.routers.capabilities import router as capabilities_router
+from .api.routers.diagnostics import router as diagnostics_router
+from .api.routers.downloads import router as downloads_router
+from .api.routers.jobs import router as jobs_router
+from .api.routers.storage import router as storage_router
 from .auth import has_permission, required_permission_for_request
 from .auth.roles import Role
 from .benchmarks import BenchmarkConfig, BenchmarkRunner
@@ -64,13 +59,7 @@ from .chat import ChatMessage as CoreChatMessage
 from .chat import InvalidChatMessageError
 from .config import Config
 from .diagnostics import export_diagnostics
-from .downloads import DownloadManager, DownloadRequest, DownloadTaskState
-from .downloads.exceptions import (
-    DownloadAlreadyRunningError,
-    DownloadCancelNotAllowedError,
-    DownloadError,
-    DownloadRetryNotAllowedError,
-)
+from .downloads import DownloadManager
 from .execution import run_blocking_io, run_cpu_bound
 from .generation import CancellationToken
 from .generation.exceptions import (
@@ -79,7 +68,7 @@ from .generation.exceptions import (
     GenerationTimeoutError,
 )
 from .jobs import JobQueue, JobRepository, JobType
-from .jobs.exceptions import JobCancelNotAllowedError, JobNotFoundError, JobNotImplementedError
+from .jobs.exceptions import JobNotImplementedError
 from .models import LocalModelRepository
 from .models.exceptions import ModelDeleteError
 from .models.selection import ModelSelectionError, select_model_for_chat
@@ -100,7 +89,6 @@ from .security.uploads import (
     UploadPolicy,
     save_upload_file_safely,
 )
-from .storage import CacheManager, collect_disk_usage
 from .vision import VisionRunner
 
 # Loaded model runners keyed by model_path
@@ -138,6 +126,13 @@ def get_app(config: Config):
     _job_repository = JobRepository(layout.jobs_dir / "jobs.sqlite")
     _job_queue = JobQueue(_job_repository)
     _download_manager = DownloadManager(config, _job_queue, model_repository=_model_repository)
+    configure_api_state(
+        config=config,
+        download_manager=_download_manager,
+        job_repository=_job_repository,
+        job_queue=_job_queue,
+        diagnostics_exporter=lambda cfg: export_diagnostics(cfg),
+    )
     _adapter_repository = AdapterRepository(config)
     runtime_cfg = config.runtime
     _concurrency = ModelConcurrencyController(
@@ -179,6 +174,10 @@ def get_app(config: Config):
         lifespan=lifespan,
     )
     app.include_router(capabilities_router)
+    app.include_router(downloads_router)
+    app.include_router(jobs_router)
+    app.include_router(storage_router)
+    app.include_router(diagnostics_router)
 
     @app.middleware("http")
     async def request_id_middleware(request: Request, call_next):
@@ -367,14 +366,6 @@ def get_app(config: Config):
     class RegisterModelRequest(BaseModel):
         path: str
 
-    class DownloadModelRequest(BaseModel):
-        repo_id: str
-        revision: str | None = None
-        allow_patterns: list[str] | None = None
-        ignore_patterns: list[str] | None = None
-        local_name: str | None = None
-        local_files_only: bool = False
-
     class AdapterPathRequest(BaseModel):
         path: str
 
@@ -390,9 +381,6 @@ def get_app(config: Config):
         measured_runs: int = 3
         max_new_tokens: int = 128
         context_lengths: list[int] = Field(default_factory=lambda: [512, 2048])
-
-    class StorageCleanupRequest(BaseModel):
-        categories: list[str] | None = None
 
     # Helper functions
 
@@ -703,96 +691,6 @@ def get_app(config: Config):
             raise api_error(500, MODEL_UNLOAD_FAILED, "模型卸载失败。", request_id) from e
         return {"status": "ok", "model": req.model}
 
-    @app.post("/v1/downloads")
-    async def create_download(req: DownloadModelRequest):
-        assert _download_manager is not None
-        try:
-            job = _download_manager.create_download(
-                DownloadRequest(
-                    repo_id=req.repo_id,
-                    revision=req.revision,
-                    allow_patterns=tuple(req.allow_patterns) if req.allow_patterns else None,
-                    ignore_patterns=tuple(req.ignore_patterns) if req.ignore_patterns else None,
-                    local_name=req.local_name,
-                    token=None,
-                    local_files_only=req.local_files_only,
-                )
-            )
-        except DownloadAlreadyRunningError as exc:
-            raise api_error(409, DOWNLOAD_ALREADY_RUNNING, str(exc), _request_id()) from exc
-        except DownloadError as exc:
-            raise api_error(400, getattr(exc, "error_code", DOWNLOAD_FAILED), str(exc), _request_id()) from exc
-        return {"job_id": job.id}
-
-    @app.get("/v1/downloads")
-    async def list_downloads():
-        assert _job_repository is not None
-        return {
-            "data": [
-                DownloadTaskState.from_job(job).to_dict()
-                for job in _job_repository.list(limit=100)
-                if job.type == JobType.MODEL_DOWNLOAD.value
-            ]
-        }
-
-    @app.get("/v1/downloads/{job_id}")
-    async def get_download(job_id: str):
-        assert _job_repository is not None
-        try:
-            job = _job_repository.get(job_id)
-        except JobNotFoundError as exc:
-            raise api_error(404, DOWNLOAD_NOT_FOUND, "下载任务不存在。", _request_id()) from exc
-        return DownloadTaskState.from_job(job).to_dict()
-
-    @app.post("/v1/downloads/{job_id}/cancel")
-    async def cancel_download(job_id: str):
-        assert _download_manager is not None
-        try:
-            job = _download_manager.cancel_job(job_id)
-        except JobNotFoundError as exc:
-            raise api_error(404, DOWNLOAD_NOT_FOUND, "下载任务不存在。", _request_id()) from exc
-        except DownloadCancelNotAllowedError as exc:
-            raise api_error(409, DOWNLOAD_CANCEL_NOT_ALLOWED, str(exc), _request_id()) from exc
-        data = DownloadTaskState.from_job(job).to_dict()
-        data["error_code"] = data["error_code"] or DOWNLOAD_CANCEL_REQUESTED
-        data["cancel_semantics"] = "取消请求已提交；当前网络传输步骤可能结束后才会停止，重试会复用 Hugging Face 缓存。"
-        return data
-
-    @app.post("/v1/downloads/{job_id}/retry")
-    async def retry_download(job_id: str):
-        assert _download_manager is not None and _job_repository is not None
-        try:
-            retried = _download_manager.retry_interrupted(_job_repository.get(job_id))
-        except JobNotFoundError as exc:
-            raise api_error(404, DOWNLOAD_NOT_FOUND, "下载任务不存在。", _request_id()) from exc
-        except DownloadRetryNotAllowedError as exc:
-            raise api_error(409, DOWNLOAD_RETRY_NOT_ALLOWED, str(exc), _request_id()) from exc
-        return {
-            "job_id": retried.id,
-            "resume_supported": True,
-            "message": "Retry reuses the Hugging Face cache; strict pause/resume is not claimed.",
-        }
-
-    @app.get("/v1/jobs")
-    async def list_jobs(limit: int = 50, offset: int = 0):
-        assert _job_repository is not None
-        return {"data": [job.to_public_dict() for job in _job_repository.list(limit=limit, offset=offset)]}
-
-    @app.get("/v1/jobs/{job_id}")
-    async def get_job(job_id: str):
-        assert _job_repository is not None
-        return _job_repository.get(job_id).to_public_dict()
-
-    @app.post("/v1/jobs/{job_id}/cancel")
-    async def cancel_job(job_id: str):
-        assert _job_queue is not None
-        try:
-            return _job_queue.cancel(job_id).to_public_dict()
-        except JobNotFoundError as exc:
-            raise api_error(404, JOB_NOT_FOUND, "任务不存在。", _request_id()) from exc
-        except JobCancelNotAllowedError as exc:
-            raise api_error(409, JOB_CANCEL_NOT_ALLOWED, str(exc), _request_id()) from exc
-
     @app.get("/v1/adapters")
     async def list_adapters():
         assert _adapter_repository is not None
@@ -937,49 +835,6 @@ def get_app(config: Config):
         if not deleted:
             raise api_error(404, BENCHMARK_FAILED, "未找到 Benchmark 结果。", _request_id())
         return {"status": "deleted", "id": benchmark_id}
-
-    @app.get("/v1/storage")
-    async def storage_status():
-        request_id = _request_id()
-        try:
-            items = await run_blocking_io(collect_disk_usage, config)
-        except Exception as e:
-            raise api_error(500, STORAGE_CLEANUP_FAILED, "磁盘空间统计失败。", request_id) from e
-        return {"data": [item.to_dict() for item in items]}
-
-    @app.post("/v1/storage/cleanup/preview")
-    async def cleanup_storage_preview(req: StorageCleanupRequest | None = None):
-        request_id = _request_id()
-        manager = CacheManager(config)
-        categories = set(req.categories) if req and req.categories else None
-        try:
-            items = await run_blocking_io(manager.preview_cleanup, categories)
-        except Exception as e:
-            raise api_error(500, STORAGE_CLEANUP_FAILED, "清理预览生成失败。", request_id) from e
-        return {
-            "items": [item.to_dict() for item in items],
-            "total_size_bytes": sum(item.size_bytes for item in items),
-        }
-
-    @app.post("/v1/storage/cleanup")
-    async def cleanup_storage(req: StorageCleanupRequest | None = None):
-        request_id = _request_id()
-        manager = CacheManager(config)
-        categories = set(req.categories) if req and req.categories else None
-        try:
-            items = await run_blocking_io(manager.preview_cleanup, categories)
-            return await run_blocking_io(manager.cleanup_preview_items, items)
-        except Exception as e:
-            raise api_error(500, STORAGE_CLEANUP_FAILED, "存储清理失败。", request_id) from e
-
-    @app.post("/v1/diagnostics/export")
-    async def diagnostics_export():
-        request_id = _request_id()
-        try:
-            path = await run_blocking_io(export_diagnostics, config)
-        except Exception as e:
-            raise api_error(500, DIAGNOSTICS_EXPORT_FAILED, "诊断包导出失败。", request_id) from e
-        return {"status": "ok", "path": str(path)}
 
     # Chat endpoints (OpenAI-compatible)
 

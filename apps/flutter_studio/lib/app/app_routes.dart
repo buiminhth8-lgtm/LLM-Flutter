@@ -33,11 +33,7 @@ const shellDestinationGroups = [
         icon: Icons.monitor_heart_outlined,
         label: 'Status',
       ),
-      ShellDestination(
-        index: 1,
-        icon: Icons.storage_outlined,
-        label: 'Models',
-      ),
+      ShellDestination(index: 1, icon: Icons.storage_outlined, label: 'Models'),
       ShellDestination(
         index: 2,
         icon: Icons.chat_bubble_outline,
@@ -53,11 +49,7 @@ const shellDestinationGroups = [
         icon: Icons.cloud_download_outlined,
         label: 'Downloads',
       ),
-      ShellDestination(
-        index: 4,
-        icon: Icons.article_outlined,
-        label: 'RAG',
-      ),
+      ShellDestination(index: 4, icon: Icons.article_outlined, label: 'RAG'),
       ShellDestination(
         index: 5,
         icon: Icons.extension_outlined,
