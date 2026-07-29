@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
+from llm_studio.security.redaction import redact_sensitive_text
+
 
 class JobType(str, Enum):
     MODEL_DOWNLOAD = "MODEL_DOWNLOAD"
@@ -27,6 +29,14 @@ class JobStatus(str, Enum):
     SUCCEEDED = "succeeded"
     FAILED = "failed"
     INTERRUPTED = "interrupted"
+
+
+TERMINAL_JOB_STATUSES = {
+    JobStatus.CANCELLED.value,
+    JobStatus.SUCCEEDED.value,
+    JobStatus.FAILED.value,
+    JobStatus.INTERRUPTED.value,
+}
 
 
 @dataclass(frozen=True)
@@ -80,6 +90,12 @@ class Job:
             "payload": self.payload,
         }
 
+    def to_public_dict(self) -> dict[str, Any]:
+        data = self.to_dict()
+        data["error_message"] = redact_sensitive_text(self.error_message)
+        data["payload"] = sanitize_job_payload(self.payload)
+        return data
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Job:
         def parse(value: str | None) -> datetime | None:
@@ -101,6 +117,16 @@ class Job:
 
 
 SENSITIVE_PAYLOAD_KEYS = {"token", "password", "api_key", "authorization", "cookie", "hf_token"}
+SENSITIVE_PUBLIC_PAYLOAD_KEYS = {
+    *SENSITIVE_PAYLOAD_KEYS,
+    "secret",
+    "file_path",
+    "directory_path",
+    "image_path",
+    "local_path",
+    "path",
+}
+SAFE_PUBLIC_PAYLOAD_KEYS = {"repo_id", "revision", "allow_patterns", "ignore_patterns", "model_id"}
 
 
 def sanitize_payload(payload: dict[str, Any]) -> dict[str, Any]:
@@ -110,6 +136,29 @@ def sanitize_payload(payload: dict[str, Any]) -> dict[str, Any]:
             continue
         if isinstance(value, dict):
             cleaned[key] = sanitize_payload(value)
+        else:
+            cleaned[key] = value
+    return cleaned
+
+
+def sanitize_job_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    cleaned: dict[str, Any] = {}
+    for key, value in payload.items():
+        key_lower = key.lower()
+        is_sensitive_key = key_lower in SENSITIVE_PUBLIC_PAYLOAD_KEYS or any(
+            marker in key_lower
+            for marker in ("token", "api_key", "authorization", "password", "secret", "path")
+        )
+        if key_lower not in SAFE_PUBLIC_PAYLOAD_KEYS and is_sensitive_key:
+            cleaned[key] = "<redacted>"
+        elif isinstance(value, dict):
+            cleaned[key] = sanitize_job_payload(value)
+        elif isinstance(value, list):
+            cleaned[key] = [
+                sanitize_job_payload(item) if isinstance(item, dict) else item for item in value
+            ]
+        elif isinstance(value, str):
+            cleaned[key] = redact_sensitive_text(value)
         else:
             cleaned[key] = value
     return cleaned

@@ -25,6 +25,7 @@ from .api.errors import (
     CUDA_OUT_OF_MEMORY,
     DIAGNOSTICS_EXPORT_FAILED,
     DOWNLOAD_ALREADY_RUNNING,
+    DOWNLOAD_CANCEL_NOT_ALLOWED,
     DOWNLOAD_CANCEL_REQUESTED,
     DOWNLOAD_FAILED,
     DOWNLOAD_NOT_FOUND,
@@ -34,6 +35,8 @@ from .api.errors import (
     GPU_BUSY,
     INTERNAL_ERROR,
     INVALID_MESSAGES,
+    JOB_CANCEL_NOT_ALLOWED,
+    JOB_NOT_FOUND,
     MODEL_DELETE_CONFIRM_REQUIRED,
     MODEL_DELETE_FAILED,
     MODEL_LOAD_BUSY,
@@ -64,6 +67,7 @@ from .diagnostics import export_diagnostics
 from .downloads import DownloadManager, DownloadRequest, DownloadTaskState
 from .downloads.exceptions import (
     DownloadAlreadyRunningError,
+    DownloadCancelNotAllowedError,
     DownloadError,
     DownloadRetryNotAllowedError,
 )
@@ -75,7 +79,7 @@ from .generation.exceptions import (
     GenerationTimeoutError,
 )
 from .jobs import JobQueue, JobRepository, JobType
-from .jobs.exceptions import JobNotFoundError, JobNotImplementedError
+from .jobs.exceptions import JobCancelNotAllowedError, JobNotFoundError, JobNotImplementedError
 from .models import LocalModelRepository
 from .models.exceptions import ModelDeleteError
 from .models.selection import ModelSelectionError, select_model_for_chat
@@ -747,6 +751,8 @@ def get_app(config: Config):
             job = _download_manager.cancel_job(job_id)
         except JobNotFoundError as exc:
             raise api_error(404, DOWNLOAD_NOT_FOUND, "下载任务不存在。", _request_id()) from exc
+        except DownloadCancelNotAllowedError as exc:
+            raise api_error(409, DOWNLOAD_CANCEL_NOT_ALLOWED, str(exc), _request_id()) from exc
         data = DownloadTaskState.from_job(job).to_dict()
         data["error_code"] = data["error_code"] or DOWNLOAD_CANCEL_REQUESTED
         data["cancel_semantics"] = "取消请求已提交；当前网络传输步骤可能结束后才会停止，重试会复用 Hugging Face 缓存。"
@@ -770,17 +776,22 @@ def get_app(config: Config):
     @app.get("/v1/jobs")
     async def list_jobs(limit: int = 50, offset: int = 0):
         assert _job_repository is not None
-        return {"data": [job.to_dict() for job in _job_repository.list(limit=limit, offset=offset)]}
+        return {"data": [job.to_public_dict() for job in _job_repository.list(limit=limit, offset=offset)]}
 
     @app.get("/v1/jobs/{job_id}")
     async def get_job(job_id: str):
         assert _job_repository is not None
-        return _job_repository.get(job_id).to_dict()
+        return _job_repository.get(job_id).to_public_dict()
 
     @app.post("/v1/jobs/{job_id}/cancel")
     async def cancel_job(job_id: str):
         assert _job_queue is not None
-        return _job_queue.cancel(job_id).to_dict()
+        try:
+            return _job_queue.cancel(job_id).to_public_dict()
+        except JobNotFoundError as exc:
+            raise api_error(404, JOB_NOT_FOUND, "任务不存在。", _request_id()) from exc
+        except JobCancelNotAllowedError as exc:
+            raise api_error(409, JOB_CANCEL_NOT_ALLOWED, str(exc), _request_id()) from exc
 
     @app.get("/v1/adapters")
     async def list_adapters():

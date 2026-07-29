@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from llm_studio.jobs import Job, JobQueue, JobStatus, JobType
+from llm_studio.jobs.exceptions import JobCancelNotAllowedError
 from llm_studio.models.entities import ModelStatus
 from llm_studio.models.repository import LocalModelRepository
 from llm_studio.models.storage import (
@@ -21,6 +22,7 @@ from .exceptions import (
     DiskSpaceError,
     DownloadAlreadyRunningError,
     DownloadCancelledError,
+    DownloadCancelNotAllowedError,
     DownloadModelScanError,
     DownloadModelUnsupportedError,
     DownloadRetryNotAllowedError,
@@ -83,7 +85,10 @@ class DownloadManager:
         )
 
     def cancel_job(self, job_id: str) -> Job:
-        job = self.job_queue.cancel(job_id)
+        try:
+            job = self.job_queue.cancel(job_id)
+        except JobCancelNotAllowedError as exc:
+            raise DownloadCancelNotAllowedError("该下载任务当前不能取消。") from exc
         self._merge_payload(
             job.id,
             {"cancel_requested": True},
@@ -123,7 +128,7 @@ class DownloadManager:
             raise DownloadValidationError(f"目标模型已存在，拒绝覆盖: {final_dir}")
         temp_dir.mkdir(parents=True, exist_ok=True)
 
-        files = self._list_files(request)
+        files = [] if request.local_files_only else self._list_files(request)
         tracker = DownloadProgressTracker(files)
         self._publish_progress(job.id, tracker.snapshot(), "开始下载；重试会复用 Hugging Face 缓存。")
         self._raise_if_cancelled(job.id, cancel_flag)
