@@ -39,10 +39,12 @@ class StudioShell extends StatefulWidget {
     super.key,
     this.autoRefresh = true,
     this.initialRequiresSetup = false,
+    this.client,
   });
 
   final bool autoRefresh;
   final bool initialRequiresSetup;
+  final LlmStudioClient? client;
 
   @override
   State<StudioShell> createState() => _StudioShellState();
@@ -56,7 +58,8 @@ class _StudioShellState extends State<StudioShell> {
   final _navigation = ShellNavigationController();
   final _settings = SettingsController();
   final _backend = BackendLifecycleController();
-  final _client = LlmStudioClient(defaultApiBase);
+  late final LlmStudioClient _client =
+      widget.client ?? LlmStudioClient(defaultApiBase);
 
   final _chatInputController = TextEditingController();
   final _downloadRepoController = TextEditingController();
@@ -387,6 +390,7 @@ class _StudioShellState extends State<StudioShell> {
     _syncClientAuth();
     _status.clear();
     _models.clear();
+    _navigation.select(settingsPageIndex);
     _shell.setAuthRequired('认证信息已清除，请重新填写 API Key。');
   }
 
@@ -431,7 +435,8 @@ class _StudioShellState extends State<StudioShell> {
     } catch (_) {
       // Preserve the original authentication error if setup status cannot be checked.
     }
-    _shell.setAuthRequired(error.toString());
+    _navigation.select(settingsPageIndex);
+    _shell.setAuthRequired('认证已失效，请重新登录或填写有效 API Key。');
   }
 
   String _topModelLabel() {
@@ -670,7 +675,7 @@ class _StudioShellState extends State<StudioShell> {
                     leading: const Icon(Icons.lock_outline),
                     actions: [
                       TextButton(
-                        onPressed: () => _navigation.select(9),
+                        onPressed: () => _navigation.select(settingsPageIndex),
                         child: const Text('打开 Settings'),
                       ),
                     ],

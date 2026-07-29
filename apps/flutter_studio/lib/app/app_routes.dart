@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'app_shell_widgets.dart';
 
+const settingsPageIndex = 9;
+
 class ShellDestination {
   const ShellDestination({
     required this.index,
@@ -99,7 +101,7 @@ Widget buildShellNavigation({
       ],
       const Divider(),
       SideNavItem(
-        index: 9,
+        index: settingsPageIndex,
         selectedIndex: selectedIndex,
         icon: Icons.settings_outlined,
         label: 'Settings',
