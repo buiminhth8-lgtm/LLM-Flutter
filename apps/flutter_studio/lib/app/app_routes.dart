@@ -1,0 +1,118 @@
+import 'package:flutter/material.dart';
+
+import 'app_shell_widgets.dart';
+
+class ShellDestination {
+  const ShellDestination({
+    required this.index,
+    required this.icon,
+    required this.label,
+  });
+
+  final int index;
+  final IconData icon;
+  final String label;
+}
+
+class ShellDestinationGroup {
+  const ShellDestinationGroup({
+    required this.label,
+    required this.destinations,
+  });
+
+  final String label;
+  final List<ShellDestination> destinations;
+}
+
+const shellDestinationGroups = [
+  ShellDestinationGroup(
+    label: 'Core',
+    destinations: [
+      ShellDestination(
+        index: 0,
+        icon: Icons.monitor_heart_outlined,
+        label: 'Status',
+      ),
+      ShellDestination(
+        index: 1,
+        icon: Icons.storage_outlined,
+        label: 'Models',
+      ),
+      ShellDestination(
+        index: 2,
+        icon: Icons.chat_bubble_outline,
+        label: 'Chat',
+      ),
+    ],
+  ),
+  ShellDestinationGroup(
+    label: 'Workflows',
+    destinations: [
+      ShellDestination(
+        index: 3,
+        icon: Icons.cloud_download_outlined,
+        label: 'Downloads',
+      ),
+      ShellDestination(
+        index: 4,
+        icon: Icons.article_outlined,
+        label: 'RAG',
+      ),
+      ShellDestination(
+        index: 5,
+        icon: Icons.extension_outlined,
+        label: 'Adapters',
+      ),
+      ShellDestination(
+        index: 6,
+        icon: Icons.speed_outlined,
+        label: 'Benchmark',
+      ),
+    ],
+  ),
+  ShellDestinationGroup(
+    label: 'System',
+    destinations: [
+      ShellDestination(
+        index: 7,
+        icon: Icons.cleaning_services_outlined,
+        label: 'Storage',
+      ),
+      ShellDestination(
+        index: 8,
+        icon: Icons.bug_report_outlined,
+        label: 'Diagnostics',
+      ),
+    ],
+  ),
+];
+
+Widget buildShellNavigation({
+  required int selectedIndex,
+  required ValueChanged<int> onSelected,
+}) {
+  return ListView(
+    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+    children: [
+      for (final group in shellDestinationGroups) ...[
+        SideNavSection(label: group.label),
+        for (final destination in group.destinations)
+          SideNavItem(
+            index: destination.index,
+            selectedIndex: selectedIndex,
+            icon: destination.icon,
+            label: destination.label,
+            onSelected: onSelected,
+          ),
+      ],
+      const Divider(),
+      SideNavItem(
+        index: 9,
+        selectedIndex: selectedIndex,
+        icon: Icons.settings_outlined,
+        label: 'Settings',
+        onSelected: onSelected,
+      ),
+    ],
+  );
+}

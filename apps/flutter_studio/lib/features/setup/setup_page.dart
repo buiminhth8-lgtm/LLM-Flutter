@@ -32,7 +32,7 @@ class SetupPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Text(
-                    '初始化 LLM-Studio',
+                    '初始化 LLM Studio',
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 8),

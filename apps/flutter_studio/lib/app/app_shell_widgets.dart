@@ -34,25 +34,54 @@ class SideNavItem extends StatelessWidget {
   }
 }
 
+class SideNavSection extends StatelessWidget {
+  const SideNavSection({super.key, required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 14, 12, 6),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+            ),
+      ),
+    );
+  }
+}
+
 class TopBar extends StatelessWidget {
   const TopBar({
     super.key,
     required this.loading,
     required this.backendStatus,
+    required this.modelLabel,
+    required this.adapterLabel,
+    required this.gpuLabel,
+    required this.runningJobs,
     required this.onRefresh,
   });
 
   final bool loading;
   final String backendStatus;
+  final String modelLabel;
+  final String adapterLabel;
+  final String gpuLabel;
+  final int runningJobs;
   final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
-      height: 64,
+      constraints: const BoxConstraints(minHeight: 72),
       padding: const EdgeInsets.symmetric(horizontal: 20),
       alignment: Alignment.centerLeft,
-      color: Colors.white,
+      color: scheme.surface,
       child: Row(
         children: [
           const Text(
@@ -61,10 +90,16 @@ class TopBar extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              backendStatus,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.black54),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                _TopPill(icon: Icons.dns_outlined, label: 'Backend', value: backendStatus),
+                _TopPill(icon: Icons.memory_outlined, label: 'Model', value: modelLabel),
+                _TopPill(icon: Icons.extension_outlined, label: 'Adapter', value: adapterLabel),
+                _TopPill(icon: Icons.bolt_outlined, label: 'GPU', value: gpuLabel),
+                _TopPill(icon: Icons.task_alt_outlined, label: 'Jobs', value: '$runningJobs running'),
+              ],
             ),
           ),
           if (loading)
@@ -80,6 +115,44 @@ class TopBar extends StatelessWidget {
             tooltip: 'Refresh',
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _TopPill extends StatelessWidget {
+  const _TopPill({required this.icon, required this.label, required this.value});
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: SizedBox(
+          width: 176,
+          child: Row(
+            children: [
+              Icon(icon, size: 15, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  '$label: $value',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
