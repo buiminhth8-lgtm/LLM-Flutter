@@ -12,6 +12,12 @@ def test_capability_registry_has_truthful_statuses():
     assert caps["benchmark"].status == CapabilityStatus.EXPERIMENTAL
     assert caps["benchmark_with_adapter"].status == CapabilityStatus.NOT_IMPLEMENTED
     assert caps["benchmark_with_adapter"].frontend_exposed is False
+    assert caps["model_download"].status == CapabilityStatus.AVAILABLE
+    assert caps["model_download"].frontend_exposed is True
+    assert caps["model_download_progress"].status == CapabilityStatus.PARTIAL
+    assert caps["model_download_progress"].frontend_exposed is True
+    assert caps["model_download_retry"].status == CapabilityStatus.AVAILABLE
+    assert caps["model_download_auto_register"].status == CapabilityStatus.AVAILABLE
     assert caps["lora_scan"].frontend_exposed is True
     assert caps["flutter_windows"].status == CapabilityStatus.AVAILABLE
     assert caps["flutter_android"].status == CapabilityStatus.NOT_IMPLEMENTED

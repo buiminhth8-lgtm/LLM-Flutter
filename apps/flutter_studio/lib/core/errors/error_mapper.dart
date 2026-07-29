@@ -6,8 +6,20 @@ String mapApiErrorMessage(String code, String fallback) {
     'PERMISSION_DENIED' => '当前 API Key 没有执行该操作的权限。',
     'UPLOAD_FILE_TOO_LARGE' => '上传文件超过大小限制。',
     'GPU_BUSY' => 'GPU 正在执行其他任务，请稍后重试。',
-    'DOWNLOAD_FAILED' => '下载失败，请查看任务详情。',
+    'DOWNLOAD_NOT_FOUND' => '下载任务不存在。',
+    'DOWNLOAD_ALREADY_RUNNING' => '同一模型仓库已有下载任务正在运行。',
+    'DOWNLOAD_AUTH_REQUIRED' => 'Hugging Face 仓库需要授权，请配置有效 Token。',
+    'DOWNLOAD_REPO_NOT_FOUND' => '未找到 Hugging Face 仓库。',
+    'DOWNLOAD_REVISION_NOT_FOUND' => '未找到指定 Hugging Face revision。',
     'DOWNLOAD_DISK_FULL' => '磁盘空间不足，无法继续下载。',
+    'DOWNLOAD_NETWORK_ERROR' => '下载网络错误，请稍后重试。',
+    'DOWNLOAD_CANCEL_REQUESTED' => '取消请求已提交，当前文件传输可能稍后停止。',
+    'DOWNLOAD_CANCELLED' => '下载已取消。',
+    'DOWNLOAD_RETRY_NOT_ALLOWED' => '当前下载状态不允许重试。',
+    'DOWNLOAD_FAILED' => '下载失败，请查看任务详情。',
+    'DOWNLOAD_VALIDATION_FAILED' => '下载结果校验失败。',
+    'DOWNLOAD_MODEL_SCAN_FAILED' => '下载完成，但模型扫描注册失败。',
+    'DOWNLOAD_MODEL_UNSUPPORTED' => '下载完成，但模型格式暂不支持。',
     'MODEL_NOT_FOUND' => '未找到指定模型，请先扫描、下载或注册模型。',
     'MODEL_LOAD_BUSY' => '模型正在加载或 GPU 正忙，请稍后重试。',
     'MODEL_LOAD_FAILED' => '模型加载失败，请查看后端日志。',
@@ -45,3 +57,4 @@ StudioApiException exceptionForApiError({
   }
   return StudioApiException(mapped, code: code, statusCode: statusCode);
 }
+

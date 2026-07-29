@@ -33,3 +33,81 @@ class CurrentModelState {
   final String? displayName;
   final String? adapterId;
 }
+
+class DownloadTaskDto {
+  const DownloadTaskDto({
+    required this.jobId,
+    required this.repoId,
+    required this.status,
+    this.revision,
+    this.downloadedBytes,
+    this.totalBytes,
+    this.percent,
+    this.completedFiles,
+    this.totalFiles,
+    this.currentFile,
+    this.speedBytesPerSecond,
+    this.etaSeconds,
+    this.canCancel = false,
+    this.canRetry = false,
+    this.resumeSupported = false,
+    this.cancelRequested = false,
+    this.message,
+    this.errorCode,
+    this.errorMessage,
+    this.modelId,
+  });
+
+  factory DownloadTaskDto.fromMap(Map<dynamic, dynamic> map) {
+    int? asInt(Object? value) => value is num ? value.toInt() : int.tryParse('$value');
+    double? asDouble(Object? value) => value is num ? value.toDouble() : double.tryParse('$value');
+    String? asString(Object? value) => value == null ? null : '$value';
+
+    return DownloadTaskDto(
+      jobId: '${map['job_id'] ?? map['id'] ?? ''}',
+      repoId: '${map['repo_id'] ?? map['payload']?['repo_id'] ?? ''}',
+      revision: asString(map['revision'] ?? map['payload']?['revision']),
+      status: '${map['status'] ?? 'unknown'}',
+      downloadedBytes: asInt(map['downloaded_bytes']),
+      totalBytes: asInt(map['total_bytes']),
+      percent: asDouble(map['percent']),
+      completedFiles: asInt(map['completed_files']),
+      totalFiles: asInt(map['total_files']),
+      currentFile: asString(map['current_file']),
+      speedBytesPerSecond: asDouble(map['speed_bytes_per_second']),
+      etaSeconds: asDouble(map['eta_seconds']),
+      canCancel: map['can_cancel'] == true,
+      canRetry: map['can_retry'] == true,
+      resumeSupported: map['resume_supported'] == true,
+      cancelRequested: map['cancel_requested'] == true,
+      message: asString(map['message']),
+      errorCode: asString(map['error_code']),
+      errorMessage: asString(map['error_message']),
+      modelId: asString(map['model_id']),
+    );
+  }
+
+  final String jobId;
+  final String repoId;
+  final String status;
+  final String? revision;
+  final int? downloadedBytes;
+  final int? totalBytes;
+  final double? percent;
+  final int? completedFiles;
+  final int? totalFiles;
+  final String? currentFile;
+  final double? speedBytesPerSecond;
+  final double? etaSeconds;
+  final bool canCancel;
+  final bool canRetry;
+  final bool resumeSupported;
+  final bool cancelRequested;
+  final String? message;
+  final String? errorCode;
+  final String? errorMessage;
+  final String? modelId;
+
+  bool get isRunning => status == 'pending' || status == 'running' || status == 'cancelling';
+  bool get isSucceeded => status == 'succeeded';
+}

@@ -89,7 +89,7 @@ class JobQueue:
                 current.with_update(
                     status=JobStatus.CANCELLED.value,
                     finished_at=datetime.now(timezone.utc),
-                    error_code="JOB_CANCELLED",
+                    error_code=getattr(exc, "error_code", "JOB_CANCELLED"),
                     error_message=str(exc),
                     message="任务已取消。",
                 )
@@ -100,7 +100,7 @@ class JobQueue:
                 current.with_update(
                     status=JobStatus.FAILED.value,
                     finished_at=datetime.now(timezone.utc),
-                    error_code=type(exc).__name__,
+                    error_code=getattr(exc, "error_code", type(exc).__name__),
                     error_message=str(exc),
                     message="任务失败。",
                 )

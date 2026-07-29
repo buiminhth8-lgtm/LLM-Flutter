@@ -44,6 +44,7 @@ class DownloadTaskState:
     status: str
     downloaded_bytes: int | None
     total_bytes: int | None
+    percent: float | None
     completed_files: int | None
     total_files: int | None
     speed_bytes_per_second: float | None
@@ -52,10 +53,13 @@ class DownloadTaskState:
     can_cancel: bool
     can_retry: bool
     resume_supported: bool
+    cancel_requested: bool
     message: str | None
     error_code: str | None
     error_message: str | None
     model_id: str | None
+    registration_status: str | None
+    parent_job_id: str | None
 
     @classmethod
     def from_job(cls, job: Job) -> DownloadTaskState:
@@ -67,13 +71,19 @@ class DownloadTaskState:
             JobStatus.CANCELLED.value,
             JobStatus.INTERRUPTED.value,
         }
+        total_bytes = payload.get("total_bytes")
+        downloaded_bytes = payload.get("downloaded_bytes")
+        percent = None
+        if total_bytes is not None and downloaded_bytes is not None and int(total_bytes) > 0:
+            percent = min(100.0, max(0.0, int(downloaded_bytes) / int(total_bytes) * 100.0))
         return cls(
             job_id=job.id,
             repo_id=str(payload.get("repo_id", "")),
             revision=payload.get("revision"),
             status=status,
-            downloaded_bytes=payload.get("downloaded_bytes"),
-            total_bytes=payload.get("total_bytes"),
+            downloaded_bytes=downloaded_bytes,
+            total_bytes=total_bytes,
+            percent=payload.get("percent", percent),
             completed_files=payload.get("completed_files"),
             total_files=payload.get("total_files"),
             speed_bytes_per_second=payload.get("speed_bytes_per_second"),
@@ -81,11 +91,14 @@ class DownloadTaskState:
             current_file=payload.get("current_file"),
             can_cancel=can_cancel,
             can_retry=can_retry,
-            resume_supported=True,
+            resume_supported=bool(payload.get("resume_supported", True)),
+            cancel_requested=status == JobStatus.CANCELLING.value or bool(payload.get("cancel_requested", False)),
             message=job.message,
             error_code=job.error_code,
             error_message=job.error_message,
             model_id=payload.get("model_id"),
+            registration_status=payload.get("registration_status"),
+            parent_job_id=payload.get("parent_job_id"),
         )
 
     def to_dict(self) -> dict[str, object]:

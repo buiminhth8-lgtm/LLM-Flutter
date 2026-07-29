@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../errors/error_mapper.dart';
+import '../models/dto.dart';
 import 'api_exception.dart';
 import 'sse_client.dart';
 
@@ -66,13 +67,27 @@ class LlmStudioClient {
     return (body['data'] as List?) ?? const [];
   }
 
-  Future<List<dynamic>> downloads() async {
+  Future<List<DownloadTaskDto>> downloads() async {
     final body = await _getMap('/v1/downloads');
-    return (body['data'] as List?) ?? const [];
+    final items = (body['data'] as List?) ?? const [];
+    return items
+        .whereType<Map>()
+        .map((item) => DownloadTaskDto.fromMap(item))
+        .toList();
   }
 
-  Future<Map<String, dynamic>> startDownload({required String repoId, String? revision}) {
-    return _postMap('/v1/downloads', body: {'repo_id': repoId, if (revision != null && revision.isNotEmpty) 'revision': revision});
+  Future<Map<String, dynamic>> startDownload({
+    required String repoId,
+    String? revision,
+    List<String>? allowPatterns,
+    List<String>? ignorePatterns,
+  }) {
+    return _postMap('/v1/downloads', body: {
+      'repo_id': repoId,
+      if (revision != null && revision.isNotEmpty) 'revision': revision,
+      if (allowPatterns != null && allowPatterns.isNotEmpty) 'allow_patterns': allowPatterns,
+      if (ignorePatterns != null && ignorePatterns.isNotEmpty) 'ignore_patterns': ignorePatterns,
+    });
   }
 
   Future<void> cancelDownload(String id) async => _postMap('/v1/downloads/${Uri.encodeComponent(id)}/cancel');

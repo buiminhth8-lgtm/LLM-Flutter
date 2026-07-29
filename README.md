@@ -414,7 +414,7 @@ Flutter 页面：
 - Status：runtime、GPU scheduler、capabilities、Job Center。
 - Models：扫描、刷新、加载、卸载、选择聊天模型、删除保护。
 - Chat：非流式 / SSE 流式、停止生成、清空历史、重新生成、复制消息。
-- Downloads：创建 Hugging Face 下载任务、查看进度、取消、重试。
+- Downloads：创建 Hugging Face 下载任务、查看真实进度、速度、ETA、取消请求、重试，并在成功后自动扫描注册模型。
 - RAG：最小查询入口。
 - Adapters：扫描、加载、激活、停用 Adapter。
 - Benchmarks：实验性本机基准测试。
@@ -613,9 +613,12 @@ C:\Users\zkjr\...
 | `model_scan` | available | yes | 使用统一模型仓库，不加载权重 |
 | `model_load` | available | yes | 经过 runtime policy 和 GPU scheduler |
 | `model_unload` | available | yes | 释放 runtime 状态 |
-| `model_download` | backend_only | partial | 后端任务存在，Flutter 可查看任务状态 |
-| `model_download_cancel` | partial | yes | 协作式取消，不声明严格暂停 |
-| `model_download_resume` | partial | partial | retry 复用 Hugging Face cache |
+| `model_download` | available | yes | 下载作为后台 Job 运行，Flutter 可创建和查看任务 |
+| `model_download_progress` | partial | yes | 有真实总字节时显示百分比；未知时 `total_bytes` 和 `percent` 为 null |
+| `model_download_cancel` | partial | yes | 协作式取消；当前文件传输可能完成后才停止 |
+| `model_download_retry` | available | yes | failed / cancelled / interrupted 任务可重试 |
+| `model_download_resume` | partial | partial | retry 复用 Hugging Face cache，不声明严格暂停/续传 |
+| `model_download_auto_register` | available | yes | 下载成功后自动触发扫描并把 `model_id` 写回任务 |
 | `rag_query` | partial | yes | Flutter 有最小查询页面；本地路径导入默认禁用并仅限管理员 allowlist |
 | `rag_import` | backend_only | no | 后台任务导入，Flutter 暂未暴露完整导入控件 |
 | `vision_ocr` | backend_only | no | 后端受 GPU scheduler 保护 |

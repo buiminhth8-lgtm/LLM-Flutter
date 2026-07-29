@@ -51,6 +51,8 @@ class _StudioShellState extends State<StudioShell> {
   final _chatInputController = TextEditingController();
   final _downloadRepoController = TextEditingController();
   final _downloadRevisionController = TextEditingController();
+  final _downloadAllowController = TextEditingController();
+  final _downloadIgnoreController = TextEditingController();
   final _localPythonController = TextEditingController();
   final _localBackendRootController = TextEditingController();
   final _setupPasswordController = TextEditingController();
@@ -110,6 +112,8 @@ class _StudioShellState extends State<StudioShell> {
     _chatInputController.dispose();
     _downloadRepoController.dispose();
     _downloadRevisionController.dispose();
+    _downloadAllowController.dispose();
+    _downloadIgnoreController.dispose();
     _localPythonController.dispose();
     _localBackendRootController.dispose();
     _systemController.dispose();
@@ -321,9 +325,20 @@ class _StudioShellState extends State<StudioShell> {
     await _downloads.start(
       repoId: _downloadRepoController.text.trim(),
       revision: _downloadRevisionController.text.trim(),
+      allowPatterns: _splitPatterns(_downloadAllowController.text),
+      ignorePatterns: _splitPatterns(_downloadIgnoreController.text),
     );
     await _refreshAll();
   });
+
+  List<String>? _splitPatterns(String text) {
+    final patterns = text
+        .split(',')
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+    return patterns.isEmpty ? null : patterns;
+  }
 
   Future<void> _cancelDownload(String id) async => _guarded(() async {
     await _downloads.cancel(id);
@@ -333,6 +348,11 @@ class _StudioShellState extends State<StudioShell> {
   Future<void> _retryDownload(String id) async => _guarded(() async {
     await _downloads.retry(id);
     await _refreshAll();
+  });
+
+  Future<void> _viewDownloadedModel(String modelId) async => _guarded(() async {
+    await _models.select(modelId);
+    setState(() => _pageIndex = 1);
   });
 
   Future<void> _cancelJob(String id) async => _guarded(() async {
@@ -550,9 +570,12 @@ class _StudioShellState extends State<StudioShell> {
         downloads: _downloads.state.downloads,
         repoController: _downloadRepoController,
         revisionController: _downloadRevisionController,
+        allowPatternsController: _downloadAllowController,
+        ignorePatternsController: _downloadIgnoreController,
         onStart: _startDownload,
         onCancel: _cancelDownload,
         onRetry: _retryDownload,
+        onViewModel: _viewDownloadedModel,
         onRefresh: _refreshAll,
       ),
       RagPage(

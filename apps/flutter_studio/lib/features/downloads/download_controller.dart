@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../../core/api/api_client.dart';
@@ -8,14 +10,35 @@ class DownloadController extends ChangeNotifier {
 
   final LlmStudioClient _client;
   DownloadState state = const DownloadState();
+  Timer? _pollTimer;
+  bool _refreshing = false;
 
   Future<void> refresh() async {
-    state = DownloadState(downloads: await _client.downloads());
-    notifyListeners();
+    if (_refreshing) {
+      return;
+    }
+    _refreshing = true;
+    try {
+      state = DownloadState(downloads: await _client.downloads());
+      _syncPolling();
+      notifyListeners();
+    } finally {
+      _refreshing = false;
+    }
   }
 
-  Future<void> start({required String repoId, String? revision}) async {
-    await _client.startDownload(repoId: repoId, revision: revision);
+  Future<void> start({
+    required String repoId,
+    String? revision,
+    List<String>? allowPatterns,
+    List<String>? ignorePatterns,
+  }) async {
+    await _client.startDownload(
+      repoId: repoId,
+      revision: revision,
+      allowPatterns: allowPatterns,
+      ignorePatterns: ignorePatterns,
+    );
     await refresh();
   }
 
@@ -27,5 +50,22 @@ class DownloadController extends ChangeNotifier {
   Future<void> retry(String id) async {
     await _client.retryDownload(id);
     await refresh();
+  }
+
+  void _syncPolling() {
+    if (state.hasRunningDownloads) {
+      _pollTimer ??= Timer.periodic(const Duration(seconds: 1), (_) {
+        unawaited(refresh());
+      });
+    } else {
+      _pollTimer?.cancel();
+      _pollTimer = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
   }
 }

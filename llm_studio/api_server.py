@@ -24,6 +24,11 @@ from .api.errors import (
     BENCHMARK_FAILED,
     CUDA_OUT_OF_MEMORY,
     DIAGNOSTICS_EXPORT_FAILED,
+    DOWNLOAD_ALREADY_RUNNING,
+    DOWNLOAD_CANCEL_REQUESTED,
+    DOWNLOAD_FAILED,
+    DOWNLOAD_NOT_FOUND,
+    DOWNLOAD_RETRY_NOT_ALLOWED,
     GENERATION_CANCELLED,
     GENERATION_TIMEOUT,
     GPU_BUSY,
@@ -57,6 +62,11 @@ from .chat import InvalidChatMessageError
 from .config import Config
 from .diagnostics import export_diagnostics
 from .downloads import DownloadManager, DownloadRequest, DownloadTaskState
+from .downloads.exceptions import (
+    DownloadAlreadyRunningError,
+    DownloadError,
+    DownloadRetryNotAllowedError,
+)
 from .execution import run_blocking_io, run_cpu_bound
 from .generation import CancellationToken
 from .generation.exceptions import (
@@ -65,7 +75,7 @@ from .generation.exceptions import (
     GenerationTimeoutError,
 )
 from .jobs import JobQueue, JobRepository, JobType
-from .jobs.exceptions import JobNotImplementedError
+from .jobs.exceptions import JobNotFoundError, JobNotImplementedError
 from .models import LocalModelRepository
 from .models.exceptions import ModelDeleteError
 from .models.selection import ModelSelectionError, select_model_for_chat
@@ -692,17 +702,22 @@ def get_app(config: Config):
     @app.post("/v1/downloads")
     async def create_download(req: DownloadModelRequest):
         assert _download_manager is not None
-        job = _download_manager.create_download(
-            DownloadRequest(
-                repo_id=req.repo_id,
-                revision=req.revision,
-                allow_patterns=tuple(req.allow_patterns) if req.allow_patterns else None,
-                ignore_patterns=tuple(req.ignore_patterns) if req.ignore_patterns else None,
-                local_name=req.local_name,
-                token=None,
-                local_files_only=req.local_files_only,
+        try:
+            job = _download_manager.create_download(
+                DownloadRequest(
+                    repo_id=req.repo_id,
+                    revision=req.revision,
+                    allow_patterns=tuple(req.allow_patterns) if req.allow_patterns else None,
+                    ignore_patterns=tuple(req.ignore_patterns) if req.ignore_patterns else None,
+                    local_name=req.local_name,
+                    token=None,
+                    local_files_only=req.local_files_only,
+                )
             )
-        )
+        except DownloadAlreadyRunningError as exc:
+            raise api_error(409, DOWNLOAD_ALREADY_RUNNING, str(exc), _request_id()) from exc
+        except DownloadError as exc:
+            raise api_error(400, getattr(exc, "error_code", DOWNLOAD_FAILED), str(exc), _request_id()) from exc
         return {"job_id": job.id}
 
     @app.get("/v1/downloads")
@@ -719,22 +734,35 @@ def get_app(config: Config):
     @app.get("/v1/downloads/{job_id}")
     async def get_download(job_id: str):
         assert _job_repository is not None
-        job = _job_repository.get(job_id)
+        try:
+            job = _job_repository.get(job_id)
+        except JobNotFoundError as exc:
+            raise api_error(404, DOWNLOAD_NOT_FOUND, "下载任务不存在。", _request_id()) from exc
         return DownloadTaskState.from_job(job).to_dict()
 
     @app.post("/v1/downloads/{job_id}/cancel")
     async def cancel_download(job_id: str):
         assert _download_manager is not None
-        job = _download_manager.cancel_job(job_id)
+        try:
+            job = _download_manager.cancel_job(job_id)
+        except JobNotFoundError as exc:
+            raise api_error(404, DOWNLOAD_NOT_FOUND, "下载任务不存在。", _request_id()) from exc
         data = DownloadTaskState.from_job(job).to_dict()
+        data["error_code"] = data["error_code"] or DOWNLOAD_CANCEL_REQUESTED
         data["cancel_semantics"] = "取消请求已提交；当前网络传输步骤可能结束后才会停止，重试会复用 Hugging Face 缓存。"
         return data
 
     @app.post("/v1/downloads/{job_id}/retry")
     async def retry_download(job_id: str):
         assert _download_manager is not None and _job_repository is not None
+        try:
+            retried = _download_manager.retry_interrupted(_job_repository.get(job_id))
+        except JobNotFoundError as exc:
+            raise api_error(404, DOWNLOAD_NOT_FOUND, "下载任务不存在。", _request_id()) from exc
+        except DownloadRetryNotAllowedError as exc:
+            raise api_error(409, DOWNLOAD_RETRY_NOT_ALLOWED, str(exc), _request_id()) from exc
         return {
-            "job_id": _download_manager.retry_interrupted(_job_repository.get(job_id)).id,
+            "job_id": retried.id,
             "resume_supported": True,
             "message": "Retry reuses the Hugging Face cache; strict pause/resume is not claimed.",
         }
