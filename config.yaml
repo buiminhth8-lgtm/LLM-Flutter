@@ -102,6 +102,15 @@ huggingface:
   cache_dir: "./data/huggingface"
   use_global_cache: false
 
+downloads:
+  default_provider: "huggingface"
+  providers:
+    huggingface:
+      cache_dir: "./data/cache/huggingface"
+    modelscope:
+      cache_dir: "./data/cache/modelscope"
+      endpoint: "https://modelscope.cn"
+
 storage:
   trash_dir: "./data/trash/models"
   benchmarks_dir: "./data/benchmarks"

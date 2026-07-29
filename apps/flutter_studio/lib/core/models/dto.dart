@@ -1,9 +1,11 @@
 class ChatTurn {
   const ChatTurn({required this.role, required this.content});
 
-  factory ChatTurn.user(String content) => ChatTurn(role: 'user', content: content);
+  factory ChatTurn.user(String content) =>
+      ChatTurn(role: 'user', content: content);
 
-  factory ChatTurn.assistant(String content) => ChatTurn(role: 'assistant', content: content);
+  factory ChatTurn.assistant(String content) =>
+      ChatTurn(role: 'assistant', content: content);
 
   final String role;
   final String content;
@@ -14,7 +16,12 @@ class ChatTurn {
 }
 
 class CurrentModelState {
-  const CurrentModelState({required this.loaded, this.modelId, this.displayName, this.adapterId});
+  const CurrentModelState({
+    required this.loaded,
+    this.modelId,
+    this.displayName,
+    this.adapterId,
+  });
 
   factory CurrentModelState.fromMap(Map<String, dynamic>? map) {
     if (map == null || map['loaded'] != true) {
@@ -37,6 +44,7 @@ class CurrentModelState {
 class DownloadTaskDto {
   const DownloadTaskDto({
     required this.jobId,
+    required this.provider,
     required this.repoId,
     required this.status,
     this.revision,
@@ -59,12 +67,16 @@ class DownloadTaskDto {
   });
 
   factory DownloadTaskDto.fromMap(Map<dynamic, dynamic> map) {
-    int? asInt(Object? value) => value is num ? value.toInt() : int.tryParse('$value');
-    double? asDouble(Object? value) => value is num ? value.toDouble() : double.tryParse('$value');
+    int? asInt(Object? value) =>
+        value is num ? value.toInt() : int.tryParse('$value');
+    double? asDouble(Object? value) =>
+        value is num ? value.toDouble() : double.tryParse('$value');
     String? asString(Object? value) => value == null ? null : '$value';
 
     return DownloadTaskDto(
       jobId: '${map['job_id'] ?? map['id'] ?? ''}',
+      provider:
+          '${map['provider'] ?? map['payload']?['provider'] ?? 'huggingface'}',
       repoId: '${map['repo_id'] ?? map['payload']?['repo_id'] ?? ''}',
       revision: asString(map['revision'] ?? map['payload']?['revision']),
       status: '${map['status'] ?? 'unknown'}',
@@ -88,6 +100,7 @@ class DownloadTaskDto {
   }
 
   final String jobId;
+  final String provider;
   final String repoId;
   final String status;
   final String? revision;
@@ -108,6 +121,7 @@ class DownloadTaskDto {
   final String? errorMessage;
   final String? modelId;
 
-  bool get isRunning => status == 'pending' || status == 'running' || status == 'cancelling';
+  bool get isRunning =>
+      status == 'pending' || status == 'running' || status == 'cancelling';
   bool get isSucceeded => status == 'succeeded';
 }

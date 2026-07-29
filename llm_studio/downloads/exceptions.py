@@ -57,3 +57,31 @@ class DownloadModelScanError(DownloadValidationError):
 
 class DownloadModelUnsupportedError(DownloadValidationError):
     error_code = "DOWNLOAD_MODEL_UNSUPPORTED"
+
+
+class DownloadProviderNotSupportedError(DownloadError):
+    error_code = "DOWNLOAD_PROVIDER_NOT_SUPPORTED"
+
+
+class DownloadProviderNotInstalledError(DownloadError):
+    error_code = "DOWNLOAD_PROVIDER_NOT_INSTALLED"
+
+
+class ModelScopeAuthRequiredError(DownloadError):
+    error_code = "MODELSCOPE_AUTH_REQUIRED"
+
+
+class ModelScopeRepoNotFoundError(DownloadError):
+    error_code = "MODELSCOPE_REPO_NOT_FOUND"
+
+
+class ModelScopeNetworkError(DownloadError):
+    error_code = "MODELSCOPE_NETWORK_ERROR"
+
+
+class ModelScopeLocalFilesNotFoundError(DownloadError):
+    error_code = "MODELSCOPE_LOCAL_FILES_NOT_FOUND"
+
+
+class ModelScopeDownloadError(DownloadError):
+    error_code = "MODELSCOPE_DOWNLOAD_FAILED"

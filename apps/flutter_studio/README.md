@@ -33,7 +33,7 @@ flutter run -d windows
 - Status：运行时状态、GPU Scheduler、Capabilities、任务摘要。
 - Models：扫描、加载、卸载、选择模型，删除模型会先二次确认并移入回收站。
 - Chat：非流式与 SSE 流式聊天，支持停止生成；未加载模型时禁用输入。
-- Downloads：后台下载任务、真实进度、速度、ETA、取消、重试和完成后查看模型。
+- Downloads：后台下载任务，支持 Hugging Face 与 ModelScope / 魔塔 provider，显示真实进度、速度、ETA、取消、重试和完成后查看模型。
 - Jobs：任务列表、状态、错误码、取消和详情。
 - RAG：查询测试和基础状态展示；本地路径访问默认受限。
 - Adapters：扫描、加载、激活、停用 Adapter；无基础模型时禁用相关操作。

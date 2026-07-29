@@ -20,7 +20,7 @@ def redact_sensitive_text(text: str | None) -> str | None:
     if text is None:
         return None
     redacted = str(text)
-    for env_name in ("HF_TOKEN", "HUGGINGFACE_HUB_TOKEN"):
+    for env_name in ("HF_TOKEN", "HUGGINGFACE_HUB_TOKEN", "MODELSCOPE_API_TOKEN"):
         value = os.environ.get(env_name)
         if value:
             redacted = redacted.replace(value, _REDACTED)

@@ -29,12 +29,14 @@ class DownloadController extends ChangeNotifier {
 
   Future<void> start({
     required String repoId,
+    String provider = 'huggingface',
     String? revision,
     List<String>? allowPatterns,
     List<String>? ignorePatterns,
   }) async {
     await _client.startDownload(
       repoId: repoId,
+      provider: provider,
       revision: revision,
       allowPatterns: allowPatterns,
       ignorePatterns: ignorePatterns,

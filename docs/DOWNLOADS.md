@@ -2,6 +2,46 @@
 
 LLM Studio 的模型下载通过后台 Job 执行，不依赖 CLI，也不会在测试中真实下载大模型。
 
+## Download Provider
+
+当前下载源通过 `provider` 字段选择：
+
+- `huggingface`：Hugging Face Hub，保留原有下载能力。
+- `modelscope`：ModelScope / 魔塔社区，适合国内网络环境；依赖 `modelscope-hub`。
+
+未传 `provider` 时使用配置项 `downloads.default_provider`。国内环境可以配置为：
+
+```yaml
+downloads:
+  default_provider: "modelscope"
+  providers:
+    huggingface:
+      cache_dir: "./data/cache/huggingface"
+    modelscope:
+      cache_dir: "./data/cache/modelscope"
+      endpoint: "https://modelscope.cn"
+```
+
+请求示例：
+
+```json
+{
+  "provider": "modelscope",
+  "repo_id": "modelscope/Llama-3.2-1B",
+  "revision": "master",
+  "allow_patterns": ["*.safetensors", "*.json"],
+  "ignore_patterns": ["*.bin"]
+}
+```
+
+ModelScope 配置可由环境变量覆盖：
+
+- `MODELSCOPE_API_TOKEN`：ModelScope 访问 Token。
+- `MODELSCOPE_ENDPOINT`：ModelScope endpoint。
+- `MODELSCOPE_CACHE`：ModelScope 本地缓存目录。
+
+Hugging Face Token 和 ModelScope Token 都不会写入 Job payload、日志或诊断包。
+
 ## 任务状态
 
 下载任务可能经历以下状态：
@@ -26,11 +66,11 @@ LLM Studio 的模型下载通过后台 Job 执行，不依赖 CLI，也不会在
 - `percent`：仅在 `total_bytes` 已知时计算；未知时为 `null`。
 - `speed_bytes_per_second`：基于真实字节增量计算的速度；未知时为 `null`。
 - `eta_seconds`：基于真实速度和剩余字节估算；未知时为 `null`。
-- `current_file`：当前文件名，必须脱敏，不包含 Token 或用户敏感路径。
+- `current_file`：当前文件名，必须脱敏，不能包含 Token 或用户敏感路径。
 - `completed_files`：已完成文件数。
 - `total_files`：可获取时的总文件数；未知时为 `null`。
 
-实现不伪造 `total_bytes` 或 `percent`。Hugging Face 无法提供真实大小时，客户端应显示不确定进度。
+实现不伪造 `total_bytes` 或 `percent`。当 provider 无法提供真实大小时，客户端应显示不确定进度。
 
 ## Cancel 语义
 
@@ -44,17 +84,17 @@ LLM Studio 的模型下载通过后台 Job 执行，不依赖 CLI，也不会在
 
 - `failed/cancelled/interrupted` 可以 retry。
 - `succeeded` 不允许 retry，返回 `DOWNLOAD_RETRY_NOT_ALLOWED`。
-- retry 会尽量复用 Hugging Face cache。
-- 当前不声明严格暂停/断点续传，只复用底层缓存能力。
+- retry 会尽量复用底层缓存。
+- 当前不声明严格暂停/断点续传，只复用 Hugging Face 或 ModelScope SDK 的缓存能力。
 
 ## local_files_only
 
-`local_files_only=true` 表示只使用本地 Hugging Face 缓存：
+`local_files_only=true` 表示只使用本地缓存：
 
-- 不访问 Hugging Face 网络 API。
-- 不调用远程 repo metadata 或 `model_info`。
-- `snapshot_download` 会带上 `local_files_only=true`。
-- 本地缓存不存在时返回 `DOWNLOAD_LOCAL_FILES_NOT_FOUND`。
+- Hugging Face provider 不访问 Hugging Face 网络 API，不调用远程 repo metadata 或 `model_info`。
+- ModelScope provider 不访问 ModelScope 网络 API，不调用远程 repo metadata。
+- `snapshot_download` 或等价 SDK 调用会带上 `local_files_only=true`。
+- 本地缓存不存在时返回 `DOWNLOAD_LOCAL_FILES_NOT_FOUND` 或 `MODELSCOPE_LOCAL_FILES_NOT_FOUND`。
 - `total_bytes` 和 `percent` 可以为 `null`。
 
 ## 下载完成后的模型注册
@@ -66,7 +106,7 @@ LLM Studio 的模型下载通过后台 Job 执行，不依赖 CLI，也不会在
 3. 调用模型扫描。
 4. 写回 `model_id`。
 
-如果扫描失败，不伪装成注册成功；任务会记录 `DOWNLOAD_MODEL_SCAN_FAILED` 或 `registration_status=failed`。
+如果扫描失败，不会伪装成注册成功；任务会记录 `DOWNLOAD_MODEL_SCAN_FAILED` 或 `registration_status=failed`。
 
 ## temp_dir 清理策略
 
@@ -84,12 +124,13 @@ data/downloads/{job_id}-xxx
 - Storage cleanup preview 会以 `download_temp` 分类显示过期下载临时目录。
 - cleanup 只能删除项目 `data/downloads` 下的下载临时目录。
 - 不删除最终模型目录。
-- 不删除全局 Hugging Face cache。
+- 不删除全局 Hugging Face cache 或 ModelScope cache。
 - 清理失败时返回 `DOWNLOAD_TEMP_CLEANUP_FAILED` 或通用 `STORAGE_CLEANUP_FAILED`。
 
 ## Token 安全
 
 - Hugging Face Token 不进入 Job payload。
+- ModelScope Token 不进入 Job payload。
 - Token 不进入日志。
 - Token 不进入诊断包。
-- Hugging Face 异常、Authorization header、`token=...`、`api_key=...` 会在写入 Job error 或返回 API 前脱敏。
+- Hugging Face / ModelScope 异常、`Authorization` header、`token=...`、`api_key=...` 会在写入 Job error 或返回 API 前脱敏。

@@ -116,6 +116,18 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "cache_dir": "./data/huggingface",
         "use_global_cache": False,
     },
+    "downloads": {
+        "default_provider": "huggingface",
+        "providers": {
+            "huggingface": {
+                "cache_dir": "./data/cache/huggingface",
+            },
+            "modelscope": {
+                "cache_dir": "./data/cache/modelscope",
+                "endpoint": "https://modelscope.cn",
+            },
+        },
+    },
     "storage": {
         "trash_dir": "./data/trash/models",
         "benchmarks_dir": "./data/benchmarks",
@@ -274,10 +286,12 @@ class Config:
         for section, keys in {
             "models": ("root_dir", "temp_dir", "metadata_cache", "adapters_dir"),
             "huggingface": ("cache_dir",),
+            "downloads.providers.huggingface": ("cache_dir",),
+            "downloads.providers.modelscope": ("cache_dir",),
             "storage": ("trash_dir", "benchmarks_dir", "jobs_dir", "diagnostics_dir"),
             "uploads": ("temp_dir",),
         }.items():
-            cfg = self._data.get(section, {})
+            cfg = self._section(section)
             for key in keys:
                 if key not in cfg:
                     continue
@@ -299,6 +313,15 @@ class Config:
                     else:
                         p.parent.mkdir(parents=True, exist_ok=True)
                 cfg[key] = str(p.resolve())
+
+    def _section(self, dotted: str) -> dict[str, Any]:
+        current = self._data
+        for part in dotted.split("."):
+            item = current.get(part, {})
+            if not isinstance(item, dict):
+                return {}
+            current = item
+        return current
 
     @property
     def models_dir(self) -> Path:

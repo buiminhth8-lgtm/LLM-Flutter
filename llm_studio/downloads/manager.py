@@ -30,6 +30,8 @@ from .exceptions import (
 )
 from .huggingface_client import HuggingFaceDownloadClient
 from .progress import DownloadProgressTracker, RemoteFile
+from .providers.base import DownloadProvider
+from .providers.registry import get_download_provider
 from .validation import validate_downloaded_model
 
 ACTIVE_DOWNLOAD_STATUSES = {
@@ -45,6 +47,8 @@ class DownloadManager:
         config,
         job_queue: JobQueue,
         hf_client: HuggingFaceDownloadClient | None = None,
+        modelscope_client: Any | None = None,
+        providers: dict[str, DownloadProvider] | None = None,
         model_repository: LocalModelRepository | None = None,
     ):
         self.config = config
@@ -52,12 +56,16 @@ class DownloadManager:
         self.layout.ensure()
         self.job_queue = job_queue
         self.hf_client = hf_client or HuggingFaceDownloadClient()
+        self.modelscope_client = modelscope_client
+        self.providers = providers or {}
         self.model_repository = model_repository or LocalModelRepository(config, self.layout)
 
     def create_download(self, request: DownloadRequest, *, parent_job_id: str | None = None) -> Job:
+        request = self._with_default_provider(request)
         self._ensure_not_already_running(request)
         local_name = sanitize_local_name(request.local_name or request.repo_id.replace("/", "--"))
         payload = {
+            "provider": request.provider,
             "repo_id": request.repo_id,
             "revision": request.revision,
             "allow_patterns": list(request.allow_patterns or ()),
@@ -107,6 +115,7 @@ class DownloadManager:
         return self.create_download(
             DownloadRequest(
                 repo_id=str(payload["repo_id"]),
+                provider=str(payload.get("provider") or self._default_provider_name()),
                 revision=payload.get("revision"),
                 allow_patterns=tuple(payload.get("allow_patterns") or ()) or None,
                 ignore_patterns=tuple(payload.get("ignore_patterns") or ()) or None,
@@ -118,6 +127,8 @@ class DownloadManager:
         )
 
     def _run_download(self, job: Job, request: DownloadRequest, cancel_flag: threading.Event) -> None:
+        request = self._with_default_provider(request)
+        provider = self._provider_for(request)
         local_name = sanitize_local_name(str(job.payload["local_name"]))
         if disk_free_bytes(self.layout.temp_dir) < self.layout.minimum_free_space_gb * 1024**3:
             raise DiskSpaceError(f"可用磁盘空间不足 {self.layout.minimum_free_space_gb}GB。")
@@ -129,31 +140,34 @@ class DownloadManager:
             raise DownloadValidationError(f"目标模型已存在，拒绝覆盖: {final_dir}")
         temp_dir.mkdir(parents=True, exist_ok=True)
 
-        files = [] if request.local_files_only else self._list_files(request)
+        files = [] if request.local_files_only else self._list_files(provider, request)
         tracker = DownloadProgressTracker(files)
-        self._publish_progress(job.id, tracker.snapshot(), "开始下载；重试会复用 Hugging Face 缓存。")
-        self._raise_if_cancelled(job.id, cancel_flag)
+        self._publish_progress(
+            job.id,
+            tracker.snapshot(),
+            f"开始下载；重试会复用 {self._provider_label(request.provider)} 缓存。",
+        )
+        self._raise_if_cancelled(job.id, cancel_flag, request.provider)
 
         final_progress: DownloadProgress
         if files:
-            cache_dir = Path(self.config.get("huggingface", {}).get("cache_dir", self.layout.temp_dir / "hf-cache"))
             for remote_file in files:
                 self._publish_progress(job.id, tracker.start_file(remote_file.path), f"正在下载 {remote_file.path}")
-                self._raise_if_cancelled(job.id, cancel_flag)
-                downloaded_path = self._download_file(request, remote_file, temp_dir, cache_dir)
+                self._raise_if_cancelled(job.id, cancel_flag, request.provider)
+                downloaded_path = self._download_file(provider, request, remote_file, temp_dir)
                 observed_size = self._file_size(downloaded_path)
                 progress = tracker.complete_file(remote_file.path, size_bytes=remote_file.size or observed_size)
                 self._publish_progress(job.id, progress, f"已完成 {remote_file.path}")
-                self._raise_if_cancelled(job.id, cancel_flag)
+                self._raise_if_cancelled(job.id, cancel_flag, request.provider)
             final_progress = tracker.snapshot()
         else:
-            self._snapshot_download(request, temp_dir)
+            provider.download_snapshot(request, temp_dir, tracker, cancel_flag)
             final_progress = self._scan_progress(temp_dir)
             self._publish_progress(job.id, final_progress, "文件清单不可用，已根据本地文件扫描更新进度。")
-            self._raise_if_cancelled(job.id, cancel_flag)
+            self._raise_if_cancelled(job.id, cancel_flag, request.provider)
 
         self._publish_progress(job.id, final_progress, "下载完成，正在校验模型文件。")
-        self._raise_if_cancelled(job.id, cancel_flag)
+        self._raise_if_cancelled(job.id, cancel_flag, request.provider)
 
         validate_downloaded_model(temp_dir)
         atomic_replace_directory(temp_dir, final_dir)
@@ -164,28 +178,24 @@ class DownloadManager:
             if job.type != JobType.MODEL_DOWNLOAD.value or job.status not in ACTIVE_DOWNLOAD_STATUSES:
                 continue
             payload = job.payload
-            if payload.get("repo_id") == request.repo_id and payload.get("revision") == request.revision:
-                raise DownloadAlreadyRunningError("同一仓库和 revision 已有下载任务正在运行。")
+            if (
+                payload.get("provider") == request.provider
+                and payload.get("repo_id") == request.repo_id
+                and payload.get("revision") == request.revision
+            ):
+                raise DownloadAlreadyRunningError("同一下载源、仓库和 revision 已有下载任务正在运行。")
 
-    def _list_files(self, request: DownloadRequest) -> list[RemoteFile]:
-        list_files = getattr(self.hf_client, "list_files", None)
-        if callable(list_files):
-            return list_files(request)
-        return []
+    def _list_files(self, provider: DownloadProvider, request: DownloadRequest) -> list[RemoteFile]:
+        return provider.resolve_files(request)
 
-    def _download_file(self, request: DownloadRequest, remote_file: RemoteFile, temp_dir: Path, cache_dir: Path) -> Path:
-        download_file = getattr(self.hf_client, "download_file", None)
-        if callable(download_file):
-            return download_file(request, remote_file, local_dir=temp_dir, cache_dir=cache_dir)
-        self._snapshot_download(request, temp_dir)
-        return temp_dir / remote_file.path
-
-    def _snapshot_download(self, request: DownloadRequest, temp_dir: Path) -> Path:
-        return self.hf_client.snapshot_download(
-            request,
-            local_dir=temp_dir,
-            cache_dir=Path(self.config.get("huggingface", {}).get("cache_dir", self.layout.temp_dir / "hf-cache")),
-        )
+    def _download_file(
+        self,
+        provider: DownloadProvider,
+        request: DownloadRequest,
+        remote_file: RemoteFile,
+        temp_dir: Path,
+    ) -> Path:
+        return provider.download_file(request, remote_file, local_dir=temp_dir)
 
     def _register_downloaded_model(self, job_id: str, final_dir: Path) -> None:
         self._merge_payload(job_id, {"registration_status": "scanning"}, message="下载完成，正在扫描模型仓库。")
@@ -230,12 +240,17 @@ class DownloadManager:
             message=message,
         )
 
-    def _raise_if_cancelled(self, job_id: str, cancel_flag: threading.Event) -> None:
+    def _raise_if_cancelled(
+        self,
+        job_id: str,
+        cancel_flag: threading.Event,
+        provider: str | None,
+    ) -> None:
         if cancel_flag.is_set():
             self._merge_payload(
                 job_id,
                 {"cancel_requested": True},
-                message="下载已取消；重试会复用 Hugging Face 缓存。",
+                message=f"下载已取消；重试会复用 {self._provider_label(provider)} 缓存。",
             )
             raise DownloadCancelledError("下载已取消。")
 
@@ -279,3 +294,37 @@ class DownloadManager:
             return path.stat().st_size if path.exists() and path.is_file() else None
         except OSError:
             return None
+
+    def _default_provider_name(self) -> str:
+        downloads_cfg = self.config.get("downloads", {})
+        if isinstance(downloads_cfg, dict):
+            return str(downloads_cfg.get("default_provider") or "huggingface").strip().lower()
+        return "huggingface"
+
+    def _with_default_provider(self, request: DownloadRequest) -> DownloadRequest:
+        if request.provider:
+            return request
+        return DownloadRequest(
+            repo_id=request.repo_id,
+            provider=self._default_provider_name(),
+            revision=request.revision,
+            allow_patterns=request.allow_patterns,
+            ignore_patterns=request.ignore_patterns,
+            local_name=request.local_name,
+            token=request.token,
+            local_files_only=request.local_files_only,
+        )
+
+    def _provider_for(self, request: DownloadRequest) -> DownloadProvider:
+        name = str(request.provider or self._default_provider_name()).strip().lower()
+        if name in self.providers:
+            return self.providers[name]
+        return get_download_provider(
+            name,
+            self.config,
+            hf_client=self.hf_client,
+            modelscope_client=self.modelscope_client,
+        )
+
+    def _provider_label(self, provider: str | None) -> str:
+        return "ModelScope" if provider == "modelscope" else "Hugging Face"

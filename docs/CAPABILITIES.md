@@ -16,8 +16,11 @@ curl http://127.0.0.1:8000/v1/capabilities
 - `model_download`：available，后台 Job。
 - `model_download_progress`：partial；只有真实 `total_bytes` 已知时显示百分比。
 - `model_download_cancel`：partial；取消是协作式请求。
-- `model_download_retry`：available；重试复用 Hugging Face cache。
+- `model_download_retry`：available；重试复用 Hugging Face 或 ModelScope SDK cache。
 - `model_download_auto_register`：available；下载成功后扫描并写回 `model_id`。
+- `model_download_huggingface`：available；Hugging Face provider 保持可用。
+- `model_download_modelscope`：partial；ModelScope / 魔塔 provider 可用，但依赖 `modelscope-hub`，部分进度字段可能未知。
+- `model_download_provider_selection`：available；后端 API 和 Flutter 下载页面支持选择 provider。
 - `rag_query`：partial，Flutter 有最小查询入口。
 - `rag_import`：backend only。
 - `lora_scan` / `lora_load` / `lora_activate`：partial。
