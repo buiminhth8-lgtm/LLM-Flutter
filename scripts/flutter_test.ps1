@@ -6,6 +6,7 @@ if (-not (Get-Command flutter -ErrorAction SilentlyContinue)) {
 
 Push-Location "$PSScriptRoot\..\apps\flutter_studio"
 try {
+  flutter pub get
   flutter test
 } finally {
   Pop-Location

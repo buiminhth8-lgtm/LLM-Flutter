@@ -1,5 +1,7 @@
 # LLM-Studio
 
+Windows 真实运行验收流程见 [docs/WINDOWS_ACCEPTANCE.md](docs/WINDOWS_ACCEPTANCE.md)，下载生命周期说明见 [docs/DOWNLOADS.md](docs/DOWNLOADS.md)。
+
 下载生命周期、进度、取消、重试、本地缓存和临时目录清理策略见 [docs/DOWNLOADS.md](docs/DOWNLOADS.md)。
 
 LLM-Studio 是一个面向 Windows 本地大模型使用场景的桌面工作台。当前项目已经从旧 CLI / Web 原型架构迁移为：

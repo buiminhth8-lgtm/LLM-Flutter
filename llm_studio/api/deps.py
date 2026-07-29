@@ -1,0 +1,29 @@
+"""Shared API dependencies configured by the FastAPI app factory."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any
+
+
+@dataclass
+class ApiState:
+    config: Any | None = None
+    download_manager: Any | None = None
+    job_repository: Any | None = None
+    job_queue: Any | None = None
+    diagnostics_exporter: Any | None = None
+
+
+_state = ApiState()
+
+
+def configure_api_state(**kwargs: Any) -> None:
+    for name, value in kwargs.items():
+        if not hasattr(_state, name):
+            raise AttributeError(f"Unknown API state dependency: {name}")
+        setattr(_state, name, value)
+
+
+def get_api_state() -> ApiState:
+    return _state
