@@ -1,8 +1,10 @@
 from pathlib import Path
 
+import pytest
+
 from llm_studio.downloads import DownloadManager, DownloadRequest, DownloadTaskState
 from llm_studio.jobs import Job, JobQueue, JobRepository, JobStatus, JobType, sanitize_payload
-from llm_studio.jobs.exceptions import JobNotImplementedError
+from llm_studio.jobs.exceptions import JobCancelNotAllowedError, JobNotImplementedError
 
 
 class TinyConfig:
@@ -54,6 +56,29 @@ def test_payload_sanitization_removes_tokens():
     assert "api_key" not in payload["nested"]
 
 
+def test_public_job_payload_redacts_paths_and_secrets():
+    job = Job.new(
+        "job-redact",
+        JobType.RAG_REBUILD.value,
+        {
+            "repo_id": "org/model",
+            "file_path": "C:/Users/example/private.txt",
+            "directory_path": "D:/secret/docs",
+            "nested": {"token": "hf_secret", "path": "D:/secret/image.png"},
+        },
+    ).with_update(error_message="Authorization: Bearer hf_secret token=hf_secret")
+
+    public = job.to_public_dict()
+
+    assert public["payload"]["repo_id"] == "org/model"
+    assert public["payload"]["file_path"] == "<redacted>"
+    assert public["payload"]["directory_path"] == "<redacted>"
+    assert public["payload"]["nested"]["token"] == "<redacted>"
+    assert public["payload"]["nested"]["path"] == "<redacted>"
+    assert "hf_secret" not in public["error_message"]
+    assert job.payload["file_path"] == "C:/Users/example/private.txt"
+
+
 def test_download_manager_does_not_store_token(tmp_path):
     config = TinyConfig(tmp_path)
     repo = JobRepository(tmp_path / "jobs.sqlite")
@@ -88,6 +113,19 @@ def test_queue_success_transition(tmp_path):
     job = queue.submit(JobType.MODEL_SCAN.value, {}, lambda job, update, cancel: update(1.0, "ok"))
     queue.shutdown(wait=True)
     assert repo.get(job.id).status == JobStatus.SUCCEEDED.value
+
+
+def test_queue_rejects_cancel_for_terminal_jobs(tmp_path):
+    repo = JobRepository(tmp_path / "jobs.sqlite")
+    queue = JobQueue(repo)
+    for status in (JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELLED, JobStatus.INTERRUPTED):
+        job = Job.new(f"job-{status.value}", JobType.MODEL_SCAN.value, {}).with_update(status=status.value)
+        repo.save(job)
+
+        with pytest.raises(JobCancelNotAllowedError):
+            queue.cancel(job.id)
+
+        assert repo.get(job.id).status == status.value
 
 
 def test_queue_not_implemented_becomes_failed(tmp_path):

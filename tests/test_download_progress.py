@@ -11,7 +11,11 @@ from llm_studio.downloads import (
     DownloadTaskState,
     RemoteFile,
 )
-from llm_studio.downloads.exceptions import DownloadRetryNotAllowedError
+from llm_studio.downloads.exceptions import (
+    DownloadLocalFilesNotFoundError,
+    DownloadRetryNotAllowedError,
+)
+from llm_studio.downloads.huggingface_client import HuggingFaceDownloadClient
 from llm_studio.jobs import Job, JobQueue, JobRepository, JobStatus, JobType
 
 
@@ -75,6 +79,29 @@ class BlockingHFClient(FakeHFClient):
         self.started.set()
         self.release.wait(timeout=2)
         return super().download_file(request, file, local_dir=local_dir, cache_dir=cache_dir)
+
+
+class LocalOnlyHFClient:
+    def __init__(self):
+        self.list_files_called = False
+        self.snapshot_local_files_only = None
+
+    def list_files(self, request):
+        self.list_files_called = True
+        raise AssertionError("local_files_only download must not request remote metadata")
+
+    def snapshot_download(self, request, *, local_dir, cache_dir=None):
+        self.snapshot_local_files_only = request.local_files_only
+        local_dir.mkdir(parents=True, exist_ok=True)
+        (local_dir / "config.json").write_text('{"model_type":"llama"}', encoding="utf-8")
+        (local_dir / "model.safetensors").write_bytes(b"12345")
+        return local_dir
+
+
+class MissingLocalOnlyHFClient(LocalOnlyHFClient):
+    def snapshot_download(self, request, *, local_dir, cache_dir=None):
+        self.snapshot_local_files_only = request.local_files_only
+        raise DownloadLocalFilesNotFoundError("missing local cache token=hf_secret")
 
 
 def _manager(tmp_path, hf_client):
@@ -190,3 +217,43 @@ def test_unknown_file_sizes_do_not_fake_total(tmp_path):
     assert state.downloaded_bytes == 27
     assert state.total_bytes is None
     assert state.percent is None
+
+
+def test_local_files_only_skips_remote_file_listing(tmp_path):
+    hf_client = LocalOnlyHFClient()
+    manager, repo, queue = _manager(tmp_path, hf_client)
+
+    job = manager.create_download(DownloadRequest(repo_id="org/model", local_files_only=True))
+    queue.shutdown(wait=True)
+
+    state = DownloadTaskState.from_job(repo.get(job.id))
+    assert hf_client.list_files_called is False
+    assert hf_client.snapshot_local_files_only is True
+    assert state.total_bytes is None
+    assert state.percent is None
+    assert state.registration_status == "succeeded"
+
+
+def test_local_files_only_missing_cache_uses_stable_error_and_redacts(tmp_path):
+    hf_client = MissingLocalOnlyHFClient()
+    manager, repo, queue = _manager(tmp_path, hf_client)
+
+    job = manager.create_download(DownloadRequest(repo_id="org/model", local_files_only=True))
+    queue.shutdown(wait=True)
+
+    stored = repo.get(job.id)
+    assert hf_client.list_files_called is False
+    assert stored.status == JobStatus.FAILED.value
+    assert stored.error_code == "DOWNLOAD_LOCAL_FILES_NOT_FOUND"
+    assert stored.error_message == "missing local cache token=<redacted>"
+
+
+def test_huggingface_error_mapping_redacts_tokens(monkeypatch):
+    monkeypatch.setenv("HF_TOKEN", "hf_env_secret")
+    error = HuggingFaceDownloadClient()._map_hf_error(
+        RuntimeError("boom Authorization: Bearer hf_env_secret token=hf_env_secret")
+    )
+
+    assert "hf_env_secret" not in str(error)
+    assert "Authorization: Bearer <redacted>" in str(error)
+    assert "token=<redacted>" in str(error)

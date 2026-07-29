@@ -13,6 +13,10 @@ class JobCancelledError(JobError):
     pass
 
 
+class JobCancelNotAllowedError(JobError):
+    error_code = "JOB_CANCEL_NOT_ALLOWED"
+
+
 class JobQueueClosedError(JobError):
     pass
 

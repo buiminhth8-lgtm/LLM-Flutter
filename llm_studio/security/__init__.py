@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 
 from .paths import PathSecurityError, resolve_allowed_path
+from .redaction import redact_sensitive_text
 
 
 def hash_api_key(api_key: str) -> str:
@@ -20,4 +21,10 @@ def redact_secret(value: str | None) -> str:
     return f"{text[:4]}...{text[-4:]}"
 
 
-__all__ = ["PathSecurityError", "hash_api_key", "redact_secret", "resolve_allowed_path"]
+__all__ = [
+    "PathSecurityError",
+    "hash_api_key",
+    "redact_secret",
+    "redact_sensitive_text",
+    "resolve_allowed_path",
+]

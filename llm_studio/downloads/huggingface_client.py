@@ -6,9 +6,12 @@ import os
 from fnmatch import fnmatch
 from pathlib import Path
 
+from llm_studio.security.redaction import redact_sensitive_text
+
 from .entities import DownloadRequest
 from .exceptions import (
     DownloadError,
+    DownloadLocalFilesNotFoundError,
     DownloadNetworkError,
     RepositoryNotFoundError,
     RevisionNotFoundError,
@@ -122,8 +125,10 @@ class HuggingFaceDownloadClient:
         return Path(result)
 
     def _map_hf_error(self, exc: Exception) -> DownloadError:
-        text = str(exc)
+        text = redact_sensitive_text(str(exc)) or ""
         lowered = text.lower()
+        if "local_files_only" in lowered or ("cannot find" in lowered and "cache" in lowered):
+            return DownloadLocalFilesNotFoundError("??????????????")
         if "401" in text or "unauthorized" in lowered or "gated" in lowered:
             return UnauthorizedRepositoryError("私有或受限仓库未授权，请配置有效 Hugging Face Token。")
         if "revision" in lowered and ("not found" in lowered or "404" in text):

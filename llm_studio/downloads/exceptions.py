@@ -39,6 +39,14 @@ class DownloadRetryNotAllowedError(DownloadError):
     error_code = "DOWNLOAD_RETRY_NOT_ALLOWED"
 
 
+class DownloadCancelNotAllowedError(DownloadError):
+    error_code = "DOWNLOAD_CANCEL_NOT_ALLOWED"
+
+
+class DownloadLocalFilesNotFoundError(DownloadError):
+    error_code = "DOWNLOAD_LOCAL_FILES_NOT_FOUND"
+
+
 class DownloadAlreadyRunningError(DownloadError):
     error_code = "DOWNLOAD_ALREADY_RUNNING"
 

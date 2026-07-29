@@ -9,8 +9,10 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import Any
 
-from .entities import Job, JobStatus, JobType, sanitize_payload
-from .exceptions import JobCancelledError, JobQueueClosedError
+from llm_studio.security.redaction import redact_sensitive_text
+
+from .entities import TERMINAL_JOB_STATUSES, Job, JobStatus, JobType, sanitize_payload
+from .exceptions import JobCancelledError, JobCancelNotAllowedError, JobQueueClosedError
 from .repository import JobRepository
 
 
@@ -51,11 +53,14 @@ class JobQueue:
 
     def cancel(self, job_id: str) -> Job:
         job = self.repository.get(job_id)
+        if job.status in TERMINAL_JOB_STATUSES:
+            raise JobCancelNotAllowedError("????????????")
         flag = self._cancel_flags.get(job_id)
         if flag:
             flag.set()
-        job = job.with_update(status=JobStatus.CANCELLING.value, message="正在取消任务。")
-        self.repository.save(job)
+        if job.status != JobStatus.CANCELLING.value:
+            job = job.with_update(status=JobStatus.CANCELLING.value, message="???????")
+            self.repository.save(job)
         return job
 
     def shutdown(self, *, wait: bool = True) -> None:
@@ -90,7 +95,7 @@ class JobQueue:
                     status=JobStatus.CANCELLED.value,
                     finished_at=datetime.now(timezone.utc),
                     error_code=getattr(exc, "error_code", "JOB_CANCELLED"),
-                    error_message=str(exc),
+                    error_message=redact_sensitive_text(str(exc)),
                     message="任务已取消。",
                 )
             )
@@ -101,7 +106,7 @@ class JobQueue:
                     status=JobStatus.FAILED.value,
                     finished_at=datetime.now(timezone.utc),
                     error_code=getattr(exc, "error_code", type(exc).__name__),
-                    error_message=str(exc),
+                    error_message=redact_sensitive_text(str(exc)),
                     message="任务失败。",
                 )
             )
