@@ -46,6 +46,7 @@ void main() {
     expect(find.text('Status'), findsOneWidget);
     expect(find.text('Models'), findsWidgets);
     expect(find.text('Chat'), findsOneWidget);
+    expect(find.text('Novel Studio'), findsNothing);
   });
 
   testWidgets('first run setup state shows initialization page', (
@@ -90,6 +91,9 @@ void main() {
 
     expect(find.text('Backend logs'), findsOneWidget);
     expect(find.text('Copy logs'), findsOneWidget);
+    await tester.ensureVisible(find.text('Novel Studio roadmap'));
+    expect(find.text('Novel Studio roadmap'), findsOneWidget);
+    expect(find.text('Status: planned / not implemented.'), findsOneWidget);
   });
 
   testWidgets('401 responses return the user to the auth settings page', (

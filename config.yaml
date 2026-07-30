@@ -89,6 +89,10 @@ security:
       - "./data/imports"
       - "./data/uploads"
 
+features:
+  novel_studio:
+    enabled: false
+
 # Unified model repository. Legacy configs with top-level models_dir are still
 # migrated at load time, but new installs should use this section only.
 models:

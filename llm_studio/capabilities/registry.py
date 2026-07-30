@@ -55,6 +55,15 @@ _CAPABILITIES: tuple[CapabilityInfo, ...] = (
     CapabilityInfo("flutter_linux", CapabilityStatus.NOT_IMPLEMENTED, "No Linux desktop build target is supported yet.", False),
     CapabilityInfo("flutter_macos", CapabilityStatus.NOT_IMPLEMENTED, "No macOS desktop build target is supported yet.", False),
     CapabilityInfo("flutter_web", CapabilityStatus.NOT_IMPLEMENTED, "The legacy web UI has been replaced by Flutter Windows desktop.", False),
+    CapabilityInfo("novel_studio", CapabilityStatus.NOT_IMPLEMENTED, "Novel Studio is a staged roadmap item; Stage 0 only prepares feature flags, documentation, and placeholders.", False),
+    CapabilityInfo("novel_projects", CapabilityStatus.NOT_IMPLEMENTED, "Novel project CRUD is not implemented in Stage 0.", False),
+    CapabilityInfo("prompt_studio", CapabilityStatus.NOT_IMPLEMENTED, "Prompt Studio templates are planned for a later stage.", False),
+    CapabilityInfo("writing_workspace", CapabilityStatus.NOT_IMPLEMENTED, "The novel writing workspace is planned but not implemented.", False),
+    CapabilityInfo("revision_system", CapabilityStatus.NOT_IMPLEMENTED, "Revision and version workflows are planned but not implemented.", False),
+    CapabilityInfo("dataset_builder", CapabilityStatus.NOT_IMPLEMENTED, "Novel dataset building is planned but not implemented.", False),
+    CapabilityInfo("finetune_center", CapabilityStatus.PARTIAL, "Core LoRA/QLoRA plumbing exists, but Novel-specific fine-tune workflows are not implemented.", False),
+    CapabilityInfo("novel_rag_memory", CapabilityStatus.NOT_IMPLEMENTED, "Novel memory and long-form RAG are planned but not implemented.", False),
+    CapabilityInfo("novel_evaluation", CapabilityStatus.NOT_IMPLEMENTED, "Novel evaluation workflows are planned but not implemented.", False),
 )
 
 
