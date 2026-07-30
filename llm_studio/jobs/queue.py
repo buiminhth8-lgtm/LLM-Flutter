@@ -51,6 +51,33 @@ class JobQueue:
         executor.submit(self._run, job, handler, cancel_flag)
         return job
 
+    def resubmit(
+        self,
+        job: Job,
+        handler: Callable[[Job, Callable[[float | None, str | None], None], threading.Event], Any],
+    ) -> Job:
+        with self._lock:
+            if self._closed:
+                raise JobQueueClosedError("Job queue is closing; refusing to accept the job.")
+            if job.status not in TERMINAL_JOB_STATUSES:
+                raise JobCancelNotAllowedError("Only terminal jobs can be resubmitted.")
+            retried = job.with_update(
+                status=JobStatus.PENDING.value,
+                progress=None,
+                started_at=None,
+                finished_at=None,
+                error_code=None,
+                error_message=None,
+                message="Retry queued.",
+            )
+            self.repository.save(retried)
+            cancel_flag = threading.Event()
+            self._cancel_flags[retried.id] = cancel_flag
+
+        executor = self._executors.get(retried.type) or self._executors[JobType.MODEL_SCAN.value]
+        executor.submit(self._run, retried, handler, cancel_flag)
+        return retried
+
     def cancel(self, job_id: str) -> Job:
         job = self.repository.get(job_id)
         if job.status in TERMINAL_JOB_STATUSES:

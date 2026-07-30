@@ -110,7 +110,7 @@ class DownloadManager:
         }:
             raise DownloadRetryNotAllowedError("只有失败、取消或中断的下载任务可以重试。")
         payload = job.payload
-        return self.create_download(
+        request = self._with_default_provider(
             DownloadRequest(
                 repo_id=str(payload["repo_id"]),
                 provider=str(payload.get("provider") or self._default_provider_name()),
@@ -120,8 +120,32 @@ class DownloadManager:
                 local_name=str(payload.get("local_name") or ""),
                 token=None,
                 local_files_only=bool(payload.get("local_files_only", False)),
-            ),
-            parent_job_id=job.id,
+            )
+        )
+        self._ensure_not_already_running(request)
+        retried_payload = {
+            **payload,
+            "provider": request.provider,
+            "repo_id": request.repo_id,
+            "revision": request.revision,
+            "allow_patterns": list(request.allow_patterns or ()),
+            "ignore_patterns": list(request.ignore_patterns or ()),
+            "local_files_only": request.local_files_only,
+            "downloaded_bytes": None,
+            "total_bytes": None,
+            "percent": None,
+            "completed_files": None,
+            "total_files": None,
+            "speed_bytes_per_second": None,
+            "eta_seconds": None,
+            "current_file": None,
+            "cancel_requested": False,
+            "registration_status": None,
+            "model_id": None,
+        }
+        return self.job_queue.resubmit(
+            job.with_update(payload=retried_payload),
+            lambda retried_job, update, cancel: self._run_download(retried_job, request, cancel),
         )
 
     def _run_download(self, job: Job, request: DownloadRequest, cancel_flag: threading.Event) -> None:
