@@ -93,6 +93,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "enabled": False,
         },
     },
+    "novels": {
+        "db_path": "./data/novels/novels.sqlite",
+    },
     "finetune": {
         "method": "qlora",
         "lora_r": 16,
@@ -292,6 +295,7 @@ class Config:
             "auth": ("users_file", "audit_log"),
             "storage": ("trash_dir", "benchmarks_dir", "jobs_dir", "diagnostics_dir"),
             "uploads": ("temp_dir",),
+            "novels": ("db_path",),
         }.items():
             cfg = self._section(section)
             for key in keys:

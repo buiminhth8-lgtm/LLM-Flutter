@@ -82,6 +82,13 @@ def required_permission_for_request(method: str, path: str) -> Permission | None
     if path == "/v1/auth/me" or path.startswith("/v1/auth/users"):
         return None
 
+    if path.startswith("/v1/novels"):
+        if method == "GET":
+            return Permission.VIEW_NOVELS
+        if method == "DELETE":
+            return Permission.DELETE_NOVELS
+        return Permission.MANAGE_NOVELS
+
     if path.startswith("/v1/vision"):
         return Permission.CHAT
 

@@ -1,5 +1,5 @@
-"""Reserved package for Novel Studio Stage 1.
+"""Novel Studio foundation package."""
 
-Stage 0 must not add Novel Studio business logic, routers, repositories, or
-database tables.
-"""
+from .service import NovelService
+
+__all__ = ["NovelService"]

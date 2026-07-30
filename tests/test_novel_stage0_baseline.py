@@ -32,7 +32,7 @@ def test_novel_capabilities_are_placeholders():
     assert caps["novel_studio"].frontend_exposed is False
 
 
-def test_novel_stage0_does_not_register_business_api(monkeypatch, tmp_path):
+def test_novel_stage0_default_feature_flag_keeps_business_api_disabled(monkeypatch, tmp_path):
     import pytest
 
     pytest.importorskip("fastapi")
@@ -58,27 +58,31 @@ models:
     monkeypatch.setenv("LLM_STUDIO_CONFIG", str(cfg_path))
     app = get_app(Config(cfg_path))
     paths = {path for route in app.routes if (path := getattr(route, "path", None))}
-
-    assert "/v1/novels" not in paths
-    assert not any(path.startswith("/v1/novels/") for path in paths)
     assert not any(path.startswith("/v1/writing") for path in paths)
     assert not any(path.startswith("/v1/revisions") for path in paths)
     assert not any(path.startswith("/v1/datasets") for path in paths)
 
-    response = TestClient(app).get("/v1/capabilities")
+    client = TestClient(app)
+    disabled = client.get("/v1/novels/projects")
+    assert disabled.status_code == 404
+    assert disabled.json()["error"]["code"] == "NOVEL_FEATURE_DISABLED"
+
+    response = client.get("/v1/capabilities")
     assert response.status_code == 200
     caps = {item["name"]: item for item in response.json()["capabilities"]}
     assert caps["novel_studio"]["status"] == CapabilityStatus.NOT_IMPLEMENTED.value
 
 
-def test_novel_stage0_has_no_database_table_names():
+def test_novel_scope_does_not_add_later_stage_services():
     from pathlib import Path
 
-    import llm_studio.novels as novels
+    import llm_studio
 
-    assert "novels" in novels.__name__
-    package_dir = Path(novels.__file__).parent
-    python_files = {path.name for path in package_dir.glob("*.py")}
-
-    assert python_files == {"__init__.py"}
-    assert not any(path.name in {"repository.py", "service.py", "schema.py", "models.py"} for path in package_dir.iterdir())
+    root = Path(llm_studio.__file__).parent
+    forbidden_files = {
+        root / "writing" / "service.py",
+        root / "revisions" / "repository.py",
+        root / "datasets" / "builder.py",
+        root / "datasets" / "repository.py",
+    }
+    assert not any(path.exists() for path in forbidden_files)

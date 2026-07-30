@@ -92,6 +92,8 @@ security:
 features:
   novel_studio:
     enabled: false
+novels:
+  db_path: "./data/novels/novels.sqlite"
 
 # Unified model repository. Legacy configs with top-level models_dir are still
 # migrated at load time, but new installs should use this section only.
