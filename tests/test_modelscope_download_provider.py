@@ -70,6 +70,25 @@ class FailingModelScopeClient(FakeModelScopeClient):
         raise RuntimeError("boom Authorization: Bearer ms_secret token=ms_secret")
 
 
+class ListRepoOnlyHubApi:
+    def __init__(self):
+        self.calls = []
+
+    def list_repo_files(self, repo_id, repo_type, *, revision=None, recursive=True):
+        self.calls.append(
+            {
+                "repo_id": repo_id,
+                "repo_type": repo_type,
+                "revision": revision,
+                "recursive": recursive,
+            }
+        )
+        return [
+            type("FileInfo", (), {"path": "config.json", "size": 23})(),
+            type("FileInfo", (), {"path": "model.safetensors", "size": None})(),
+        ]
+
+
 def _manager(tmp_path, client):
     repo = JobRepository(tmp_path / "jobs.sqlite")
     queue = JobQueue(repo)
@@ -143,3 +162,28 @@ def test_modelscope_provider_maps_local_cache_error():
     error = provider._map_modelscope_error(RuntimeError("missing cache token=ms_secret"))
 
     assert error.error_code == "MODELSCOPE_LOCAL_FILES_NOT_FOUND"
+
+
+def test_modelscope_provider_supports_list_repo_files_without_get_model_files():
+    provider = ModelScopeDownloadProvider(TinyConfig(Path(".")), client=None)
+    api = ListRepoOnlyHubApi()
+
+    list_func = provider._repo_file_list_func(api)
+    raw_files = provider._call_supported_kwargs(
+        list_func,
+        model_id="damo/model",
+        repo_id="damo/model",
+        repo_type="model",
+        revision="master",
+        recursive=True,
+    )
+
+    assert api.calls == [
+        {
+            "repo_id": "damo/model",
+            "repo_type": "model",
+            "revision": "master",
+            "recursive": True,
+        }
+    ]
+    assert [item.path for item in raw_files] == ["config.json", "model.safetensors"]

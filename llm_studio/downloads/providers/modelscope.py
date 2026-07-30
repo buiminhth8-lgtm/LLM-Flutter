@@ -80,11 +80,14 @@ class ModelScopeDownloadProvider:
 
         try:
             api = self._create_hub_api(HubApi)
+            list_func = self._repo_file_list_func(api)
             raw_files = self._call_supported_kwargs(
-                api.get_model_files,
+                list_func,
                 model_id=request.repo_id,
                 repo_id=request.repo_id,
+                repo_type="model",
                 revision=request.revision or "master",
+                recursive=True,
             )
         except Exception as exc:
             raise self._map_modelscope_error(exc) from exc
@@ -94,7 +97,12 @@ class ModelScopeDownloadProvider:
             if isinstance(item, str):
                 files.append(RemoteFile(path=item, size=None))
                 continue
-            path = getattr(item, "path", None) or getattr(item, "name", None) or getattr(item, "Path", None)
+            path = (
+                getattr(item, "path", None)
+                or getattr(item, "file_path", None)
+                or getattr(item, "name", None)
+                or getattr(item, "Path", None)
+            )
             size = getattr(item, "size", None) or getattr(item, "Size", None)
             if path:
                 files.append(RemoteFile(path=str(path), size=int(size) if size is not None else None))
@@ -168,6 +176,13 @@ class ModelScopeDownloadProvider:
             from modelscope_hub import snapshot_download
 
             return snapshot_download
+
+    def _repo_file_list_func(self, api):
+        for name in ("get_model_files", "list_repo_files"):
+            func = getattr(api, name, None)
+            if callable(func):
+                return func
+        raise AttributeError("ModelScope HubApi does not provide a repository file listing method.")
 
     def _call_supported_kwargs(self, func, **kwargs):
         filtered = {key: value for key, value in kwargs.items() if value is not None}

@@ -208,8 +208,12 @@ def test_retry_allowed_for_cancelled_and_rejected_for_succeeded(tmp_path):
     )
     repo.save(cancelled)
     retry = manager.retry_interrupted(cancelled)
-    assert retry.payload["parent_job_id"] == cancelled.id
+    assert retry.id == cancelled.id
+    assert retry.status == JobStatus.PENDING.value
+    assert len(repo.list(limit=20)) == 1
     queue.shutdown(wait=True)
+    retried = repo.get(cancelled.id)
+    assert retried.status == JobStatus.SUCCEEDED.value
 
 
 def test_unknown_file_sizes_do_not_fake_total(tmp_path):
