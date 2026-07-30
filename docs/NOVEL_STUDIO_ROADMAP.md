@@ -3,6 +3,8 @@
 Novel Studio is developed in stages on top of the existing LLM-Studio backend
 and Flutter Windows client.
 
+Stage 2 Prompt Studio details: [NOVEL_STAGE2_PROMPT_STUDIO.md](NOVEL_STAGE2_PROMPT_STUDIO.md).
+
 ## 阶段 0：工程基线整理与开发入口
 
 - 不开发业务功能。

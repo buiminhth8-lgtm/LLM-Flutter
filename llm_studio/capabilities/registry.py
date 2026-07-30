@@ -78,11 +78,15 @@ def get_capabilities_for_config(config) -> tuple[CapabilityInfo, ...]:
     if not is_novel_studio_enabled(config):
         return _CAPABILITIES
     overrides = {
-        "novel_studio": (CapabilityStatus.PARTIAL, "Novel Studio Stage 1 foundation APIs and Flutter entry are available.", True),
+        "novel_studio": (CapabilityStatus.PARTIAL, "Novel Studio Stage 2 foundation and Prompt Studio preview APIs are available.", True),
         "novel_projects": (CapabilityStatus.AVAILABLE, "Novel project CRUD is available.", True),
         "novel_world_bible": (CapabilityStatus.AVAILABLE, "Novel world bible entries are available.", True),
         "novel_characters": (CapabilityStatus.AVAILABLE, "Novel character records are available.", True),
         "novel_chapters": (CapabilityStatus.AVAILABLE, "Novel volumes, chapters, scenes, plot threads, and timeline records are available.", True),
+        "prompt_studio": (CapabilityStatus.AVAILABLE, "Prompt templates, immutable versions, and preview rendering are available.", True),
+        "prompt_template_versions": (CapabilityStatus.AVAILABLE, "Prompt template version history and activation are available.", True),
+        "prompt_render_preview": (CapabilityStatus.AVAILABLE, "Prompt rendering preview is available without calling Runtime or Runner.", True),
+        "context_assembler": (CapabilityStatus.NOT_IMPLEMENTED, "Context Assembler is planned for Stage 3 and not implemented in Stage 2.", False),
     }
     existing = {cap.name for cap in _CAPABILITIES}
     result: list[CapabilityInfo] = []
