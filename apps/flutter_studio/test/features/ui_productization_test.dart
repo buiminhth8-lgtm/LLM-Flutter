@@ -6,6 +6,7 @@ import 'package:flutter_studio/features/benchmarks/benchmarks_page.dart';
 import 'package:flutter_studio/features/diagnostics/diagnostics_page.dart';
 import 'package:flutter_studio/features/downloads/downloads_page.dart';
 import 'package:flutter_studio/features/models/models_page.dart';
+import 'package:flutter_studio/features/novel_studio/novel_studio_placeholder_page.dart';
 import 'package:flutter_studio/features/rag/rag_page.dart';
 import 'package:flutter_studio/features/storage/storage_page.dart';
 
@@ -247,5 +248,13 @@ void main() {
 
     expect(find.text('Local paths restricted'), findsOneWidget);
     expect(find.textContaining('question'), findsWidgets);
+  });
+
+  testWidgets('Novel Studio placeholder is roadmap only', (tester) async {
+    await tester.pumpWidget(_wrap(const NovelStudioPlaceholderPage()));
+
+    expect(find.text('Novel Studio is planned.'), findsOneWidget);
+    expect(find.text('阶段 0：工程基线准备中。'), findsOneWidget);
+    expect(find.text('下一阶段：Novel 项目与基础资料库。'), findsOneWidget);
   });
 }

@@ -232,6 +232,15 @@ class SettingsPage extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: 24),
+          const Text(
+            'Novel Studio roadmap',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          const Text('Status: planned / not implemented.'),
+          const SizedBox(height: 4),
+          const Text('阶段 0：工程基线准备中。下一阶段：Novel 项目与基础资料库。'),
         ],
       ),
     );

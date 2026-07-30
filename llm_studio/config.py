@@ -88,6 +88,11 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "allowed_roots": ["./data/imports", "./data/uploads"],
         },
     },
+    "features": {
+        "novel_studio": {
+            "enabled": False,
+        },
+    },
     "finetune": {
         "method": "qlora",
         "lora_r": 16,
