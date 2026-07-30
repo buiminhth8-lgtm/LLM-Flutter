@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import threading
+from collections.abc import Callable
 from pathlib import Path
 from typing import Protocol
 
-from llm_studio.downloads.entities import DownloadRequest
+from llm_studio.downloads.entities import DownloadProgress, DownloadRequest
 from llm_studio.downloads.progress import DownloadProgressTracker, RemoteFile
 
 
@@ -31,5 +32,6 @@ class DownloadProvider(Protocol):
         target_dir: Path,
         progress: DownloadProgressTracker,
         cancel_token: threading.Event | None = None,
+        on_progress: Callable[[DownloadProgress], None] | None = None,
     ) -> Path:
         ...

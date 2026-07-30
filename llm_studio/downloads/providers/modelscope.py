@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import inspect
+import logging
 import os
 import threading
+from collections.abc import Callable
 from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any
 
-from llm_studio.downloads.entities import DownloadRequest
+from llm_studio.downloads.entities import DownloadProgress, DownloadRequest
 from llm_studio.downloads.exceptions import (
     DownloadProviderNotInstalledError,
     ModelScopeAuthRequiredError,
@@ -18,9 +20,12 @@ from llm_studio.downloads.exceptions import (
     ModelScopeNetworkError,
     ModelScopeRepoNotFoundError,
 )
+from llm_studio.downloads.modelscope_progress import ModelScopeProgressBridge
 from llm_studio.downloads.progress import DownloadProgressTracker, RemoteFile
 from llm_studio.models.storage import layout_from_config
 from llm_studio.security.redaction import redact_sensitive_text
+
+logger = logging.getLogger(__name__)
 
 
 def _matches_patterns(path: str, patterns: tuple[str, ...] | None, *, default: bool) -> bool:
@@ -42,6 +47,7 @@ def _filter_files(files: list[RemoteFile], request: DownloadRequest) -> list[Rem
 
 class ModelScopeDownloadProvider:
     name = "modelscope"
+    prefers_snapshot_download = True
 
     def __init__(self, config, client: Any | None = None):
         self.config = config
@@ -126,6 +132,7 @@ class ModelScopeDownloadProvider:
         target_dir: Path,
         progress: DownloadProgressTracker,
         cancel_token: threading.Event | None = None,
+        on_progress: Callable[[DownloadProgress], None] | None = None,
     ) -> Path:
         if self.client is not None and hasattr(self.client, "snapshot_download"):
             return Path(
@@ -136,15 +143,25 @@ class ModelScopeDownloadProvider:
                 )
             )
         try:
-            snapshot_download = self._import_snapshot_download()
+            from modelscope_hub.api import HubApi
         except ImportError as exc:
             raise DownloadProviderNotInstalledError("modelscope-hub 未安装，请安装下载依赖。") from exc
 
         try:
+            api = self._create_hub_api(HubApi)
+            download_repo = getattr(api, "download_repo", None)
+            if not callable(download_repo):
+                download_repo = self._import_snapshot_download()
+            callback_cls = None
+            if on_progress is not None:
+                callback_cls = ModelScopeProgressBridge(progress, on_progress).callback_class()
+                if not self._supports_kwarg(download_repo, "progress_callbacks"):
+                    logger.debug("ModelScope progress callback not supported by installed SDK.")
             result = self._call_supported_kwargs(
-                snapshot_download,
+                download_repo,
                 model_id=request.repo_id,
                 repo_id=request.repo_id,
+                repo_type="model",
                 revision=request.revision or "master",
                 cache_dir=str(self._cache_dir()),
                 local_dir=str(target_dir),
@@ -155,6 +172,7 @@ class ModelScopeDownloadProvider:
                 ignore_file_pattern=list(request.ignore_patterns) if request.ignore_patterns else None,
                 endpoint=self._endpoint(),
                 token=self._token(),
+                progress_callbacks=[callback_cls] if callback_cls else None,
             )
         except Exception as exc:
             raise self._map_modelscope_error(exc) from exc
@@ -193,6 +211,15 @@ class ModelScopeDownloadProvider:
         if any(param.kind == inspect.Parameter.VAR_KEYWORD for param in signature.parameters.values()):
             return func(**filtered)
         return func(**{key: value for key, value in filtered.items() if key in signature.parameters})
+
+    def _supports_kwarg(self, func, name: str) -> bool:
+        try:
+            signature = inspect.signature(func)
+        except (TypeError, ValueError):
+            return True
+        return name in signature.parameters or any(
+            param.kind == inspect.Parameter.VAR_KEYWORD for param in signature.parameters.values()
+        )
 
     def _map_modelscope_error(self, exc: Exception):
         text = redact_sensitive_text(str(exc)) or ""
