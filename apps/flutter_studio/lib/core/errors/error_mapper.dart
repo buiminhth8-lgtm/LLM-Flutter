@@ -3,6 +3,12 @@ import '../api/api_exception.dart';
 String mapApiErrorMessage(String code, String fallback) {
   final message = switch (code) {
     'AUTH_REQUIRED' || 'UNAUTHORIZED' => '请先配置有效的 API Key。',
+    'AUTH_INVALID_API_KEY' => 'API Key 无效。',
+    'AUTH_USER_NOT_FOUND' => '用户不存在。',
+    'AUTH_USER_DISABLED' => '用户已禁用。',
+    'AUTH_ADMIN_REQUIRED' => '需要管理员权限。',
+    'AUTH_KEY_NOT_RECOVERABLE' => 'API Key 只能重置，不能找回。',
+    'AUTH_RECOVERY_LOCAL_ONLY' => '该恢复操作只能在本机执行。',
     'PERMISSION_DENIED' => '当前 API Key 没有执行该操作的权限。',
     'UPLOAD_FILE_TOO_LARGE' => '上传文件超过大小限制。',
     'GPU_BUSY' => 'GPU 正在执行其他任务，请稍后重试。',
@@ -20,7 +26,7 @@ String mapApiErrorMessage(String code, String fallback) {
     'DOWNLOAD_RECORD_DELETE_NOT_ALLOWED' => '下载任务仍在运行，不能删除记录。',
     'DOWNLOAD_LOCAL_FILES_NOT_FOUND' => '本地缓存中未找到该模型文件。',
     'DOWNLOAD_TEMP_CLEANUP_FAILED' => '下载临时目录清理失败。',
-    'DOWNLOAD_RETRY_NOT_ALLOWED' => '当前下载状态不允许重试。',
+    'DOWNLOAD_RETRY_NOT_ALLOWED' => '该下载任务当前不能重试。',
     'DOWNLOAD_FAILED' => '下载失败，请查看任务详情。',
     'DOWNLOAD_VALIDATION_FAILED' => '下载结果校验失败。',
     'DOWNLOAD_MODEL_SCAN_FAILED' => '下载完成，但模型扫描注册失败。',
@@ -61,10 +67,15 @@ StudioApiException exceptionForApiError({
   required String message,
 }) {
   final mapped = mapApiErrorMessage(code, message);
-  if (statusCode == 401 || code == 'AUTH_REQUIRED' || code == 'UNAUTHORIZED') {
+  if (statusCode == 401 ||
+      code == 'AUTH_REQUIRED' ||
+      code == 'AUTH_INVALID_API_KEY' ||
+      code == 'UNAUTHORIZED') {
     return AuthRequiredException(mapped, code: code, statusCode: statusCode);
   }
-  if (statusCode == 403 || code == 'PERMISSION_DENIED') {
+  if (statusCode == 403 ||
+      code == 'PERMISSION_DENIED' ||
+      code == 'AUTH_ADMIN_REQUIRED') {
     return PermissionDeniedException(
       mapped,
       code: code,

@@ -6,6 +6,7 @@ import '../core/api/api_client.dart';
 import '../core/api/api_exception.dart';
 import '../core/config/app_settings_store.dart';
 import '../core/logging/client_logger.dart';
+import '../core/models/dto.dart';
 import '../features/adapters/adapter_controller.dart';
 import '../features/adapters/adapters_page.dart';
 import '../features/benchmarks/benchmark_controller.dart';
@@ -163,6 +164,25 @@ class _StudioShellState extends State<StudioShell> {
     );
   }
 
+  Future<void> _loadAuthUsers() async {
+    await _guarded(() async {
+      _syncClientAuth();
+      await _settings.loadAuthUsers(_client);
+    });
+  }
+
+  Future<RegeneratedApiKeyDto> _regenerateApiKey(String userId) async {
+    RegeneratedApiKeyDto? result;
+    await _guarded(() async {
+      _syncClientAuth();
+      result = await _settings.regenerateApiKey(_client, userId);
+    });
+    if (result == null) {
+      throw StateError('API Key regeneration failed.');
+    }
+    return result!;
+  }
+
   void _syncClientAuth() {
     _client.baseUrl = _settings.apiBaseController.text.trim();
     _client.userId = _settings.userIdController.text.trim();
@@ -195,6 +215,13 @@ class _StudioShellState extends State<StudioShell> {
         return;
       }
 
+      try {
+        await _settings.refreshCurrentUser(_client);
+      } on AuthRequiredException {
+        rethrow;
+      } catch (error) {
+        logClientError('Unable to refresh current auth user: $error');
+      }
       await Future.wait([
         _status.refresh(),
         _models.refresh(),
@@ -621,6 +648,9 @@ class _StudioShellState extends State<StudioShell> {
         autoStartBackend: _settings.autoStartBackend,
         closeBackendOnExit: _settings.closeBackendOnExit,
         backendLogs: _backend.recentLogs(),
+        currentUser: _settings.currentUser,
+        authUsers: _settings.authUsers,
+        loadingAuthUsers: _settings.loadingAuthUsers,
         onApply: () async {
           _syncClientAuth();
           await _savePreferences();
@@ -629,6 +659,8 @@ class _StudioShellState extends State<StudioShell> {
         onClearAuth: _clearAuth,
         onRestartBackend: _restartBackend,
         onStopBackend: _stopBackend,
+        onLoadAuthUsers: _loadAuthUsers,
+        onRegenerateApiKey: _regenerateApiKey,
         onBackendModeChanged: (value) async {
           _settings.setBackendMode(value);
           await _savePreferences();

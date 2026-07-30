@@ -79,6 +79,8 @@ api:
 # through /v1/setup/status and /v1/setup/initialize.
 auth:
   enabled: true
+  users_file: "./data/auth/api_users.json"
+  audit_log: "./data/auth/auth_audit.log"
 
 security:
   local_path_access:

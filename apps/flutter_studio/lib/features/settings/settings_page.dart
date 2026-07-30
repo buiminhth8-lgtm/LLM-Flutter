@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/models/dto.dart';
+
 class SettingsPage extends StatelessWidget {
   const SettingsPage({
     super.key,
@@ -13,10 +15,15 @@ class SettingsPage extends StatelessWidget {
     required this.autoStartBackend,
     required this.closeBackendOnExit,
     required this.backendLogs,
+    required this.currentUser,
+    required this.authUsers,
+    required this.loadingAuthUsers,
     required this.onApply,
     required this.onClearAuth,
     required this.onRestartBackend,
     required this.onStopBackend,
+    required this.onLoadAuthUsers,
+    required this.onRegenerateApiKey,
     required this.onBackendModeChanged,
     required this.onAutoStartChanged,
     required this.onCloseOnExitChanged,
@@ -31,10 +38,15 @@ class SettingsPage extends StatelessWidget {
   final bool autoStartBackend;
   final bool closeBackendOnExit;
   final List<String> backendLogs;
+  final AuthUserDto? currentUser;
+  final List<AuthUserDto> authUsers;
+  final bool loadingAuthUsers;
   final VoidCallback onApply;
   final VoidCallback onClearAuth;
   final VoidCallback onRestartBackend;
   final VoidCallback onStopBackend;
+  final Future<void> Function() onLoadAuthUsers;
+  final Future<RegeneratedApiKeyDto> Function(String userId) onRegenerateApiKey;
   final ValueChanged<String> onBackendModeChanged;
   final ValueChanged<bool> onAutoStartChanged;
   final ValueChanged<bool> onCloseOnExitChanged;
@@ -133,7 +145,9 @@ class SettingsPage extends StatelessWidget {
                 child: TextField(
                   controller: userIdController,
                   decoration: const InputDecoration(
-                    labelText: 'X-User-ID',
+                    labelText: 'User ID (optional)',
+                    helperText:
+                        'Leave empty to authenticate with Authorization: Bearer.',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -150,6 +164,14 @@ class SettingsPage extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 24),
+          _AuthRecoverySection(
+            currentUser: currentUser,
+            authUsers: authUsers,
+            loadingAuthUsers: loadingAuthUsers,
+            onLoadAuthUsers: onLoadAuthUsers,
+            onRegenerateApiKey: onRegenerateApiKey,
           ),
           const SizedBox(height: 16),
           Row(
@@ -212,6 +234,149 @@ class SettingsPage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AuthRecoverySection extends StatelessWidget {
+  const _AuthRecoverySection({
+    required this.currentUser,
+    required this.authUsers,
+    required this.loadingAuthUsers,
+    required this.onLoadAuthUsers,
+    required this.onRegenerateApiKey,
+  });
+
+  final AuthUserDto? currentUser;
+  final List<AuthUserDto> authUsers;
+  final bool loadingAuthUsers;
+  final Future<void> Function() onLoadAuthUsers;
+  final Future<RegeneratedApiKeyDto> Function(String userId) onRegenerateApiKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final isAdmin = currentUser?.isAdmin == true;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Auth recovery',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          currentUser == null
+              ? '输入 API Key 后可以留空 User ID，客户端会使用 Bearer-only 认证让后端自动识别用户。'
+              : 'Current user: ${currentUser!.userId} (${currentUser!.role})',
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'API Key 不能找回，只能由已认证 admin 重新生成。新 Key 只显示一次。',
+        ),
+        const SizedBox(height: 12),
+        if (isAdmin) ...[
+          Row(
+            children: [
+              OutlinedButton.icon(
+                onPressed: loadingAuthUsers ? null : onLoadAuthUsers,
+                icon: loadingAuthUsers
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.people_outline),
+                label: const Text('Load users'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...authUsers.map(
+            (user) => Card(
+              child: ListTile(
+                title: Text('${user.userId} (${user.role})'),
+                subtitle: Text(
+                  'enabled=${user.enabled}  key=${user.apiKeyMasked ?? "***"}',
+                ),
+                trailing: OutlinedButton.icon(
+                  onPressed: () async {
+                    final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (dialogContext) => AlertDialog(
+                            title: const Text('Regenerate API Key'),
+                            content: Text(
+                              '即将让 ${user.userId} 的旧 API Key 立即失效。新 Key 只显示一次。',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.pop(dialogContext, false),
+                                child: const Text('Cancel'),
+                              ),
+                              FilledButton(
+                                onPressed: () =>
+                                    Navigator.pop(dialogContext, true),
+                                child: const Text('Regenerate'),
+                              ),
+                            ],
+                          ),
+                        ) ??
+                        false;
+                    if (!confirmed || !context.mounted) {
+                      return;
+                    }
+                    final result = await onRegenerateApiKey(user.userId);
+                    if (!context.mounted) {
+                      return;
+                    }
+                    await showDialog<void>(
+                      context: context,
+                      builder: (dialogContext) => AlertDialog(
+                        title: const Text('New API Key'),
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('请立即保存。关闭后无法再次查看完整 Key。'),
+                            const SizedBox(height: 12),
+                            SelectableText(result.apiKey),
+                          ],
+                        ),
+                        actions: [
+                          TextButton.icon(
+                            onPressed: () async {
+                              await Clipboard.setData(
+                                ClipboardData(text: result.apiKey),
+                              );
+                            },
+                            icon: const Icon(Icons.copy),
+                            label: const Text('Copy'),
+                          ),
+                          FilledButton(
+                            onPressed: () => Navigator.pop(dialogContext),
+                            child: const Text('Close'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.key),
+                  label: const Text('Regenerate'),
+                ),
+              ),
+            ),
+          ),
+        ] else
+          const Text('User Management 仅 admin 可见。'),
+        const SizedBox(height: 12),
+        const Text(
+          'Admin 密码丢失时不能通过远程 UI 重置。请在后端所在机器运行：',
+        ),
+        const SizedBox(height: 4),
+        const SelectableText('python tools/reset_auth.py --reset-admin'),
+        const SizedBox(height: 8),
+        const Text('如果 admin 密码和 API Key 都丢失，请停止后端，备份并重命名 api_users.json，然后重新初始化。'),
+      ],
     );
   }
 }

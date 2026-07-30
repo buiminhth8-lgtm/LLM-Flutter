@@ -79,6 +79,9 @@ def required_permission_for_request(method: str, path: str) -> Permission | None
     if method == "POST" and path.startswith("/v1/jobs/") and path.endswith("/cancel"):
         return Permission.MANAGE_STORAGE
 
+    if path == "/v1/auth/me" or path.startswith("/v1/auth/users"):
+        return None
+
     if path.startswith("/v1/vision"):
         return Permission.CHAT
 

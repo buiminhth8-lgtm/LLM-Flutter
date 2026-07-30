@@ -1,6 +1,8 @@
 import 'package:flutter/widgets.dart';
 
+import '../../core/api/api_client.dart';
 import '../../core/config/app_settings_store.dart';
+import '../../core/models/dto.dart';
 
 class SettingsController extends ChangeNotifier {
   SettingsController({AppSettingsStore? store})
@@ -19,6 +21,10 @@ class SettingsController extends ChangeNotifier {
   String backendMode = 'local';
   String? selectedModelId;
   bool chatStreamingEnabled = true;
+  AuthUserDto? currentUser;
+  List<AuthUserDto> authUsers = const [];
+  bool loadingAuthUsers = false;
+  String? authManagementError;
 
   Future<AppSettings> load() async {
     final settings = await _store.load();
@@ -85,7 +91,61 @@ class SettingsController extends ChangeNotifier {
 
   void clearApiKey() {
     apiKeyController.clear();
+    currentUser = null;
+    authUsers = const [];
     notifyListeners();
+  }
+
+  Future<void> refreshCurrentUser(LlmStudioClient client) async {
+    if (apiKeyController.text.trim().isEmpty) {
+      currentUser = null;
+      notifyListeners();
+      return;
+    }
+    currentUser = await client.currentAuthUser();
+    if (userIdController.text.trim().isEmpty && currentUser != null) {
+      userIdController.text = currentUser!.userId;
+    }
+    notifyListeners();
+  }
+
+  Future<void> loadAuthUsers(LlmStudioClient client) async {
+    loadingAuthUsers = true;
+    authManagementError = null;
+    notifyListeners();
+    try {
+      authUsers = await client.authUsers();
+    } catch (error) {
+      authManagementError = error.toString();
+      rethrow;
+    } finally {
+      loadingAuthUsers = false;
+      notifyListeners();
+    }
+  }
+
+  Future<RegeneratedApiKeyDto> regenerateApiKey(
+    LlmStudioClient client,
+    String userId,
+  ) async {
+    final result = await client.regenerateApiKey(userId);
+    authUsers = authUsers
+        .map(
+          (user) => user.userId == userId
+              ? AuthUserDto(
+                  userId: user.userId,
+                  role: user.role,
+                  enabled: user.enabled,
+                  apiKeyMasked: result.apiKeyMasked,
+                  note: user.note,
+                  createdAt: user.createdAt,
+                  updatedAt: user.updatedAt,
+                )
+              : user,
+        )
+        .toList();
+    notifyListeners();
+    return result;
   }
 
   @override

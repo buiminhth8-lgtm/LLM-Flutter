@@ -74,6 +74,38 @@ void main() {
     });
   });
 
+  test('API client uses bearer-only auth when user id is empty', () {
+    final client = LlmStudioClient('http://127.0.0.1:8000')
+      ..userId = ''
+      ..apiKey = 'sk-test-key';
+
+    expect(client.authHeadersForTesting(), {
+      'Authorization': 'Bearer sk-test-key',
+    });
+  });
+
+  test('auth user endpoints parse current user and regenerate API key', () async {
+    final httpClient = CapturingHttpClient(
+      responseBody: {
+        'status': 'ok',
+        'user_id': 'operator',
+        'api_key': 'sk-new-key',
+        'api_key_masked': 'sk-llmstudio...abcd',
+      },
+    );
+    final client = LlmStudioClient('http://127.0.0.1:8000', httpClient: httpClient)
+      ..apiKey = 'sk-admin';
+
+    final result = await client.regenerateApiKey('operator');
+
+    expect(result.userId, 'operator');
+    expect(result.apiKey, 'sk-new-key');
+    final request = httpClient.requests.single;
+    expect(request.method, 'POST');
+    expect(request.url.path, '/v1/auth/users/operator/regenerate');
+    expect(request.headers['Authorization'], 'Bearer sk-admin');
+  });
+
   test('non-streaming chat uses selected model and does not log API key in body', () async {
     final httpClient = CapturingHttpClient(
       responseBody: {

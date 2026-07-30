@@ -54,4 +54,20 @@ void main() {
     expect(prefs.getBool('llm_studio.auto_start_backend'), isFalse);
     expect(prefs.getString('llm_studio.backend_mode'), 'remote');
   });
+
+  test('save allows empty user id for bearer-only authentication', () async {
+    SharedPreferences.setMockInitialValues({});
+    final controller = SettingsController();
+    controller.userIdController.text = '';
+    controller.apiKeyController.text = 'bearer-only-key';
+
+    await controller.save(
+      selectedModelId: null,
+      chatStreamingEnabled: true,
+    );
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('llm_studio.user_id'), '');
+    expect(prefs.getString('llm_studio.api_key'), 'bearer-only-key');
+  });
 }

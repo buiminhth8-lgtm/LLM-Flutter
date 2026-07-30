@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import platform
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -76,7 +77,11 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "http://localhost:8080",
         ],
     },
-    "auth": {"enabled": True},
+    "auth": {
+        "enabled": True,
+        "users_file": "./data/auth/api_users.json",
+        "audit_log": "./data/auth/auth_audit.log",
+    },
     "security": {
         "local_path_access": {
             "enabled": False,
@@ -149,7 +154,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
 
 
 def _deep_merge(defaults: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]:
-    merged = dict(defaults)
+    merged = deepcopy(defaults)
     for key, value in data.items():
         if isinstance(value, dict) and isinstance(merged.get(key), dict):
             merged[key] = _deep_merge(merged[key], value)
@@ -279,6 +284,7 @@ class Config:
         for section, keys in {
             "models": ("root_dir", "temp_dir", "metadata_cache", "adapters_dir"),
             "downloads.providers.modelscope": ("cache_dir",),
+            "auth": ("users_file", "audit_log"),
             "storage": ("trash_dir", "benchmarks_dir", "jobs_dir", "diagnostics_dir"),
             "uploads": ("temp_dir",),
         }.items():
