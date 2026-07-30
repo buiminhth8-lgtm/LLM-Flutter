@@ -56,6 +56,7 @@ from .api.routers.capabilities import router as capabilities_router
 from .api.routers.diagnostics import router as diagnostics_router
 from .api.routers.downloads import router as downloads_router
 from .api.routers.jobs import router as jobs_router
+from .api.routers.novels import router as novels_router
 from .api.routers.storage import router as storage_router
 from .auth import has_permission, normalize_role, required_permission_for_request
 from .auth.roles import Role
@@ -78,6 +79,7 @@ from .models import LocalModelRepository
 from .models.exceptions import ModelDeleteError
 from .models.selection import ModelSelectionError, select_model_for_chat
 from .models.storage import layout_from_config
+from .novels import NovelService
 from .rag import RAGPipeline
 from .runner import BaseRunner, create_runner
 from .runtime.capabilities import detect_runtime_capabilities
@@ -109,6 +111,7 @@ _job_queue: JobQueue | None = None
 _download_manager: DownloadManager | None = None
 _adapter_repository: AdapterRepository | None = None
 _gpu_scheduler: GpuTaskScheduler | None = None
+_novel_service: NovelService | None = None
 _current_model_id: str | None = None
 _runner_model_ids: dict[str, str] = {}
 
@@ -122,7 +125,7 @@ def get_app(config: Config):
     from starlette.middleware.base import BaseHTTPMiddleware
 
     global _config, _rag_pipeline, _admin, _concurrency
-    global _model_repository, _job_repository, _job_queue, _download_manager, _adapter_repository, _gpu_scheduler
+    global _model_repository, _job_repository, _job_queue, _download_manager, _adapter_repository, _gpu_scheduler, _novel_service
     _config = config
     layout = layout_from_config(config)
     layout.ensure()
@@ -151,12 +154,14 @@ def get_app(config: Config):
     _job_repository = JobRepository(layout.jobs_dir / "jobs.sqlite")
     _job_queue = JobQueue(_job_repository)
     _download_manager = DownloadManager(config, _job_queue, model_repository=_model_repository)
+    _novel_service = NovelService.from_config(config)
     configure_api_state(
         config=config,
         download_manager=_download_manager,
         job_repository=_job_repository,
         job_queue=_job_queue,
         diagnostics_exporter=lambda cfg: export_diagnostics(cfg),
+        novel_service=_novel_service,
     )
     _adapter_repository = AdapterRepository(config)
     runtime_cfg = config.runtime
@@ -203,6 +208,7 @@ def get_app(config: Config):
     app.include_router(jobs_router)
     app.include_router(storage_router)
     app.include_router(diagnostics_router)
+    app.include_router(novels_router)
 
     @app.middleware("http")
     async def request_id_middleware(request: Request, call_next):

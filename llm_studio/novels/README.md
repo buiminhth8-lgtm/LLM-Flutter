@@ -1,4 +1,21 @@
-This module is reserved for Novel Studio Stage 1.
+# llm_studio.novels
 
-Do not add business logic before Stage 1. Stage 0 only prepares feature flags,
-capability placeholders, documentation, and baseline tests.
+Novel Studio Stage 1 foundation module.
+
+This package contains:
+
+- SQLite migrations for `novel_*` tables.
+- Repository classes for project, volume, chapter, scene, character, world
+  entry, plot thread, and timeline CRUD.
+- A service layer for validation, slug generation, parent-child consistency,
+  word count updates, and soft deletes.
+- API schemas used by `llm_studio/api/routers/novels.py`.
+
+This package does not contain:
+
+- Prompt Studio.
+- PromptRenderer.
+- WritingService.
+- Revision or Dataset logic.
+- Runtime / Runner calls.
+- FineTune / LoRA / QLoRA workflows.

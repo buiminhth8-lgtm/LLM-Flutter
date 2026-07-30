@@ -1,6 +1,7 @@
 # LLM-Studio
 
 Novel Studio roadmap: [docs/NOVEL_STUDIO_ROADMAP.md](docs/NOVEL_STUDIO_ROADMAP.md).
+Novel Studio Stage 1 foundation: [docs/NOVEL_STAGE1_FOUNDATION.md](docs/NOVEL_STAGE1_FOUNDATION.md).
 
 认证恢复、API Key 重新生成和本机 admin 恢复流程见 [docs/AUTH_RECOVERY.md](docs/AUTH_RECOVERY.md)。
 

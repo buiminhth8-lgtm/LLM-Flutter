@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'app_shell_widgets.dart';
 
-const settingsPageIndex = 9;
+const novelStudioPageIndex = 9;
+const settingsPageIndex = 10;
 
 class ShellDestination {
   const ShellDestination({
@@ -84,6 +85,7 @@ const shellDestinationGroups = [
 Widget buildShellNavigation({
   required int selectedIndex,
   required ValueChanged<int> onSelected,
+  bool showNovelStudio = false,
 }) {
   return ListView(
     padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
@@ -98,6 +100,16 @@ Widget buildShellNavigation({
             label: destination.label,
             onSelected: onSelected,
           ),
+      ],
+      if (showNovelStudio) ...[
+        const SideNavSection(label: 'Creative'),
+        SideNavItem(
+          index: novelStudioPageIndex,
+          selectedIndex: selectedIndex,
+          icon: Icons.auto_stories_outlined,
+          label: 'Novel Studio',
+          onSelected: onSelected,
+        ),
       ],
       const Divider(),
       SideNavItem(

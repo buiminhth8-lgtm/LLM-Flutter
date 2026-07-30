@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+
+from llm_studio.features import is_novel_studio_enabled
 
 from .status import CapabilityStatus
 
@@ -69,3 +71,28 @@ _CAPABILITIES: tuple[CapabilityInfo, ...] = (
 
 def get_capabilities() -> tuple[CapabilityInfo, ...]:
     return _CAPABILITIES
+
+
+def get_capabilities_for_config(config) -> tuple[CapabilityInfo, ...]:
+    """Return capabilities with config-driven feature flags applied."""
+    if not is_novel_studio_enabled(config):
+        return _CAPABILITIES
+    overrides = {
+        "novel_studio": (CapabilityStatus.PARTIAL, "Novel Studio Stage 1 foundation APIs and Flutter entry are available.", True),
+        "novel_projects": (CapabilityStatus.AVAILABLE, "Novel project CRUD is available.", True),
+        "novel_world_bible": (CapabilityStatus.AVAILABLE, "Novel world bible entries are available.", True),
+        "novel_characters": (CapabilityStatus.AVAILABLE, "Novel character records are available.", True),
+        "novel_chapters": (CapabilityStatus.AVAILABLE, "Novel volumes, chapters, scenes, plot threads, and timeline records are available.", True),
+    }
+    existing = {cap.name for cap in _CAPABILITIES}
+    result: list[CapabilityInfo] = []
+    for cap in _CAPABILITIES:
+        if cap.name in overrides:
+            status, reason, frontend = overrides[cap.name]
+            result.append(replace(cap, status=status, reason=reason, frontend_exposed=frontend))
+        else:
+            result.append(cap)
+    for name, (status, description, frontend) in overrides.items():
+        if name not in existing:
+            result.append(CapabilityInfo(name, status, description, frontend))
+    return tuple(result)

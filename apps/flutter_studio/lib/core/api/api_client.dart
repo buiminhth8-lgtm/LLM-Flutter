@@ -215,6 +215,142 @@ class LlmStudioClient {
   Future<Map<String, dynamic>> exportDiagnostics() async =>
       _postMap('/v1/diagnostics/export');
 
+  Future<List<dynamic>> novelProjects() async {
+    final body = await _getMap('/v1/novels/projects');
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> createNovelProject({
+    required String title,
+    String? genre,
+    String? description,
+    String? targetStyle,
+    String? targetAudience,
+  }) {
+    return _postMap(
+      '/v1/novels/projects',
+      body: {
+        'title': title,
+        if (genre != null && genre.isNotEmpty) 'genre': genre,
+        if (description != null && description.isNotEmpty)
+          'description': description,
+        if (targetStyle != null && targetStyle.isNotEmpty)
+          'target_style': targetStyle,
+        if (targetAudience != null && targetAudience.isNotEmpty)
+          'target_audience': targetAudience,
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> updateNovelProject(
+    String projectId,
+    Map<String, Object?> body,
+  ) => _patchMap('/v1/novels/projects/${Uri.encodeComponent(projectId)}', body);
+
+  Future<void> deleteNovelProject(String projectId) async {
+    await _deleteMap('/v1/novels/projects/${Uri.encodeComponent(projectId)}');
+  }
+
+  Future<List<dynamic>> novelVolumes(String projectId) async {
+    final body = await _getMap(
+      '/v1/novels/projects/${Uri.encodeComponent(projectId)}/volumes',
+    );
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> createNovelVolume(
+    String projectId, {
+    required String title,
+    String? outline,
+  }) => _postMap(
+    '/v1/novels/projects/${Uri.encodeComponent(projectId)}/volumes',
+    body: {
+      'title': title,
+      if (outline != null && outline.isNotEmpty) 'outline': outline,
+    },
+  );
+
+  Future<List<dynamic>> novelChapters(String projectId) async {
+    final body = await _getMap(
+      '/v1/novels/projects/${Uri.encodeComponent(projectId)}/chapters',
+    );
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> createNovelChapter(
+    String projectId, {
+    required String title,
+    String? outline,
+    String? draftContent,
+    String? summary,
+  }) => _postMap(
+    '/v1/novels/projects/${Uri.encodeComponent(projectId)}/chapters',
+    body: {
+      'title': title,
+      if (outline != null && outline.isNotEmpty) 'outline': outline,
+      if (draftContent != null && draftContent.isNotEmpty)
+        'draft_content': draftContent,
+      if (summary != null && summary.isNotEmpty) 'summary': summary,
+    },
+  );
+
+  Future<Map<String, dynamic>> updateNovelChapter(
+    String chapterId,
+    Map<String, Object?> body,
+  ) => _patchMap('/v1/novels/chapters/${Uri.encodeComponent(chapterId)}', body);
+
+  Future<List<dynamic>> novelCharacters(String projectId) async {
+    final body = await _getMap(
+      '/v1/novels/projects/${Uri.encodeComponent(projectId)}/characters',
+    );
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> createNovelCharacter(
+    String projectId, {
+    required String name,
+    String? role,
+    String? notes,
+  }) => _postMap(
+    '/v1/novels/projects/${Uri.encodeComponent(projectId)}/characters',
+    body: {
+      'name': name,
+      if (role != null && role.isNotEmpty) 'role': role,
+      if (notes != null && notes.isNotEmpty) 'notes': notes,
+    },
+  );
+
+  Future<List<dynamic>> novelWorldEntries(String projectId) async {
+    final body = await _getMap(
+      '/v1/novels/projects/${Uri.encodeComponent(projectId)}/world',
+    );
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> createNovelWorldEntry(
+    String projectId, {
+    required String category,
+    required String title,
+    required String content,
+  }) => _postMap(
+    '/v1/novels/projects/${Uri.encodeComponent(projectId)}/world',
+    body: {'category': category, 'title': title, 'content': content},
+  );
+
+  Future<List<dynamic>> novelPlotThreads(String projectId) async {
+    final body = await _getMap(
+      '/v1/novels/projects/${Uri.encodeComponent(projectId)}/plot-threads',
+    );
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<List<dynamic>> novelTimeline(String projectId) async {
+    final body = await _getMap(
+      '/v1/novels/projects/${Uri.encodeComponent(projectId)}/timeline',
+    );
+    return (body['data'] as List?) ?? const [];
+  }
+
   Future<String> ragQuery(String query, {int topK = 5}) async {
     final body = await _postMap(
       '/v1/rag/query',
@@ -302,6 +438,27 @@ class LlmStudioClient {
           body: body == null ? null : jsonEncode(body),
         )
         .timeout(timeout);
+    return _decodeMap(response);
+  }
+
+  Future<Map<String, dynamic>> _patchMap(
+    String path,
+    Map<String, Object?> body,
+  ) async {
+    final response = await _httpClient
+        .patch(
+          Uri.parse('$baseUrl$path'),
+          headers: {..._authHeaders(), 'content-type': 'application/json'},
+          body: jsonEncode(body),
+        )
+        .timeout(const Duration(seconds: 30));
+    return _decodeMap(response);
+  }
+
+  Future<Map<String, dynamic>> _deleteMap(String path) async {
+    final response = await _httpClient
+        .delete(Uri.parse('$baseUrl$path'), headers: _authHeaders())
+        .timeout(const Duration(seconds: 30));
     return _decodeMap(response);
   }
 

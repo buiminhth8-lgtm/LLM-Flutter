@@ -1,24 +1,28 @@
 # Novel Studio Roadmap
 
-Novel Studio will be developed in staged increments on top of the existing
-LLM-Studio architecture. Stage 0 intentionally does not implement business
-features.
+Novel Studio is developed in stages on top of the existing LLM-Studio backend
+and Flutter Windows client.
 
 ## 阶段 0：工程基线整理与开发入口
+
 - 不开发业务功能。
 - 新增 feature flag。
 - 新增 capabilities 占位。
 - 确认现有 LLM-Studio 基础能力稳定。
 
 ## 阶段 1：Novel 项目与基础资料库
-- novel_projects
-- novel_volumes
-- novel_chapters
-- novel_scenes
-- novel_characters
-- novel_world_entries
-- novel_plot_threads
-- novel_timeline_events
+
+- `novel_projects`
+- `novel_volumes`
+- `novel_chapters`
+- `novel_scenes`
+- `novel_characters`
+- `novel_world_entries`
+- `novel_plot_threads`
+- `novel_timeline_events`
+
+阶段 1 已新增基础 CRUD、SQLite repository、`/v1/novels/*` API 和 Flutter
+基础页面。详情见 [NOVEL_STAGE1_FOUNDATION.md](NOVEL_STAGE1_FOUNDATION.md)。
 
 ## 阶段 2：Prompt Studio 模板系统
 

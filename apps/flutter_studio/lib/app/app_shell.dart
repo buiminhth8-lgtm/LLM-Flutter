@@ -20,6 +20,9 @@ import '../features/downloads/downloads_page.dart';
 import '../features/jobs/job_controller.dart';
 import '../features/models/model_controller.dart';
 import '../features/models/models_page.dart';
+import '../features/novels/novel_api_client.dart';
+import '../features/novels/novel_controller.dart';
+import '../features/novels/novel_projects_page.dart';
 import '../features/rag/rag_controller.dart';
 import '../features/rag/rag_page.dart';
 import '../features/settings/settings_controller.dart';
@@ -84,6 +87,7 @@ class _StudioShellState extends State<StudioShell> {
   late final DiagnosticsController _diagnostics = DiagnosticsController(
     _client,
   );
+  late final NovelController _novels = NovelController(NovelApiClient(_client));
 
   @override
   void initState() {
@@ -137,6 +141,7 @@ class _StudioShellState extends State<StudioShell> {
     _benchmarks,
     _storage,
     _diagnostics,
+    _novels,
   ];
 
   void _onNotifierChanged() {
@@ -230,6 +235,7 @@ class _StudioShellState extends State<StudioShell> {
         _adapters.refresh().catchError((_) {}),
         _benchmarks.refresh().catchError((_) {}),
         _storage.refresh().catchError((_) {}),
+        if (_novelStudioAvailable()) _novels.refresh().catchError((_) {}),
       ]);
       await _savePreferences();
     });
@@ -501,6 +507,17 @@ class _StudioShellState extends State<StudioShell> {
     }).length;
   }
 
+  bool _novelStudioAvailable() {
+    return _status.state.capabilities.any((item) {
+      if (item is! Map) {
+        return false;
+      }
+      return item['name'] == 'novel_studio' &&
+          item['status'] == 'partial' &&
+          item['frontend_exposed'] == true;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_shell.initialSetupCheckDone && widget.autoRefresh) {
@@ -638,6 +655,7 @@ class _StudioShellState extends State<StudioShell> {
         exportResult: _diagnostics.state.exportResult,
         onExport: _exportDiagnostics,
       ),
+      NovelProjectsPage(controller: _novels),
       SettingsPage(
         apiBaseController: _settings.apiBaseController,
         userIdController: _settings.userIdController,
@@ -684,6 +702,7 @@ class _StudioShellState extends State<StudioShell> {
             child: buildShellNavigation(
               selectedIndex: _navigation.pageIndex,
               onSelected: _navigation.select,
+              showNovelStudio: _novelStudioAvailable(),
             ),
           ),
           const VerticalDivider(width: 1),

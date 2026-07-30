@@ -25,6 +25,9 @@ class Permission(StrEnum):
     MANAGE_STORAGE = "manage_storage"
     EXPORT_DIAGNOSTICS = "export_diagnostics"
     MANAGE_USERS = "manage_users"
+    VIEW_NOVELS = "view_novels"
+    MANAGE_NOVELS = "manage_novels"
+    DELETE_NOVELS = "delete_novels"
 
 
 ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
@@ -32,6 +35,7 @@ ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
         {
             Permission.VIEW_RUNTIME,
             Permission.VIEW_MODELS,
+            Permission.VIEW_NOVELS,
         }
     ),
     Role.OPERATOR: frozenset(
@@ -42,6 +46,8 @@ ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.LOAD_MODEL,
             Permission.UNLOAD_MODEL,
             Permission.MANAGE_RAG,
+            Permission.VIEW_NOVELS,
+            Permission.MANAGE_NOVELS,
         }
     ),
     Role.ADMIN: frozenset(Permission),
