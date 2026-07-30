@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_studio/core/api/api_client.dart';
@@ -33,33 +34,46 @@ class DownloadHttpClient extends http.BaseClient {
 }
 
 void main() {
-  test(
-    'startDownload body supports provider revision and pattern filters',
-    () async {
-      final httpClient = DownloadHttpClient();
-      final client = LlmStudioClient(
-        'http://127.0.0.1:8000',
-        httpClient: httpClient,
-      );
+  test('startDownload defaults to ModelScope provider', () async {
+    final httpClient = DownloadHttpClient();
+    final client = LlmStudioClient(
+      'http://127.0.0.1:8000',
+      httpClient: httpClient,
+    );
 
-      await client.startDownload(
-        provider: 'modelscope',
-        repoId: 'org/model',
-        revision: 'main',
-        allowPatterns: ['*.json'],
-        ignorePatterns: ['*.md'],
-      );
+    await client.startDownload(repoId: 'damo/model');
 
-      final request = httpClient.requests.single;
-      final body = jsonDecode(request.body) as Map<String, dynamic>;
-      expect(request.url.path, '/v1/downloads');
-      expect(body['provider'], 'modelscope');
-      expect(body['repo_id'], 'org/model');
-      expect(body['revision'], 'main');
-      expect(body['allow_patterns'], ['*.json']);
-      expect(body['ignore_patterns'], ['*.md']);
-    },
-  );
+    final body =
+        jsonDecode(httpClient.requests.single.body) as Map<String, dynamic>;
+    expect(httpClient.requests.single.url.path, '/v1/downloads');
+    expect(body['provider'], 'modelscope');
+    expect(body['repo_id'], 'damo/model');
+  });
+
+  test('startDownload body supports revision and pattern filters', () async {
+    final httpClient = DownloadHttpClient();
+    final client = LlmStudioClient(
+      'http://127.0.0.1:8000',
+      httpClient: httpClient,
+    );
+
+    await client.startDownload(
+      provider: 'modelscope',
+      repoId: 'org/model',
+      revision: 'main',
+      allowPatterns: ['*.json'],
+      ignorePatterns: ['*.md'],
+    );
+
+    final request = httpClient.requests.single;
+    final body = jsonDecode(request.body) as Map<String, dynamic>;
+    expect(request.url.path, '/v1/downloads');
+    expect(body['provider'], 'modelscope');
+    expect(body['repo_id'], 'org/model');
+    expect(body['revision'], 'main');
+    expect(body['allow_patterns'], ['*.json']);
+    expect(body['ignore_patterns'], ['*.md']);
+  });
 
   test(
     'downloads parse provider null total bytes and nullable percent',
@@ -96,7 +110,25 @@ void main() {
     },
   );
 
-  test('cancel and retry use stable endpoints', () async {
+  test('downloads infer actions for legacy records without can_* fields', () {
+    final running = DownloadTaskDto.fromMap({
+      'job_id': 'running',
+      'status': 'running',
+    });
+    final failed = DownloadTaskDto.fromMap({
+      'job_id': 'failed',
+      'status': 'failed',
+    });
+
+    expect(running.provider, 'modelscope');
+    expect(running.canCancel, isTrue);
+    expect(running.canDelete, isFalse);
+    expect(failed.canCancel, isFalse);
+    expect(failed.canRetry, isTrue);
+    expect(failed.canDelete, isTrue);
+  });
+
+  test('cancel retry and delete use stable endpoints', () async {
     final httpClient = DownloadHttpClient();
     final client = LlmStudioClient(
       'http://127.0.0.1:8000',
@@ -105,9 +137,12 @@ void main() {
 
     await client.cancelDownload('job-a');
     await client.retryDownload('job-b');
+    await client.deleteDownloadRecord('job-c');
 
     expect(httpClient.requests[0].url.path, '/v1/downloads/job-a/cancel');
     expect(httpClient.requests[1].url.path, '/v1/downloads/job-b/retry');
+    expect(httpClient.requests[2].method, 'DELETE');
+    expect(httpClient.requests[2].url.path, '/v1/downloads/job-c');
   });
 
   test('download error codes map to Chinese messages', () {

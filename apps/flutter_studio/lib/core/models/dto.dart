@@ -58,6 +58,7 @@ class DownloadTaskDto {
     this.etaSeconds,
     this.canCancel = false,
     this.canRetry = false,
+    this.canDelete = false,
     this.resumeSupported = false,
     this.cancelRequested = false,
     this.message,
@@ -73,13 +74,32 @@ class DownloadTaskDto {
         value is num ? value.toDouble() : double.tryParse('$value');
     String? asString(Object? value) => value == null ? null : '$value';
 
+    final status = '${map['status'] ?? 'unknown'}';
+    final isRunningStatus = {
+      'pending',
+      'running',
+      'resolving',
+      'downloading',
+    }.contains(status);
+    final isRetryableStatus = {
+      'failed',
+      'cancelled',
+      'interrupted',
+    }.contains(status);
+    final isTerminalStatus = {
+      'succeeded',
+      'failed',
+      'cancelled',
+      'interrupted',
+    }.contains(status);
+
     return DownloadTaskDto(
       jobId: '${map['job_id'] ?? map['id'] ?? ''}',
       provider:
-          '${map['provider'] ?? map['payload']?['provider'] ?? 'huggingface'}',
+          '${map['provider'] ?? map['payload']?['provider'] ?? 'modelscope'}',
       repoId: '${map['repo_id'] ?? map['payload']?['repo_id'] ?? ''}',
       revision: asString(map['revision'] ?? map['payload']?['revision']),
-      status: '${map['status'] ?? 'unknown'}',
+      status: status,
       downloadedBytes: asInt(map['downloaded_bytes']),
       totalBytes: asInt(map['total_bytes']),
       percent: asDouble(map['percent']),
@@ -88,8 +108,15 @@ class DownloadTaskDto {
       currentFile: asString(map['current_file']),
       speedBytesPerSecond: asDouble(map['speed_bytes_per_second']),
       etaSeconds: asDouble(map['eta_seconds']),
-      canCancel: map['can_cancel'] == true,
-      canRetry: map['can_retry'] == true,
+      canCancel:
+          map['can_cancel'] == true ||
+          (map['can_cancel'] == null && isRunningStatus),
+      canRetry:
+          map['can_retry'] == true ||
+          (map['can_retry'] == null && isRetryableStatus),
+      canDelete:
+          map['can_delete'] == true ||
+          (map['can_delete'] == null && isTerminalStatus),
       resumeSupported: map['resume_supported'] == true,
       cancelRequested: map['cancel_requested'] == true,
       message: asString(map['message']),
@@ -114,6 +141,7 @@ class DownloadTaskDto {
   final double? etaSeconds;
   final bool canCancel;
   final bool canRetry;
+  final bool canDelete;
   final bool resumeSupported;
   final bool cancelRequested;
   final String? message;
@@ -122,6 +150,15 @@ class DownloadTaskDto {
   final String? modelId;
 
   bool get isRunning =>
-      status == 'pending' || status == 'running' || status == 'cancelling';
+      status == 'pending' ||
+      status == 'running' ||
+      status == 'resolving' ||
+      status == 'downloading' ||
+      status == 'cancelling';
   bool get isSucceeded => status == 'succeeded';
+  bool get isFailed => status == 'failed';
+  bool get isCancelled => status == 'cancelled';
+  bool get isInterrupted => status == 'interrupted';
+  bool get isTerminal =>
+      isSucceeded || isFailed || isCancelled || isInterrupted;
 }

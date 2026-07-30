@@ -12,7 +12,14 @@ class Config:
         self._data = {
             "api": {"api_key": "sk-secret"},
             "auth": {"password": "plain-password"},
-            "huggingface": {"token": "hf-secret", "cache_dir": str(root / "hf")},
+            "downloads": {
+                "providers": {
+                    "modelscope": {
+                        "token": "ms-secret",
+                        "cache_dir": str(root / "ms-cache"),
+                    }
+                }
+            },
             "models": {
                 "root_dir": str(root / "models"),
                 "temp_dir": str(root / "downloads"),

@@ -1,9 +1,43 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_studio/main.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+class AuthExpiredHttpClient extends http.BaseClient {
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    final path = request.url.path;
+    if (path == '/v1/setup/status') {
+      return _json({'requires_setup': false});
+    }
+    if (path == '/v1/runtime') {
+      return _json({
+        'error': {'code': 'AUTH_REQUIRED', 'message': 'expired key'},
+      }, statusCode: 401);
+    }
+    return _json({'data': <Object?>[], 'capabilities': <Object?>[]});
+  }
+
+  http.StreamedResponse _json(
+    Map<String, Object?> body, {
+    int statusCode = 200,
+  }) {
+    return http.StreamedResponse(
+      Stream.value(utf8.encode(jsonEncode(body))),
+      statusCode,
+      headers: {'content-type': 'application/json'},
+    );
+  }
+}
 
 void main() {
-  testWidgets('LLM Studio shell renders grouped primary navigation', (tester) async {
+  testWidgets('LLM Studio shell renders grouped primary navigation', (
+    tester,
+  ) async {
     await tester.pumpWidget(const LlmStudioApp(autoRefresh: false));
 
     expect(find.text('LLM Studio'), findsOneWidget);
@@ -14,7 +48,9 @@ void main() {
     expect(find.text('Chat'), findsOneWidget);
   });
 
-  testWidgets('first run setup state shows initialization page', (tester) async {
+  testWidgets('first run setup state shows initialization page', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const LlmStudioApp(autoRefresh: false, initialRequiresSetup: true),
     );
@@ -51,5 +87,26 @@ void main() {
 
     expect(find.text('Backend logs'), findsOneWidget);
     expect(find.text('Copy logs'), findsOneWidget);
+  });
+
+  testWidgets('401 responses return the user to the auth settings page', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      'llm_studio.api_key': 'expired-key',
+      'llm_studio.backend_mode': 'remote',
+      'llm_studio.auto_start_backend': false,
+    });
+    final client = LlmStudioClient(
+      'http://127.0.0.1:8000',
+      httpClient: AuthExpiredHttpClient(),
+    );
+
+    await tester.pumpWidget(LlmStudioApp(client: client));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Connection settings'), findsOneWidget);
+    expect(find.text('Clear auth'), findsOneWidget);
+    expect(find.text('认证已失效，请重新登录或填写有效 API Key。'), findsOneWidget);
   });
 }

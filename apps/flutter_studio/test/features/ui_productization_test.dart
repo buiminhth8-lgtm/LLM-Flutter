@@ -12,7 +12,7 @@ import 'package:flutter_studio/features/storage/storage_page.dart';
 Widget _wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
 
 void main() {
-  testWidgets('Downloads shows provider and unknown total progress state', (
+  testWidgets('Downloads shows ModelScope and unknown total progress state', (
     tester,
   ) async {
     String selectedProvider = 'modelscope';
@@ -31,6 +31,17 @@ void main() {
               'percent': null,
               'cancel_requested': true,
               'can_cancel': true,
+              'can_delete': false,
+            }),
+            DownloadTaskDto.fromMap({
+              'job_id': 'job-2',
+              'provider': 'modelscope',
+              'repo_id': 'org/done',
+              'status': 'succeeded',
+              'downloaded_bytes': 1024,
+              'total_bytes': 1024,
+              'percent': 100.0,
+              'can_delete': true,
             }),
           ],
           repoController: TextEditingController(),
@@ -42,17 +53,68 @@ void main() {
           onProviderChanged: (value) => selectedProvider = value,
           onCancel: (_) async {},
           onRetry: (_) async {},
+          onDelete: (_) async {},
           onViewModel: (_) async {},
           onRefresh: () {},
         ),
       ),
     );
 
-    expect(find.text('ModelScope'), findsOneWidget);
-    expect(find.text('ModelScope: org/model'), findsOneWidget);
+    expect(find.text('ModelScope / 魔塔社区'), findsWidgets);
+    expect(find.text('ModelScope / 魔塔社区: org/model'), findsOneWidget);
+    expect(find.text('Hugging Face'), findsNothing);
     expect(find.text('1.0 KB / 总大小未知'), findsOneWidget);
     expect(find.text('取消请求已提交'), findsOneWidget);
     expect(find.text('进度未知'), findsOneWidget);
+    expect(find.text('删除记录'), findsNWidgets(2));
+  });
+
+  testWidgets('Downloads can delete terminal records and copy errors', (
+    tester,
+  ) async {
+    var deletedJobId = '';
+
+    await tester.pumpWidget(
+      _wrap(
+        DownloadsPage(
+          downloads: [
+            DownloadTaskDto.fromMap({
+              'job_id': 'job-failed',
+              'provider': 'modelscope',
+              'repo_id': 'org/failed',
+              'status': 'failed',
+              'downloaded_bytes': 0,
+              'total_bytes': null,
+              'error_code': 'DOWNLOAD_NETWORK_ERROR',
+              'error_message': 'network failed',
+            }),
+          ],
+          repoController: TextEditingController(),
+          provider: 'modelscope',
+          revisionController: TextEditingController(),
+          allowPatternsController: TextEditingController(),
+          ignorePatternsController: TextEditingController(),
+          onStart: () {},
+          onProviderChanged: (_) {},
+          onCancel: (_) async {},
+          onRetry: (_) async {},
+          onDelete: (id) async => deletedJobId = id,
+          onViewModel: (_) async {},
+          onRefresh: () {},
+        ),
+      ),
+    );
+
+    expect(find.text('下载失败'), findsOneWidget);
+    expect(find.textContaining('DOWNLOAD_NETWORK_ERROR'), findsOneWidget);
+    expect(find.byIcon(Icons.copy), findsOneWidget);
+
+    await tester.tap(find.text('删除记录'));
+    await tester.pumpAndSettle();
+    expect(find.text('删除下载记录？'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, '删除记录').last);
+    await tester.pumpAndSettle();
+    expect(deletedJobId, 'job-failed');
   });
 
   testWidgets('Models move to trash uses confirmation dialog', (tester) async {

@@ -15,8 +15,8 @@ from llm_studio.downloads.exceptions import (
     DownloadLocalFilesNotFoundError,
     DownloadRetryNotAllowedError,
 )
-from llm_studio.downloads.huggingface_client import HuggingFaceDownloadClient
 from llm_studio.jobs import Job, JobQueue, JobRepository, JobStatus, JobType
+from llm_studio.security.redaction import redact_sensitive_text
 
 
 class TinyConfig:
@@ -36,7 +36,10 @@ class TinyConfig:
                 "trash_dir": str(root / "trash"),
                 "jobs_dir": str(root / "jobs"),
             },
-            "huggingface": {"cache_dir": str(root / "hf")},
+            "downloads": {
+                "default_provider": "modelscope",
+                "providers": {"modelscope": {"cache_dir": str(root / "ms-cache")}},
+            },
             "external_models": [],
         }
 
@@ -44,7 +47,7 @@ class TinyConfig:
         return self._data.get(key, default)
 
 
-class FakeHFClient:
+class FakeModelScopeClient:
     files = (
         RemoteFile("config.json", 23),
         RemoteFile("model.safetensors", 5),
@@ -63,14 +66,14 @@ class FakeHFClient:
         return target
 
 
-class UnknownTotalHFClient(FakeHFClient):
+class UnknownTotalModelScopeClient(FakeModelScopeClient):
     files = (
         RemoteFile("config.json", None),
         RemoteFile("model.safetensors", None),
     )
 
 
-class BlockingHFClient(FakeHFClient):
+class BlockingModelScopeClient(FakeModelScopeClient):
     def __init__(self):
         self.started = threading.Event()
         self.release = threading.Event()
@@ -81,7 +84,7 @@ class BlockingHFClient(FakeHFClient):
         return super().download_file(request, file, local_dir=local_dir, cache_dir=cache_dir)
 
 
-class LocalOnlyHFClient:
+class LocalOnlyModelScopeClient:
     def __init__(self):
         self.list_files_called = False
         self.snapshot_local_files_only = None
@@ -98,16 +101,16 @@ class LocalOnlyHFClient:
         return local_dir
 
 
-class MissingLocalOnlyHFClient(LocalOnlyHFClient):
+class MissingLocalOnlyModelScopeClient(LocalOnlyModelScopeClient):
     def snapshot_download(self, request, *, local_dir, cache_dir=None):
         self.snapshot_local_files_only = request.local_files_only
-        raise DownloadLocalFilesNotFoundError("missing local cache token=hf_secret")
+        raise DownloadLocalFilesNotFoundError("missing local cache token=ms_secret")
 
 
-def _manager(tmp_path, hf_client):
+def _manager(tmp_path, modelscope_client):
     repo = JobRepository(tmp_path / "jobs.sqlite")
     queue = JobQueue(repo)
-    return DownloadManager(TinyConfig(tmp_path), queue, hf_client=hf_client), repo, queue
+    return DownloadManager(TinyConfig(tmp_path), queue, modelscope_client=modelscope_client), repo, queue
 
 
 def _wait_for_terminal(repo: JobRepository, job_id: str) -> Job:
@@ -150,20 +153,22 @@ def test_unknown_total_bytes_keep_percent_null():
         )
     )
 
+    assert state.provider == "modelscope"
     assert state.total_bytes is None
     assert state.percent is None
 
 
 def test_download_success_scans_and_registers_model(tmp_path):
-    manager, repo, queue = _manager(tmp_path, FakeHFClient())
+    manager, repo, queue = _manager(tmp_path, FakeModelScopeClient())
 
-    job = manager.create_download(DownloadRequest(repo_id="org/model", token="hf_secret"))
+    job = manager.create_download(DownloadRequest(repo_id="org/model", token="ms_secret"))
     queue.shutdown(wait=True)
 
     stored = repo.get(job.id)
     state = DownloadTaskState.from_job(stored)
     assert stored.status == JobStatus.SUCCEEDED.value
     assert "token" not in stored.payload
+    assert state.provider == "modelscope"
     assert state.downloaded_bytes == 28
     assert state.total_bytes == 28
     assert state.percent == 100.0
@@ -173,13 +178,13 @@ def test_download_success_scans_and_registers_model(tmp_path):
 
 
 def test_download_cancel_sets_cancelled_state(tmp_path):
-    hf_client = BlockingHFClient()
-    manager, repo, queue = _manager(tmp_path, hf_client)
+    modelscope_client = BlockingModelScopeClient()
+    manager, repo, queue = _manager(tmp_path, modelscope_client)
 
     job = manager.create_download(DownloadRequest(repo_id="org/model"))
-    assert hf_client.started.wait(timeout=2)
+    assert modelscope_client.started.wait(timeout=2)
     manager.cancel_job(job.id)
-    hf_client.release.set()
+    modelscope_client.release.set()
     queue.shutdown(wait=True)
 
     stored = repo.get(job.id)
@@ -191,7 +196,7 @@ def test_download_cancel_sets_cancelled_state(tmp_path):
 
 
 def test_retry_allowed_for_cancelled_and_rejected_for_succeeded(tmp_path):
-    manager, repo, queue = _manager(tmp_path, FakeHFClient())
+    manager, repo, queue = _manager(tmp_path, FakeModelScopeClient())
     succeeded = _wait_for_terminal(repo, manager.create_download(DownloadRequest(repo_id="org/model")).id)
 
     with pytest.raises(DownloadRetryNotAllowedError):
@@ -208,7 +213,7 @@ def test_retry_allowed_for_cancelled_and_rejected_for_succeeded(tmp_path):
 
 
 def test_unknown_file_sizes_do_not_fake_total(tmp_path):
-    manager, repo, queue = _manager(tmp_path, UnknownTotalHFClient())
+    manager, repo, queue = _manager(tmp_path, UnknownTotalModelScopeClient())
 
     job = manager.create_download(DownloadRequest(repo_id="org/model"))
     queue.shutdown(wait=True)
@@ -220,40 +225,38 @@ def test_unknown_file_sizes_do_not_fake_total(tmp_path):
 
 
 def test_local_files_only_skips_remote_file_listing(tmp_path):
-    hf_client = LocalOnlyHFClient()
-    manager, repo, queue = _manager(tmp_path, hf_client)
+    modelscope_client = LocalOnlyModelScopeClient()
+    manager, repo, queue = _manager(tmp_path, modelscope_client)
 
     job = manager.create_download(DownloadRequest(repo_id="org/model", local_files_only=True))
     queue.shutdown(wait=True)
 
     state = DownloadTaskState.from_job(repo.get(job.id))
-    assert hf_client.list_files_called is False
-    assert hf_client.snapshot_local_files_only is True
+    assert modelscope_client.list_files_called is False
+    assert modelscope_client.snapshot_local_files_only is True
     assert state.total_bytes is None
     assert state.percent is None
     assert state.registration_status == "succeeded"
 
 
 def test_local_files_only_missing_cache_uses_stable_error_and_redacts(tmp_path):
-    hf_client = MissingLocalOnlyHFClient()
-    manager, repo, queue = _manager(tmp_path, hf_client)
+    modelscope_client = MissingLocalOnlyModelScopeClient()
+    manager, repo, queue = _manager(tmp_path, modelscope_client)
 
     job = manager.create_download(DownloadRequest(repo_id="org/model", local_files_only=True))
     queue.shutdown(wait=True)
 
     stored = repo.get(job.id)
-    assert hf_client.list_files_called is False
+    assert modelscope_client.list_files_called is False
     assert stored.status == JobStatus.FAILED.value
     assert stored.error_code == "DOWNLOAD_LOCAL_FILES_NOT_FOUND"
     assert stored.error_message == "missing local cache token=<redacted>"
 
 
-def test_huggingface_error_mapping_redacts_tokens(monkeypatch):
-    monkeypatch.setenv("HF_TOKEN", "hf_env_secret")
-    error = HuggingFaceDownloadClient()._map_hf_error(
-        RuntimeError("boom Authorization: Bearer hf_env_secret token=hf_env_secret")
-    )
+def test_modelscope_error_text_redacts_tokens(monkeypatch):
+    monkeypatch.setenv("MODELSCOPE_API_TOKEN", "ms_env_secret")
+    text = redact_sensitive_text("boom Authorization: Bearer ms_env_secret token=ms_env_secret")
 
-    assert "hf_env_secret" not in str(error)
-    assert "Authorization: Bearer <redacted>" in str(error)
-    assert "token=<redacted>" in str(error)
+    assert "ms_env_secret" not in text
+    assert "Authorization: Bearer <redacted>" in text
+    assert "token=<redacted>" in text

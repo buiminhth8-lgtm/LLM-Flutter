@@ -7,21 +7,20 @@ from llm_studio.downloads.exceptions import (
     DownloadProviderNotSupportedError,
 )
 
-from .huggingface import HuggingFaceDownloadProvider
 from .modelscope import ModelScopeDownloadProvider
 
 
-def get_download_provider(name: str, config, *, hf_client=None, modelscope_client=None):
-    normalized = (name or "huggingface").strip().lower()
-    if normalized in {"huggingface", "hf"}:
-        return HuggingFaceDownloadProvider(config, client=hf_client)
+def get_download_provider(name: str | None, config, *, modelscope_client=None):
+    normalized = (name or "modelscope").strip().lower()
     if normalized in {"modelscope", "ms"}:
         if modelscope_client is None:
             try:
                 import modelscope_hub  # noqa: F401
             except ImportError as exc:
                 raise DownloadProviderNotInstalledError(
-                    "modelscope-hub 未安装，请安装下载依赖。"
+                    "modelscope-hub is not installed. Install the download dependency first."
                 ) from exc
         return ModelScopeDownloadProvider(config, client=modelscope_client)
-    raise DownloadProviderNotSupportedError(f"不支持的下载源: {name}")
+    raise DownloadProviderNotSupportedError(
+        f"Download provider '{name}' is not supported. ModelScope is the only remote download provider."
+    )

@@ -30,7 +30,7 @@ storage:
 class FakeDownloadManager:
     last_request = None
 
-    def __init__(self, config, job_queue, hf_client=None, model_repository=None):
+    def __init__(self, config, job_queue, modelscope_client=None, model_repository=None):
         self.job_queue = job_queue
 
     def create_download(self, request):
@@ -115,6 +115,47 @@ def test_download_api_not_found_and_retry_not_allowed(monkeypatch, tmp_path):
     terminal_cancel = client.post("/v1/downloads/terminal/cancel")
     assert terminal_cancel.status_code == 409
     assert terminal_cancel.json()["error"]["code"] == "DOWNLOAD_CANCEL_NOT_ALLOWED"
+
+
+def test_download_record_delete_only_allows_terminal_download_jobs(monkeypatch, tmp_path):
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    from llm_studio import api_server
+
+    monkeypatch.setattr(api_server, "DownloadManager", FakeDownloadManager)
+    cfg_path = tmp_path / "config.yaml"
+    _write_config(cfg_path)
+
+    client = TestClient(api_server.get_app(Config(cfg_path)))
+    assert api_server._job_repository is not None
+    api_server._job_repository.save(
+        Job.new("download-done", JobType.MODEL_DOWNLOAD.value, {"repo_id": "org/model"}).with_update(
+            status=JobStatus.SUCCEEDED.value,
+        )
+    )
+    api_server._job_repository.save(
+        Job.new("download-running", JobType.MODEL_DOWNLOAD.value, {"repo_id": "org/model"}).with_update(
+            status=JobStatus.RUNNING.value,
+        )
+    )
+    api_server._job_repository.save(
+        Job.new("scan-done", JobType.MODEL_SCAN.value, {}).with_update(status=JobStatus.SUCCEEDED.value)
+    )
+
+    deleted = client.delete("/v1/downloads/download-done")
+    assert deleted.status_code == 200
+    assert deleted.json() == {"status": "deleted", "job_id": "download-done"}
+    assert client.get("/v1/downloads/download-done").status_code == 404
+
+    running = client.delete("/v1/downloads/download-running")
+    assert running.status_code == 409
+    assert running.json()["error"]["code"] == "DOWNLOAD_RECORD_DELETE_NOT_ALLOWED"
+    assert api_server._job_repository.get("download-running").status == JobStatus.RUNNING.value
+
+    non_download = client.delete("/v1/downloads/scan-done")
+    assert non_download.status_code == 404
+    assert non_download.json()["error"]["code"] == "DOWNLOAD_NOT_FOUND"
 
 
 def test_jobs_api_redacts_public_payload(monkeypatch, tmp_path):

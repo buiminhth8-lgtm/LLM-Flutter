@@ -1,5 +1,5 @@
-huggingface_hub>=0.23,<1.0
 modelscope-hub>=0.1.8
+modelscope
 transformers>=4.44,<5
 # Keep accelerate here only for runtime use. Install through scripts/install_base.ps1
 # after CUDA PyTorch is installed, otherwise pip may pull a CPU torch wheel.

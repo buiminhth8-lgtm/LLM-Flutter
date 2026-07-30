@@ -41,9 +41,6 @@ def path_size(path: Path) -> int:
 
 def collect_disk_usage(config) -> list[DiskUsageItem]:
     layout = layout_from_config(config)
-    hf_cache = Path(config.get("huggingface", {}).get("cache_dir", "./data/huggingface"))
-    if not hf_cache.is_absolute():
-        hf_cache = (config.config_path.parent / hf_cache).resolve()
     upload_root = Path(config.get("uploads", {}).get("temp_dir", "./data/uploads"))
     rag_index = Path(config.get("rag", {}).get("index_path", "./data/rag"))
     if not upload_root.is_absolute():
@@ -64,7 +61,5 @@ def collect_disk_usage(config) -> list[DiskUsageItem]:
         ("logs", config.config_path.parent / "logs", True),
         ("diagnostics", layout.diagnostics_dir, True),
         ("trash", layout.trash_dir, True),
-        ("huggingface_cache_managed", hf_cache, True),
-        ("huggingface_cache_global", Path.home() / ".cache" / "huggingface", False),
     ]
     return [DiskUsageItem(name, path, path_size(path), cleanable) for name, path, cleanable in categories]

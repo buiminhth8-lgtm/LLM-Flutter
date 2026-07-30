@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/models/dto.dart';
+import '../../core/ui/app_confirm_dialog.dart';
 import '../../core/ui/app_empty_state.dart';
 import '../../core/ui/app_progress_bar.dart';
 import '../../core/ui/app_section_header.dart';
@@ -20,6 +22,7 @@ class DownloadsPage extends StatelessWidget {
     required this.onProviderChanged,
     required this.onCancel,
     required this.onRetry,
+    required this.onDelete,
     required this.onViewModel,
     required this.onRefresh,
   });
@@ -34,6 +37,7 @@ class DownloadsPage extends StatelessWidget {
   final ValueChanged<String> onProviderChanged;
   final Future<void> Function(String id) onCancel;
   final Future<void> Function(String id) onRetry;
+  final Future<void> Function(String id) onDelete;
   final Future<void> Function(String modelId) onViewModel;
   final VoidCallback onRefresh;
 
@@ -46,7 +50,7 @@ class DownloadsPage extends StatelessWidget {
         children: [
           AppSectionHeader(
             title: 'Downloads',
-            subtitle: '下载以后台 Job 运行；total_bytes 未知时不显示伪造百分比，取消是协作式请求。',
+            subtitle: '下载通过后台 Job 运行；总大小未知时不显示伪造百分比，取消是协作式请求。',
             actions: [
               IconButton.filledTonal(
                 onPressed: onRefresh,
@@ -60,32 +64,15 @@ class DownloadsPage extends StatelessWidget {
             children: [
               SizedBox(
                 width: 220,
-                child: DropdownButtonFormField<String>(
-                  initialValue: provider,
-                  isExpanded: true,
+                child: InputDecorator(
                   decoration: const InputDecoration(
                     labelText: 'Provider',
                     border: OutlineInputBorder(),
                   ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'huggingface',
-                      child: Text('Hugging Face'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'modelscope',
-                      child: Text('ModelScope / 魔塔社区'),
-                    ),
-                  ],
-                  selectedItemBuilder: (context) => const [
-                    Text('Hugging Face', overflow: TextOverflow.ellipsis),
-                    Text('ModelScope', overflow: TextOverflow.ellipsis),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) {
-                      onProviderChanged(value);
-                    }
-                  },
+                  child: Text(
+                    _providerLabel(provider),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -93,7 +80,7 @@ class DownloadsPage extends StatelessWidget {
                 child: TextField(
                   controller: repoController,
                   decoration: const InputDecoration(
-                    labelText: 'repo_id / model_id',
+                    labelText: 'ModelScope model_id',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -146,7 +133,7 @@ class DownloadsPage extends StatelessWidget {
             child: downloads.isEmpty
                 ? const AppEmptyState(
                     title: '没有下载任务',
-                    message: '选择下载源并输入 repo_id / model_id 后创建后台下载任务。',
+                    message: '输入 ModelScope model_id 后创建后台下载任务。',
                     icon: Icons.cloud_download_outlined,
                   )
                 : ListView.separated(
@@ -156,6 +143,7 @@ class DownloadsPage extends StatelessWidget {
                       task: downloads[index],
                       onCancel: onCancel,
                       onRetry: onRetry,
+                      onDelete: onDelete,
                       onViewModel: onViewModel,
                     ),
                   ),
@@ -171,12 +159,14 @@ class _DownloadCard extends StatelessWidget {
     required this.task,
     required this.onCancel,
     required this.onRetry,
+    required this.onDelete,
     required this.onViewModel,
   });
 
   final DownloadTaskDto task;
   final Future<void> Function(String id) onCancel;
   final Future<void> Function(String id) onRetry;
+  final Future<void> Function(String id) onDelete;
   final Future<void> Function(String modelId) onViewModel;
 
   @override
@@ -185,12 +175,19 @@ class _DownloadCard extends StatelessWidget {
     final progressValue = hasPercent
         ? (task.percent! / 100).clamp(0.0, 1.0)
         : null;
+    final displayedProgressValue = task.isRunning
+        ? progressValue
+        : (hasPercent ? progressValue : 0.0);
+    final progressLabel = hasPercent
+        ? '${task.percent!.toStringAsFixed(1)}%'
+        : _progressLabel(task);
     final totalText = task.totalBytes == null
         ? '总大小未知'
         : formatBytes(task.totalBytes);
-    final etaText = formatEta(task.etaSeconds);
     final statusText = task.cancelRequested ? '取消请求已提交' : task.status;
     final providerLabel = _providerLabel(task.provider);
+    final errorText =
+        '${task.errorCode ?? 'DOWNLOAD_FAILED'}: ${task.errorMessage}';
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -226,14 +223,7 @@ class _DownloadCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            AppProgressBar(
-              value: task.isRunning
-                  ? progressValue
-                  : (hasPercent ? progressValue : null),
-              label: hasPercent
-                  ? '${task.percent!.toStringAsFixed(1)}%'
-                  : '进度未知',
-            ),
+            AppProgressBar(value: displayedProgressValue, label: progressLabel),
             const SizedBox(height: 8),
             Wrap(
               spacing: 16,
@@ -241,7 +231,7 @@ class _DownloadCard extends StatelessWidget {
               children: [
                 Text('${formatBytes(task.downloadedBytes)} / $totalText'),
                 Text(formatSpeed(task.speedBytesPerSecond)),
-                Text(etaText),
+                Text(formatEta(task.etaSeconds)),
                 if (task.totalFiles != null)
                   Text(
                     '${task.completedFiles ?? 0} / ${task.totalFiles} files',
@@ -263,9 +253,24 @@ class _DownloadCard extends StatelessWidget {
             ],
             if (task.errorMessage != null && task.errorMessage!.isNotEmpty) ...[
               const SizedBox(height: 6),
-              Text(
-                '${task.errorCode ?? 'DOWNLOAD_FAILED'}: ${task.errorMessage}',
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: SelectableText(
+                      errorText,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: '复制错误信息',
+                    onPressed: () =>
+                        Clipboard.setData(ClipboardData(text: errorText)),
+                    icon: const Icon(Icons.copy),
+                  ),
+                ],
               ),
             ],
             const SizedBox(height: 10),
@@ -283,6 +288,24 @@ class _DownloadCard extends StatelessWidget {
                       ? null
                       : () => onRetry(task.jobId),
                   child: const Text('重试'),
+                ),
+                TextButton.icon(
+                  onPressed: task.jobId.isEmpty || !task.canDelete
+                      ? null
+                      : () async {
+                          final confirmed = await showAppConfirmDialog(
+                            context,
+                            title: '删除下载记录？',
+                            message: '只会删除这条下载历史记录，不会删除模型文件、下载缓存或临时目录。',
+                            confirmLabel: '删除记录',
+                            destructive: true,
+                          );
+                          if (confirmed) {
+                            await onDelete(task.jobId);
+                          }
+                        },
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('删除记录'),
                 ),
                 if (task.isSucceeded &&
                     task.modelId != null &&
@@ -309,7 +332,21 @@ class _DownloadCard extends StatelessWidget {
     };
   }
 
-  String _providerLabel(String provider) {
-    return provider == 'modelscope' ? 'ModelScope' : 'Hugging Face';
+  String _progressLabel(DownloadTaskDto task) {
+    if (task.isFailed) {
+      return '下载失败';
+    }
+    if (task.isCancelled) {
+      return '已取消';
+    }
+    if (task.isInterrupted) {
+      return '已中断';
+    }
+    if (task.isSucceeded) {
+      return '已完成';
+    }
+    return '进度未知';
   }
 }
+
+String _providerLabel(String provider) => 'ModelScope / 魔塔社区';

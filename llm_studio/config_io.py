@@ -9,7 +9,7 @@ from typing import Any
 
 import yaml
 
-EXPORT_KEYS = {"runtime", "generation", "rag", "finetune", "models", "storage", "huggingface", "api"}
+EXPORT_KEYS = {"runtime", "generation", "rag", "finetune", "models", "storage", "downloads", "api"}
 SECRET_KEYS = {"password", "api_key", "token", "cookie", "secret", "authorization"}
 
 
