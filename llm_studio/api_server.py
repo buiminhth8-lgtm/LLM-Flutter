@@ -6,6 +6,7 @@ Provides OpenAI-compatible API endpoints for third-party integration.
 import asyncio
 import json
 import secrets
+import shutil
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -21,7 +22,11 @@ from .api.errors import (
     ADAPTER_MODEL_REQUIRED,
     ADAPTER_NOT_FOUND,
     ADAPTER_OPERATION_FAILED,
+    AUTH_ADMIN_REQUIRED,
+    AUTH_INVALID_API_KEY,
     AUTH_REQUIRED,
+    AUTH_USER_DISABLED,
+    AUTH_USER_NOT_FOUND,
     BENCHMARK_FAILED,
     CUDA_OUT_OF_MEMORY,
     GENERATION_CANCELLED,
@@ -52,7 +57,7 @@ from .api.routers.diagnostics import router as diagnostics_router
 from .api.routers.downloads import router as downloads_router
 from .api.routers.jobs import router as jobs_router
 from .api.routers.storage import router as storage_router
-from .auth import has_permission, required_permission_for_request
+from .auth import has_permission, normalize_role, required_permission_for_request
 from .auth.roles import Role
 from .benchmarks import BenchmarkConfig, BenchmarkRunner
 from .chat import ChatMessage as CoreChatMessage
@@ -121,7 +126,27 @@ def get_app(config: Config):
     _config = config
     layout = layout_from_config(config)
     layout.ensure()
-    _admin = AdminManager(layout.root_dir.parent)
+    auth_cfg = config.get("auth", {})
+    auth_users_file = auth_cfg.get("users_file")
+    auth_audit_log = auth_cfg.get("audit_log")
+    legacy_users_file = layout.root_dir.parent / "api_users.json"
+    resolved_users_file = Path(auth_users_file) if auth_users_file else None
+    if (
+        resolved_users_file
+        and not resolved_users_file.exists()
+        and legacy_users_file.exists()
+    ):
+        resolved_users_file.parent.mkdir(parents=True, exist_ok=True)
+        backup = legacy_users_file.with_name(f"{legacy_users_file.name}.bak-migrated")
+        if not backup.exists():
+            shutil.copy2(legacy_users_file, backup)
+        shutil.copy2(legacy_users_file, resolved_users_file)
+        print("[Auth] Migrated legacy api_users.json to configured auth.users_file.")
+    _admin = AdminManager(
+        layout.root_dir.parent,
+        users_file=resolved_users_file,
+        audit_log=Path(auth_audit_log) if auth_audit_log else None,
+    )
     _model_repository = LocalModelRepository(config, layout)
     _job_repository = JobRepository(layout.jobs_dir / "jobs.sqlite")
     _job_queue = JobQueue(_job_repository)
@@ -247,23 +272,30 @@ def get_app(config: Config):
             if request.method == "OPTIONS":
                 return await call_next(request)
 
-            user_id = request.headers.get("X-User-ID", "")
-            api_key = request.headers.get("X-API-Key", "")
+            user_id = request.headers.get("X-User-ID", "").strip()
+            api_key = request.headers.get("X-API-Key", "").strip()
 
-            # Also support standard Authorization: Bearer header as fallback
+            # Also support standard Authorization: Bearer header as fallback.
             if not api_key:
                 auth_header = request.headers.get("Authorization", "")
                 if auth_header.startswith("Bearer "):
                     api_key = auth_header[7:].strip()
 
-            user = _admin.authenticate(user_id, api_key)
+            user = _admin.authenticate(user_id, api_key) if user_id else _admin.authenticate_by_api_key(api_key)
             if not user:
+                existing_user = _admin.get_user(user_id) if user_id else _admin.find_user_by_api_key(api_key)
+                if existing_user and not existing_user.enabled:
+                    code = AUTH_USER_DISABLED
+                    message = "该用户已被禁用。"
+                else:
+                    code = AUTH_INVALID_API_KEY
+                    message = "API Key 无效或已失效。"
                 request_id = getattr(request.state, "request_id", uuid.uuid4().hex)
                 return JSONResponse(
                     status_code=401,
                     content=error_payload(
-                        AUTH_REQUIRED,
-                        "请提供有效的 X-User-ID 和 X-API-Key。",
+                        code,
+                        message,
                         request_id,
                     ),
                 )
@@ -1297,6 +1329,51 @@ def get_app(config: Config):
             "inference_concurrency": _concurrency.max_inference_concurrency if _concurrency else None,
         }
 
+    # Auth recovery and user management for authenticated Flutter Settings.
+
+    def _current_user(request: Request) -> dict:
+        user = getattr(request.state, "user", None)
+        if not isinstance(user, dict):
+            raise api_error(401, AUTH_REQUIRED, "请先配置有效的 API Key。", _request_id())
+        return user
+
+    def _require_admin_api_key(request: Request) -> dict:
+        user = _current_user(request)
+        if normalize_role(user.get("role"), missing_role=Role.VIEWER) != Role.ADMIN:
+            raise api_error(403, AUTH_ADMIN_REQUIRED, "需要管理员权限。", _request_id())
+        return user
+
+    @app.get("/v1/auth/me")
+    async def auth_me(request: Request):
+        user = _current_user(request)
+        return {
+            "user": {
+                "user_id": user.get("user_id"),
+                "role": user.get("role"),
+                "api_key_masked": user.get("api_key_masked"),
+                "enabled": user.get("enabled", True),
+            }
+        }
+
+    @app.get("/v1/auth/users")
+    async def auth_list_users(request: Request):
+        _require_admin_api_key(request)
+        return {"users": _admin.list_users()}
+
+    @app.post("/v1/auth/users/{user_id}/regenerate")
+    async def auth_regenerate_key(request: Request, user_id: str):
+        _require_admin_api_key(request)
+        new_key = _admin.regenerate_key(user_id)
+        user = _admin.get_user(user_id)
+        if not new_key or not user:
+            raise api_error(404, AUTH_USER_NOT_FOUND, "用户不存在。", _request_id())
+        return {
+            "status": "ok",
+            "user_id": user_id,
+            "api_key": new_key,
+            "api_key_masked": user.api_key_masked,
+        }
+
     # Admin backend
 
     # Simple session token store (in-memory, cleared on restart)
@@ -1359,9 +1436,12 @@ def get_app(config: Config):
         _verify_admin_session(request)
         try:
             user = _admin.create_user(req.user_id, role=req.role, note=req.note)
-            return {"status": "ok", "user": user.to_dict(include_secret=True)}
+            return {
+                "status": "ok",
+                "user": {**user.to_public_dict(), "api_key": user.plain_api_key},
+            }
         except ValueError as exc:
-            raise HTTPException(status_code=400, detail="原密码错误。") from exc
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.delete("/admin/api/users/{user_id}")
     async def admin_delete_user(request: Request, user_id: str):
@@ -1389,9 +1469,15 @@ def get_app(config: Config):
     async def admin_regenerate_key(request: Request, user_id: str):
         _verify_admin_session(request)
         new_key = _admin.regenerate_key(user_id)
-        if not new_key:
+        user = _admin.get_user(user_id)
+        if not new_key or not user:
             raise HTTPException(status_code=404, detail="用户不存在。")
-        return {"status": "ok", "api_key": new_key}
+        return {
+            "status": "ok",
+            "user_id": user_id,
+            "api_key": new_key,
+            "api_key_masked": user.api_key_masked,
+        }
 
     @app.get("/admin/api/users/{user_id}/key")
     async def admin_get_full_key(request: Request, user_id: str):

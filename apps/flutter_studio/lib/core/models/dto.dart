@@ -162,3 +162,63 @@ class DownloadTaskDto {
   bool get isTerminal =>
       isSucceeded || isFailed || isCancelled || isInterrupted;
 }
+
+class AuthUserDto {
+  const AuthUserDto({
+    required this.userId,
+    required this.role,
+    required this.enabled,
+    this.apiKeyMasked,
+    this.note,
+    this.createdAt,
+    this.updatedAt,
+  });
+
+  factory AuthUserDto.fromMap(Map<dynamic, dynamic> map) {
+    return AuthUserDto(
+      userId: '${map['user_id'] ?? ''}',
+      role: '${map['role'] ?? ''}',
+      enabled: map['enabled'] != false,
+      apiKeyMasked: map['api_key_masked'] == null
+          ? null
+          : '${map['api_key_masked']}',
+      note: map['note'] == null ? null : '${map['note']}',
+      createdAt: map['created_at'] is num
+          ? (map['created_at'] as num).toDouble()
+          : null,
+      updatedAt: map['updated_at'] is num
+          ? (map['updated_at'] as num).toDouble()
+          : null,
+    );
+  }
+
+  final String userId;
+  final String role;
+  final bool enabled;
+  final String? apiKeyMasked;
+  final String? note;
+  final double? createdAt;
+  final double? updatedAt;
+
+  bool get isAdmin => role == 'admin';
+}
+
+class RegeneratedApiKeyDto {
+  const RegeneratedApiKeyDto({
+    required this.userId,
+    required this.apiKey,
+    required this.apiKeyMasked,
+  });
+
+  factory RegeneratedApiKeyDto.fromMap(Map<dynamic, dynamic> map) {
+    return RegeneratedApiKeyDto(
+      userId: '${map['user_id'] ?? ''}',
+      apiKey: '${map['api_key'] ?? ''}',
+      apiKeyMasked: '${map['api_key_masked'] ?? ''}',
+    );
+  }
+
+  final String userId;
+  final String apiKey;
+  final String apiKeyMasked;
+}

@@ -75,15 +75,18 @@ void main() {
   });
 
   testWidgets('settings exposes clear auth and backend logs', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1100, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(const LlmStudioApp(autoRefresh: false));
     await tester.drag(find.byType(ListView).first, const Offset(0, -500));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Settings'));
+    final settingsNav = find.widgetWithText(ListTile, 'Settings');
+    await tester.ensureVisible(settingsNav);
+    await tester.tap(settingsNav);
     await tester.pumpAndSettle();
 
     expect(find.text('Clear auth'), findsOneWidget);
-    await tester.drag(find.byType(ListView).last, const Offset(0, -400));
-    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Backend logs'));
 
     expect(find.text('Backend logs'), findsOneWidget);
     expect(find.text('Copy logs'), findsOneWidget);
@@ -105,6 +108,7 @@ void main() {
     await tester.pumpWidget(LlmStudioApp(client: client));
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.text('Connection settings'));
     expect(find.text('Connection settings'), findsOneWidget);
     expect(find.text('Clear auth'), findsOneWidget);
     expect(find.text('认证已失效，请重新登录或填写有效 API Key。'), findsOneWidget);

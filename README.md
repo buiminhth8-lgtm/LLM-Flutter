@@ -1,5 +1,7 @@
 # LLM-Studio
 
+认证恢复、API Key 重新生成和本机 admin 恢复流程见 [docs/AUTH_RECOVERY.md](docs/AUTH_RECOVERY.md)。
+
 Windows 真实运行验收流程见 [docs/WINDOWS_ACCEPTANCE.md](docs/WINDOWS_ACCEPTANCE.md)，下载生命周期说明见 [docs/DOWNLOADS.md](docs/DOWNLOADS.md)。
 
 下载生命周期、进度、取消、重试、本地缓存和临时目录清理策略见 [docs/DOWNLOADS.md](docs/DOWNLOADS.md)。

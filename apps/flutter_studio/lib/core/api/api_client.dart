@@ -42,6 +42,32 @@ class LlmStudioClient {
     return (body['capabilities'] as List?) ?? const [];
   }
 
+  Future<AuthUserDto> currentAuthUser() async {
+    final body = await _getMap('/v1/auth/me');
+    final user = body['user'];
+    if (user is Map) {
+      return AuthUserDto.fromMap(user);
+    }
+    throw StudioApiException('API response does not contain current user.');
+  }
+
+  Future<List<AuthUserDto>> authUsers() async {
+    final body = await _getMap('/v1/auth/users');
+    final users = (body['users'] as List?) ?? const [];
+    return users
+        .whereType<Map>()
+        .map((item) => AuthUserDto.fromMap(item))
+        .toList();
+  }
+
+  Future<RegeneratedApiKeyDto> regenerateApiKey(String userId) async {
+    final body = await _postMap(
+      '/v1/auth/users/${Uri.encodeComponent(userId)}/regenerate',
+      body: const {},
+    );
+    return RegeneratedApiKeyDto.fromMap(body);
+  }
+
   Future<List<dynamic>> models() async {
     final body = await _getMap('/v1/models');
     return (body['data'] as List?) ?? const [];
@@ -311,8 +337,12 @@ class LlmStudioClient {
     if (apiKey.isEmpty) {
       return const {};
     }
+    final trimmedUserId = userId.trim();
+    if (trimmedUserId.isEmpty) {
+      return {'Authorization': 'Bearer $apiKey'};
+    }
     return {
-      'X-User-ID': userId,
+      'X-User-ID': trimmedUserId,
       'X-API-Key': apiKey,
       'Authorization': 'Bearer $apiKey',
     };
