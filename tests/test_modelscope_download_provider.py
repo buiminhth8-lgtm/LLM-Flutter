@@ -1,7 +1,13 @@
 import time
 from pathlib import Path
 
-from llm_studio.downloads import DownloadManager, DownloadRequest, DownloadTaskState, RemoteFile
+from llm_studio.downloads import (
+    DownloadManager,
+    DownloadProgressTracker,
+    DownloadRequest,
+    DownloadTaskState,
+    RemoteFile,
+)
 from llm_studio.downloads.providers.modelscope import ModelScopeDownloadProvider
 from llm_studio.jobs import JobQueue, JobRepository, JobStatus
 
@@ -87,6 +93,58 @@ class ListRepoOnlyHubApi:
             type("FileInfo", (), {"path": "config.json", "size": 23})(),
             type("FileInfo", (), {"path": "model.safetensors", "size": None})(),
         ]
+
+
+class DownloadRepoWithProgressApi:
+    def __init__(self, target: Path):
+        self.target = target
+        self.progress_callbacks = None
+
+    def download_repo(
+        self,
+        repo_id,
+        repo_type,
+        *,
+        revision=None,
+        cache_dir=None,
+        local_dir=None,
+        allow_patterns=None,
+        ignore_patterns=None,
+        local_files_only=False,
+        progress_callbacks=None,
+    ):
+        self.progress_callbacks = progress_callbacks
+        target = Path(local_dir or self.target)
+        target.mkdir(parents=True, exist_ok=True)
+        callback = progress_callbacks[0]("model.safetensors", 10)
+        callback.update(4)
+        callback.update(6)
+        callback.end()
+        (target / "config.json").write_text('{"model_type":"llama"}', encoding="utf-8")
+        (target / "model.safetensors").write_bytes(b"1234567890")
+        return target
+
+
+class DownloadRepoWithoutProgressApi:
+    def __init__(self, target: Path):
+        self.target = target
+
+    def download_repo(
+        self,
+        repo_id,
+        repo_type,
+        *,
+        revision=None,
+        cache_dir=None,
+        local_dir=None,
+        allow_patterns=None,
+        ignore_patterns=None,
+        local_files_only=False,
+    ):
+        target = Path(local_dir or self.target)
+        target.mkdir(parents=True, exist_ok=True)
+        (target / "config.json").write_text('{"model_type":"llama"}', encoding="utf-8")
+        return target
 
 
 def _manager(tmp_path, client):
@@ -187,3 +245,41 @@ def test_modelscope_provider_supports_list_repo_files_without_get_model_files():
         }
     ]
     assert [item.path for item in raw_files] == ["config.json", "model.safetensors"]
+
+
+def test_modelscope_download_repo_progress_callback_flushes(monkeypatch, tmp_path):
+    provider = ModelScopeDownloadProvider(TinyConfig(tmp_path), client=None)
+    api = DownloadRepoWithProgressApi(tmp_path / "download")
+    monkeypatch.setattr(provider, "_create_hub_api", lambda cls: api)
+    tracker = DownloadProgressTracker([RemoteFile("model.safetensors", 10)])
+    snapshots = []
+
+    result = provider.download_snapshot(
+        DownloadRequest(provider="modelscope", repo_id="damo/model"),
+        tmp_path / "target",
+        tracker,
+        on_progress=snapshots.append,
+    )
+
+    assert result == tmp_path / "target"
+    assert api.progress_callbacks
+    assert snapshots[-1].downloaded_bytes == 10
+    assert snapshots[-1].total_bytes == 10
+    assert snapshots[-1].current_file == "model.safetensors"
+
+
+def test_modelscope_download_repo_without_progress_callback_support_does_not_fail(monkeypatch, tmp_path):
+    provider = ModelScopeDownloadProvider(TinyConfig(tmp_path), client=None)
+    api = DownloadRepoWithoutProgressApi(tmp_path / "download")
+    monkeypatch.setattr(provider, "_create_hub_api", lambda cls: api)
+    tracker = DownloadProgressTracker([RemoteFile("config.json", None)])
+
+    result = provider.download_snapshot(
+        DownloadRequest(provider="modelscope", repo_id="damo/model"),
+        tmp_path / "target",
+        tracker,
+        on_progress=lambda snapshot: None,
+    )
+
+    assert result == tmp_path / "target"
+    assert (tmp_path / "target" / "config.json").exists()

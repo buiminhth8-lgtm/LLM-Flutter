@@ -107,10 +107,44 @@ class MissingLocalOnlyModelScopeClient(LocalOnlyModelScopeClient):
         raise DownloadLocalFilesNotFoundError("missing local cache token=ms_secret")
 
 
+class SnapshotProgressProvider:
+    name = "modelscope"
+    prefers_snapshot_download = True
+    config_bytes = b'{"model_type":"llama"}'
+
+    def resolve_files(self, request):
+        return [
+            RemoteFile("config.json", len(self.config_bytes)),
+            RemoteFile("model.safetensors", 10),
+        ]
+
+    def download_file(self, request, file, *, local_dir):
+        raise AssertionError("snapshot provider should not use per-file download")
+
+    def download_snapshot(self, request, target_dir, progress, cancel_token=None, on_progress=None):
+        target_dir.mkdir(parents=True, exist_ok=True)
+        snapshot = progress.update_file("model.safetensors", downloaded_delta=4, total_bytes=10)
+        if on_progress:
+            on_progress(snapshot)
+        time.sleep(0.1)
+        (target_dir / "config.json").write_bytes(self.config_bytes)
+        (target_dir / "model.safetensors").write_bytes(b"1234567890")
+        snapshot = progress.finish_file("model.safetensors", total_bytes=10)
+        if on_progress:
+            on_progress(snapshot)
+        return target_dir
+
+
 def _manager(tmp_path, modelscope_client):
     repo = JobRepository(tmp_path / "jobs.sqlite")
     queue = JobQueue(repo)
     return DownloadManager(TinyConfig(tmp_path), queue, modelscope_client=modelscope_client), repo, queue
+
+
+def _manager_with_provider(tmp_path, provider):
+    repo = JobRepository(tmp_path / "jobs.sqlite")
+    queue = JobQueue(repo)
+    return DownloadManager(TinyConfig(tmp_path), queue, providers={"modelscope": provider}), repo, queue
 
 
 def _wait_for_terminal(repo: JobRepository, job_id: str) -> Job:
@@ -255,6 +289,30 @@ def test_local_files_only_missing_cache_uses_stable_error_and_redacts(tmp_path):
     assert stored.status == JobStatus.FAILED.value
     assert stored.error_code == "DOWNLOAD_LOCAL_FILES_NOT_FOUND"
     assert stored.error_message == "missing local cache token=<redacted>"
+
+
+def test_snapshot_provider_progress_flushes_to_job_payload(tmp_path):
+    manager, repo, queue = _manager_with_provider(tmp_path, SnapshotProgressProvider())
+
+    job = manager.create_download(DownloadRequest(repo_id="org/model"))
+    deadline = time.monotonic() + 3
+    observed = None
+    while time.monotonic() < deadline:
+        payload = repo.get(job.id).payload
+        if payload.get("downloaded_bytes") == 4:
+            observed = payload
+            break
+        time.sleep(0.01)
+    queue.shutdown(wait=True)
+
+    assert observed is not None
+    expected_total = len(SnapshotProgressProvider.config_bytes) + 10
+    assert observed["total_bytes"] == expected_total
+    assert observed["percent"] == 4 / expected_total * 100.0
+    final_payload = repo.get(job.id).payload
+    assert final_payload["downloaded_bytes"] == expected_total
+    assert final_payload["total_bytes"] == expected_total
+    assert final_payload["completed_files"] >= 1
 
 
 def test_modelscope_error_text_redacts_tokens(monkeypatch):

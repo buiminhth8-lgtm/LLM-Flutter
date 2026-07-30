@@ -172,7 +172,30 @@ class DownloadManager:
         self._raise_if_cancelled(job.id, cancel_flag, request.provider)
 
         final_progress: DownloadProgress
-        if files:
+        provider_client = getattr(provider, "client", None)
+        use_snapshot_download = bool(getattr(provider, "prefers_snapshot_download", False))
+        if provider_client is not None and not hasattr(provider_client, "snapshot_download"):
+            use_snapshot_download = False
+        if use_snapshot_download:
+            provider.download_snapshot(
+                request,
+                temp_dir,
+                tracker,
+                cancel_flag,
+                on_progress=lambda snapshot: self._publish_progress(
+                    job.id,
+                    snapshot,
+                    f"正在下载 {snapshot.current_file or request.repo_id}",
+                ),
+            )
+            scanned = self._scan_progress(temp_dir)
+            final_progress = tracker.observe_local_state(
+                downloaded_bytes=scanned.downloaded_bytes,
+                completed_files=scanned.completed_files,
+            )
+            self._publish_progress(job.id, final_progress, "下载完成，已根据本地文件扫描更新进度。")
+            self._raise_if_cancelled(job.id, cancel_flag, request.provider)
+        elif files:
             for remote_file in files:
                 self._publish_progress(job.id, tracker.start_file(remote_file.path), f"正在下载 {remote_file.path}")
                 self._raise_if_cancelled(job.id, cancel_flag, request.provider)
