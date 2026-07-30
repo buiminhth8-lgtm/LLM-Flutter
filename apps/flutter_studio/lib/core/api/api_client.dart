@@ -351,6 +351,94 @@ class LlmStudioClient {
     return (body['data'] as List?) ?? const [];
   }
 
+  Future<List<dynamic>> promptTemplates({
+    String? type,
+    String? scope,
+    String? projectId,
+  }) async {
+    final query = <String, String>{
+      if (type != null && type.isNotEmpty) 'type': type,
+      if (scope != null && scope.isNotEmpty) 'scope': scope,
+      if (projectId != null && projectId.isNotEmpty) 'project_id': projectId,
+    };
+    final path = Uri(
+      path: '/v1/prompts/templates',
+      queryParameters: query.isEmpty ? null : query,
+    ).toString();
+    final body = await _getMap(path);
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> createPromptTemplate(Map<String, Object?> body) {
+    return _postMap('/v1/prompts/templates', body: body);
+  }
+
+  Future<Map<String, dynamic>> updatePromptTemplate(
+    String templateId,
+    Map<String, Object?> body,
+  ) {
+    return _patchMap(
+      '/v1/prompts/templates/${Uri.encodeComponent(templateId)}',
+      body,
+    );
+  }
+
+  Future<void> deletePromptTemplate(String templateId) async {
+    await _deleteMap(
+      '/v1/prompts/templates/${Uri.encodeComponent(templateId)}',
+    );
+  }
+
+  Future<List<dynamic>> promptTemplateVersions(String templateId) async {
+    final body = await _getMap(
+      '/v1/prompts/templates/${Uri.encodeComponent(templateId)}/versions',
+    );
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> createPromptTemplateVersion(
+    String templateId,
+    Map<String, Object?> body,
+  ) {
+    return _postMap(
+      '/v1/prompts/templates/${Uri.encodeComponent(templateId)}/versions',
+      body: body,
+    );
+  }
+
+  Future<Map<String, dynamic>> activatePromptTemplateVersion(
+    String templateId,
+    String versionId,
+  ) {
+    return _postMap(
+      '/v1/prompts/templates/${Uri.encodeComponent(templateId)}/versions/${Uri.encodeComponent(versionId)}/activate',
+      body: const {},
+    );
+  }
+
+  Future<Map<String, dynamic>> renderPrompt(Map<String, Object?> body) {
+    return _postMap('/v1/prompts/render', body: body);
+  }
+
+  Future<List<dynamic>> ensureDefaultPromptTemplates() async {
+    final body = await _postMap('/v1/prompts/defaults/ensure', body: const {});
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> copyPromptTemplateToProject(
+    String templateId, {
+    required String projectId,
+    String? name,
+  }) {
+    return _postMap(
+      '/v1/prompts/templates/${Uri.encodeComponent(templateId)}/copy-to-project',
+      body: {
+        'project_id': projectId,
+        if (name != null && name.isNotEmpty) 'name': name,
+      },
+    );
+  }
+
   Future<String> ragQuery(String query, {int topK = 5}) async {
     final body = await _postMap(
       '/v1/rag/query',

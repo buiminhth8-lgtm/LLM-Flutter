@@ -14,6 +14,7 @@ class ApiState:
     job_queue: Any | None = None
     diagnostics_exporter: Any | None = None
     novel_service: Any | None = None
+    prompt_service: Any | None = None
 
 
 _state = ApiState()

@@ -89,6 +89,15 @@ def required_permission_for_request(method: str, path: str) -> Permission | None
             return Permission.DELETE_NOVELS
         return Permission.MANAGE_NOVELS
 
+    if path.startswith("/v1/prompts"):
+        if method == "GET":
+            return Permission.VIEW_PROMPTS
+        if path == "/v1/prompts/render" and method == "POST":
+            return Permission.VIEW_PROMPTS
+        if method == "DELETE":
+            return Permission.DELETE_PROMPTS
+        return Permission.MANAGE_PROMPTS
+
     if path.startswith("/v1/vision"):
         return Permission.CHAT
 
