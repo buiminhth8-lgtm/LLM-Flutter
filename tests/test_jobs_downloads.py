@@ -26,7 +26,10 @@ class TinyConfig:
                 "jobs_dir": str(root / "jobs"),
                 "diagnostics_dir": str(root / "diagnostics"),
             },
-            "huggingface": {"cache_dir": str(root / "hf")},
+            "downloads": {
+                "default_provider": "modelscope",
+                "providers": {"modelscope": {"cache_dir": str(root / "ms-cache")}},
+            },
             "external_models": [],
         }
 
@@ -34,10 +37,13 @@ class TinyConfig:
         return self._data.get(key, default)
 
 
-class FakeHFClient:
+class FakeModelScopeClient:
+    def list_files(self, request):
+        return []
+
     def snapshot_download(self, request, *, local_dir, cache_dir=None):
         local_dir.mkdir(parents=True, exist_ok=True)
-        (local_dir / "config.json").write_text("{}", encoding="utf-8")
+        (local_dir / "config.json").write_text('{"model_type":"llama"}', encoding="utf-8")
         (local_dir / "model.safetensors").write_bytes(b"x")
         return local_dir
 
@@ -83,7 +89,7 @@ def test_download_manager_does_not_store_token(tmp_path):
     config = TinyConfig(tmp_path)
     repo = JobRepository(tmp_path / "jobs.sqlite")
     queue = JobQueue(repo)
-    manager = DownloadManager(config, queue, hf_client=FakeHFClient())
+    manager = DownloadManager(config, queue, modelscope_client=FakeModelScopeClient())
 
     job = manager.create_download(DownloadRequest(repo_id="org/model", token="hf_secret"))
 

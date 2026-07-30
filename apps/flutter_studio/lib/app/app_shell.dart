@@ -66,7 +66,7 @@ class _StudioShellState extends State<StudioShell> {
   final _downloadRevisionController = TextEditingController();
   final _downloadAllowController = TextEditingController();
   final _downloadIgnoreController = TextEditingController();
-  String _downloadProvider = 'huggingface';
+  String _downloadProvider = 'modelscope';
   final _systemController = TextEditingController(
     text: 'You are a concise and reliable local assistant.',
   );

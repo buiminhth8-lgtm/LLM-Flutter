@@ -29,7 +29,10 @@ class TinyConfig:
                 "cleanup": {"incomplete_download_days": 0},
             },
             "uploads": {"temp_dir": str(root / "uploads")},
-            "huggingface": {"cache_dir": str(root / "hf-cache-managed")},
+            "downloads": {
+                "default_provider": "modelscope",
+                "providers": {"modelscope": {"cache_dir": str(root / "ms-cache")}},
+            },
             "external_models": [],
         }
 
@@ -56,7 +59,7 @@ def test_failed_download_records_temp_dir_and_cleanup_preview(tmp_path):
     config = TinyConfig(tmp_path)
     repo = JobRepository(tmp_path / "jobs.sqlite")
     queue = JobQueue(repo)
-    manager = DownloadManager(config, queue, hf_client=FailingDownloadClient())
+    manager = DownloadManager(config, queue, modelscope_client=FailingDownloadClient())
 
     job = manager.create_download(DownloadRequest(repo_id="org/model"))
     queue.shutdown(wait=True)
@@ -77,8 +80,8 @@ def test_cancelled_and_failed_download_temp_dirs_are_cleanable(tmp_path):
     failed = tmp_path / "downloads" / "job-failed1234567890-org--model"
     cancelled = tmp_path / "downloads" / "job-cancelled123456-org--model"
     final_model = tmp_path / "models" / "transformers" / "ready"
-    global_hf_cache = tmp_path / "global-hf-cache"
-    for path in (failed, cancelled, final_model, global_hf_cache):
+    global_modelscope_cache = tmp_path / "global-modelscope-cache"
+    for path in (failed, cancelled, final_model, global_modelscope_cache):
         path.mkdir(parents=True)
         (path / "x.bin").write_bytes(b"x")
         _make_old(path)
@@ -91,11 +94,11 @@ def test_cancelled_and_failed_download_temp_dirs_are_cleanable(tmp_path):
     assert failed in preview_paths
     assert cancelled in preview_paths
     assert final_model not in preview_paths
-    assert global_hf_cache not in preview_paths
+    assert global_modelscope_cache not in preview_paths
     assert not failed.exists()
     assert not cancelled.exists()
     assert final_model.exists()
-    assert global_hf_cache.exists()
+    assert global_modelscope_cache.exists()
     assert result["errors"] == []
 
 

@@ -89,7 +89,7 @@ class LlmStudioClient {
 
   Future<Map<String, dynamic>> startDownload({
     required String repoId,
-    String provider = 'huggingface',
+    String provider = 'modelscope',
     String? revision,
     List<String>? allowPatterns,
     List<String>? ignorePatterns,

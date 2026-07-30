@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import threading
+import warnings
 from pathlib import Path
 from typing import Any
 
@@ -28,7 +29,6 @@ from .exceptions import (
     DownloadRetryNotAllowedError,
     DownloadValidationError,
 )
-from .huggingface_client import HuggingFaceDownloadClient
 from .progress import DownloadProgressTracker, RemoteFile
 from .providers.base import DownloadProvider
 from .providers.registry import get_download_provider
@@ -46,7 +46,6 @@ class DownloadManager:
         self,
         config,
         job_queue: JobQueue,
-        hf_client: HuggingFaceDownloadClient | None = None,
         modelscope_client: Any | None = None,
         providers: dict[str, DownloadProvider] | None = None,
         model_repository: LocalModelRepository | None = None,
@@ -55,7 +54,6 @@ class DownloadManager:
         self.layout = layout_from_config(config)
         self.layout.ensure()
         self.job_queue = job_queue
-        self.hf_client = hf_client or HuggingFaceDownloadClient()
         self.modelscope_client = modelscope_client
         self.providers = providers or {}
         self.model_repository = model_repository or LocalModelRepository(config, self.layout)
@@ -298,8 +296,16 @@ class DownloadManager:
     def _default_provider_name(self) -> str:
         downloads_cfg = self.config.get("downloads", {})
         if isinstance(downloads_cfg, dict):
-            return str(downloads_cfg.get("default_provider") or "huggingface").strip().lower()
-        return "huggingface"
+            configured = str(downloads_cfg.get("default_provider") or "modelscope").strip().lower()
+            if configured in {"huggingface", "hf"}:
+                warnings.warn(
+                    "Hugging Face download provider has been removed; using ModelScope.",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
+                return "modelscope"
+            return configured
+        return "modelscope"
 
     def _with_default_provider(self, request: DownloadRequest) -> DownloadRequest:
         if request.provider:
@@ -322,9 +328,8 @@ class DownloadManager:
         return get_download_provider(
             name,
             self.config,
-            hf_client=self.hf_client,
             modelscope_client=self.modelscope_client,
         )
 
     def _provider_label(self, provider: str | None) -> str:
-        return "ModelScope" if provider == "modelscope" else "Hugging Face"
+        return "ModelScope"

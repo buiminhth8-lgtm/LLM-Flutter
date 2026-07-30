@@ -106,7 +106,7 @@ async def cancel_download(job_id: str):
         raise api_error(409, DOWNLOAD_CANCEL_NOT_ALLOWED, str(exc), _request_id()) from exc
     data = DownloadTaskState.from_job(job).to_dict()
     data["error_code"] = data["error_code"] or DOWNLOAD_CANCEL_REQUESTED
-    data["cancel_semantics"] = "取消请求已提交；当前网络传输步骤可能结束后才会停止，重试会复用 Hugging Face 缓存。"
+    data["cancel_semantics"] = "取消请求已提交；当前网络传输步骤可能结束后才会停止，重试会复用 ModelScope 缓存。"
     return data
 
 
@@ -123,7 +123,7 @@ async def retry_download(job_id: str):
     return {
         "job_id": retried.id,
         "resume_supported": True,
-        "message": "Retry reuses the Hugging Face cache; strict pause/resume is not claimed.",
+        "message": "Retry reuses the ModelScope cache; strict pause/resume is not claimed.",
     }
 
 

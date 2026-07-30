@@ -98,15 +98,9 @@ models:
   follow_symlinks: false
   minimum_free_space_gb: 10
 
-huggingface:
-  cache_dir: "./data/huggingface"
-  use_global_cache: false
-
 downloads:
-  default_provider: "huggingface"
+  default_provider: "modelscope"
   providers:
-    huggingface:
-      cache_dir: "./data/cache/huggingface"
     modelscope:
       cache_dir: "./data/cache/modelscope"
       endpoint: "https://modelscope.cn"

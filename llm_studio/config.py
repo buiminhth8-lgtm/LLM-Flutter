@@ -112,16 +112,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "follow_symlinks": False,
         "minimum_free_space_gb": 10,
     },
-    "huggingface": {
-        "cache_dir": "./data/huggingface",
-        "use_global_cache": False,
-    },
     "downloads": {
-        "default_provider": "huggingface",
+        "default_provider": "modelscope",
         "providers": {
-            "huggingface": {
-                "cache_dir": "./data/cache/huggingface",
-            },
             "modelscope": {
                 "cache_dir": "./data/cache/modelscope",
                 "endpoint": "https://modelscope.cn",
@@ -285,8 +278,6 @@ class Config:
             self._data[key] = str(p.resolve())
         for section, keys in {
             "models": ("root_dir", "temp_dir", "metadata_cache", "adapters_dir"),
-            "huggingface": ("cache_dir",),
-            "downloads.providers.huggingface": ("cache_dir",),
             "downloads.providers.modelscope": ("cache_dir",),
             "storage": ("trash_dir", "benchmarks_dir", "jobs_dir", "diagnostics_dir"),
             "uploads": ("temp_dir",),

@@ -19,7 +19,10 @@ class TinyConfig:
                 "follow_symlinks": False,
             },
             "storage": {"trash_dir": str(root / "trash"), "jobs_dir": str(root / "jobs")},
-            "huggingface": {"cache_dir": str(root / "hf-cache")},
+            "downloads": {
+                "default_provider": "modelscope",
+                "providers": {"modelscope": {"cache_dir": str(root / "ms-cache")}},
+            },
             "external_models": [],
         }
 
@@ -47,36 +50,37 @@ class LocalOnlyClient:
         return local_dir
 
 
-def _manager(tmp_path, hf_client):
+def _manager(tmp_path, modelscope_client):
     repo = JobRepository(tmp_path / "jobs.sqlite")
     queue = JobQueue(repo)
-    return DownloadManager(TinyConfig(tmp_path), queue, hf_client=hf_client), repo, queue
+    return DownloadManager(TinyConfig(tmp_path), queue, modelscope_client=modelscope_client), repo, queue
 
 
 def test_local_files_only_does_not_call_remote_metadata_api(tmp_path):
-    hf_client = LocalOnlyClient()
-    manager, repo, queue = _manager(tmp_path, hf_client)
+    modelscope_client = LocalOnlyClient()
+    manager, repo, queue = _manager(tmp_path, modelscope_client)
 
     job = manager.create_download(DownloadRequest(repo_id="org/model", local_files_only=True))
     queue.shutdown(wait=True)
 
     state = DownloadTaskState.from_job(repo.get(job.id))
-    assert hf_client.list_files_called is False
-    assert hf_client.snapshot_local_files_only is True
+    assert modelscope_client.list_files_called is False
+    assert modelscope_client.snapshot_local_files_only is True
     assert state.status == JobStatus.SUCCEEDED.value
+    assert state.provider == "modelscope"
     assert state.total_bytes is None
     assert state.percent is None
 
 
 def test_local_files_only_missing_cache_returns_stable_error(tmp_path):
-    hf_client = LocalOnlyClient(missing=True)
-    manager, repo, queue = _manager(tmp_path, hf_client)
+    modelscope_client = LocalOnlyClient(missing=True)
+    manager, repo, queue = _manager(tmp_path, modelscope_client)
 
     job = manager.create_download(DownloadRequest(repo_id="org/model", local_files_only=True))
     queue.shutdown(wait=True)
 
     stored = repo.get(job.id)
-    assert hf_client.list_files_called is False
-    assert hf_client.snapshot_local_files_only is True
+    assert modelscope_client.list_files_called is False
+    assert modelscope_client.snapshot_local_files_only is True
     assert stored.status == JobStatus.FAILED.value
     assert stored.error_code == "DOWNLOAD_LOCAL_FILES_NOT_FOUND"

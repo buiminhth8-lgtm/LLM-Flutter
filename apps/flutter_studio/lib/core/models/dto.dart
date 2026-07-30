@@ -96,7 +96,7 @@ class DownloadTaskDto {
     return DownloadTaskDto(
       jobId: '${map['job_id'] ?? map['id'] ?? ''}',
       provider:
-          '${map['provider'] ?? map['payload']?['provider'] ?? 'huggingface'}',
+          '${map['provider'] ?? map['payload']?['provider'] ?? 'modelscope'}',
       repoId: '${map['repo_id'] ?? map['payload']?['repo_id'] ?? ''}',
       revision: asString(map['revision'] ?? map['payload']?['revision']),
       status: status,

@@ -50,7 +50,7 @@ class DownloadsPage extends StatelessWidget {
         children: [
           AppSectionHeader(
             title: 'Downloads',
-            subtitle: '下载以后台 Job 运行；total_bytes 未知时不显示伪造百分比，取消是协作式请求。',
+            subtitle: '下载通过后台 Job 运行；总大小未知时不显示伪造百分比，取消是协作式请求。',
             actions: [
               IconButton.filledTonal(
                 onPressed: onRefresh,
@@ -64,32 +64,15 @@ class DownloadsPage extends StatelessWidget {
             children: [
               SizedBox(
                 width: 220,
-                child: DropdownButtonFormField<String>(
-                  initialValue: provider,
-                  isExpanded: true,
+                child: InputDecorator(
                   decoration: const InputDecoration(
                     labelText: 'Provider',
                     border: OutlineInputBorder(),
                   ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'huggingface',
-                      child: Text('Hugging Face'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'modelscope',
-                      child: Text('ModelScope / 魔塔社区'),
-                    ),
-                  ],
-                  selectedItemBuilder: (context) => const [
-                    Text('Hugging Face', overflow: TextOverflow.ellipsis),
-                    Text('ModelScope', overflow: TextOverflow.ellipsis),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) {
-                      onProviderChanged(value);
-                    }
-                  },
+                  child: Text(
+                    _providerLabel(provider),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -97,7 +80,7 @@ class DownloadsPage extends StatelessWidget {
                 child: TextField(
                   controller: repoController,
                   decoration: const InputDecoration(
-                    labelText: 'repo_id / model_id',
+                    labelText: 'ModelScope model_id',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -150,7 +133,7 @@ class DownloadsPage extends StatelessWidget {
             child: downloads.isEmpty
                 ? const AppEmptyState(
                     title: '没有下载任务',
-                    message: '选择下载源并输入 repo_id / model_id 后创建后台下载任务。',
+                    message: '输入 ModelScope model_id 后创建后台下载任务。',
                     icon: Icons.cloud_download_outlined,
                   )
                 : ListView.separated(
@@ -201,9 +184,10 @@ class _DownloadCard extends StatelessWidget {
     final totalText = task.totalBytes == null
         ? '总大小未知'
         : formatBytes(task.totalBytes);
-    final etaText = formatEta(task.etaSeconds);
     final statusText = task.cancelRequested ? '取消请求已提交' : task.status;
     final providerLabel = _providerLabel(task.provider);
+    final errorText =
+        '${task.errorCode ?? 'DOWNLOAD_FAILED'}: ${task.errorMessage}';
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -247,7 +231,7 @@ class _DownloadCard extends StatelessWidget {
               children: [
                 Text('${formatBytes(task.downloadedBytes)} / $totalText'),
                 Text(formatSpeed(task.speedBytesPerSecond)),
-                Text(etaText),
+                Text(formatEta(task.etaSeconds)),
                 if (task.totalFiles != null)
                   Text(
                     '${task.completedFiles ?? 0} / ${task.totalFiles} files',
@@ -274,7 +258,7 @@ class _DownloadCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: SelectableText(
-                      '${task.errorCode ?? 'DOWNLOAD_FAILED'}: ${task.errorMessage}',
+                      errorText,
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.error,
                       ),
@@ -282,12 +266,8 @@ class _DownloadCard extends StatelessWidget {
                   ),
                   IconButton(
                     tooltip: '复制错误信息',
-                    onPressed: () => Clipboard.setData(
-                      ClipboardData(
-                        text:
-                            '${task.errorCode ?? 'DOWNLOAD_FAILED'}: ${task.errorMessage}',
-                      ),
-                    ),
+                    onPressed: () =>
+                        Clipboard.setData(ClipboardData(text: errorText)),
                     icon: const Icon(Icons.copy),
                   ),
                 ],
@@ -352,10 +332,6 @@ class _DownloadCard extends StatelessWidget {
     };
   }
 
-  String _providerLabel(String provider) {
-    return provider == 'modelscope' ? 'ModelScope' : 'Hugging Face';
-  }
-
   String _progressLabel(DownloadTaskDto task) {
     if (task.isFailed) {
       return '下载失败';
@@ -372,3 +348,5 @@ class _DownloadCard extends StatelessWidget {
     return '进度未知';
   }
 }
+
+String _providerLabel(String provider) => 'ModelScope / 魔塔社区';

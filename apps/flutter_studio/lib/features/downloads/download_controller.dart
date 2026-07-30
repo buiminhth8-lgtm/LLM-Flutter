@@ -29,7 +29,7 @@ class DownloadController extends ChangeNotifier {
 
   Future<void> start({
     required String repoId,
-    String provider = 'huggingface',
+    String provider = 'modelscope',
     String? revision,
     List<String>? allowPatterns,
     List<String>? ignorePatterns,

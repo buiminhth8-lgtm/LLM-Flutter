@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_studio/core/api/api_client.dart';
@@ -33,33 +34,46 @@ class DownloadHttpClient extends http.BaseClient {
 }
 
 void main() {
-  test(
-    'startDownload body supports provider revision and pattern filters',
-    () async {
-      final httpClient = DownloadHttpClient();
-      final client = LlmStudioClient(
-        'http://127.0.0.1:8000',
-        httpClient: httpClient,
-      );
+  test('startDownload defaults to ModelScope provider', () async {
+    final httpClient = DownloadHttpClient();
+    final client = LlmStudioClient(
+      'http://127.0.0.1:8000',
+      httpClient: httpClient,
+    );
 
-      await client.startDownload(
-        provider: 'modelscope',
-        repoId: 'org/model',
-        revision: 'main',
-        allowPatterns: ['*.json'],
-        ignorePatterns: ['*.md'],
-      );
+    await client.startDownload(repoId: 'damo/model');
 
-      final request = httpClient.requests.single;
-      final body = jsonDecode(request.body) as Map<String, dynamic>;
-      expect(request.url.path, '/v1/downloads');
-      expect(body['provider'], 'modelscope');
-      expect(body['repo_id'], 'org/model');
-      expect(body['revision'], 'main');
-      expect(body['allow_patterns'], ['*.json']);
-      expect(body['ignore_patterns'], ['*.md']);
-    },
-  );
+    final body =
+        jsonDecode(httpClient.requests.single.body) as Map<String, dynamic>;
+    expect(httpClient.requests.single.url.path, '/v1/downloads');
+    expect(body['provider'], 'modelscope');
+    expect(body['repo_id'], 'damo/model');
+  });
+
+  test('startDownload body supports revision and pattern filters', () async {
+    final httpClient = DownloadHttpClient();
+    final client = LlmStudioClient(
+      'http://127.0.0.1:8000',
+      httpClient: httpClient,
+    );
+
+    await client.startDownload(
+      provider: 'modelscope',
+      repoId: 'org/model',
+      revision: 'main',
+      allowPatterns: ['*.json'],
+      ignorePatterns: ['*.md'],
+    );
+
+    final request = httpClient.requests.single;
+    final body = jsonDecode(request.body) as Map<String, dynamic>;
+    expect(request.url.path, '/v1/downloads');
+    expect(body['provider'], 'modelscope');
+    expect(body['repo_id'], 'org/model');
+    expect(body['revision'], 'main');
+    expect(body['allow_patterns'], ['*.json']);
+    expect(body['ignore_patterns'], ['*.md']);
+  });
 
   test(
     'downloads parse provider null total bytes and nullable percent',
@@ -106,6 +120,7 @@ void main() {
       'status': 'failed',
     });
 
+    expect(running.provider, 'modelscope');
     expect(running.canCancel, isTrue);
     expect(running.canDelete, isFalse);
     expect(failed.canCancel, isFalse);

@@ -4,7 +4,6 @@ from llm_studio.downloads.exceptions import (
     DownloadProviderNotInstalledError,
     DownloadProviderNotSupportedError,
 )
-from llm_studio.downloads.providers.huggingface import HuggingFaceDownloadProvider
 from llm_studio.downloads.providers.modelscope import ModelScopeDownloadProvider
 from llm_studio.downloads.providers.registry import get_download_provider
 
@@ -21,16 +20,23 @@ class TinyConfig:
         }.get(key, default)
 
 
-def test_registry_returns_huggingface_provider():
-    provider = get_download_provider("huggingface", TinyConfig(), hf_client=object())
-
-    assert isinstance(provider, HuggingFaceDownloadProvider)
-
-
 def test_registry_returns_modelscope_provider_with_fake_client():
     provider = get_download_provider("modelscope", TinyConfig(), modelscope_client=object())
 
     assert isinstance(provider, ModelScopeDownloadProvider)
+
+
+def test_registry_defaults_to_modelscope_provider_with_fake_client():
+    provider = get_download_provider(None, TinyConfig(), modelscope_client=object())
+
+    assert isinstance(provider, ModelScopeDownloadProvider)
+
+
+def test_registry_rejects_huggingface_provider():
+    with pytest.raises(DownloadProviderNotSupportedError) as error:
+        get_download_provider("huggingface", TinyConfig())
+
+    assert error.value.error_code == "DOWNLOAD_PROVIDER_NOT_SUPPORTED"
 
 
 def test_registry_rejects_unknown_provider():

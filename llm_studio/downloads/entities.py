@@ -83,7 +83,7 @@ class DownloadTaskState:
             percent = min(100.0, max(0.0, int(downloaded_bytes) / int(total_bytes) * 100.0))
         return cls(
             job_id=job.id,
-            provider=str(payload.get("provider", "huggingface")),
+            provider=str(payload.get("provider", "modelscope")),
             repo_id=str(payload.get("repo_id", "")),
             revision=payload.get("revision"),
             status=status,

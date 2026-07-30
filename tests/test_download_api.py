@@ -30,7 +30,7 @@ storage:
 class FakeDownloadManager:
     last_request = None
 
-    def __init__(self, config, job_queue, hf_client=None, model_repository=None):
+    def __init__(self, config, job_queue, modelscope_client=None, model_repository=None):
         self.job_queue = job_queue
 
     def create_download(self, request):

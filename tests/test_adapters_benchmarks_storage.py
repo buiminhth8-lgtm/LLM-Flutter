@@ -142,8 +142,14 @@ def test_storage_cleanup_preview_does_not_include_models(tmp_path):
 
 
 def test_redaction_and_path_size(tmp_path):
-    data = redact_config({"runtime": {}, "huggingface": {"token": "secret"}, "api": {"api_key": "x"}})
-    assert data["huggingface"]["token"] == "<redacted>"
+    data = redact_config(
+        {
+            "runtime": {},
+            "downloads": {"providers": {"modelscope": {"token": "secret"}}},
+            "api": {"api_key": "x"},
+        }
+    )
+    assert data["downloads"]["providers"]["modelscope"]["token"] == "<redacted>"
     assert data["api"]["api_key"] == "<redacted>"
     file = tmp_path / "x.txt"
     file.write_text("abc", encoding="utf-8")
