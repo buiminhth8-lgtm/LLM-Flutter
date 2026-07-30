@@ -53,6 +53,7 @@ from .api.errors import (
     error_payload,
 )
 from .api.routers.capabilities import router as capabilities_router
+from .api.routers.context import router as context_router
 from .api.routers.diagnostics import router as diagnostics_router
 from .api.routers.downloads import router as downloads_router
 from .api.routers.jobs import router as jobs_router
@@ -65,6 +66,7 @@ from .benchmarks import BenchmarkConfig, BenchmarkRunner
 from .chat import ChatMessage as CoreChatMessage
 from .chat import InvalidChatMessageError
 from .config import Config
+from .context import ContextService
 from .diagnostics import export_diagnostics
 from .downloads import DownloadManager
 from .execution import run_blocking_io, run_cpu_bound
@@ -115,6 +117,7 @@ _adapter_repository: AdapterRepository | None = None
 _gpu_scheduler: GpuTaskScheduler | None = None
 _novel_service: NovelService | None = None
 _prompt_service: PromptService | None = None
+_context_service: ContextService | None = None
 _current_model_id: str | None = None
 _runner_model_ids: dict[str, str] = {}
 
@@ -128,7 +131,8 @@ def get_app(config: Config):
     from starlette.middleware.base import BaseHTTPMiddleware
 
     global _config, _rag_pipeline, _admin, _concurrency
-    global _model_repository, _job_repository, _job_queue, _download_manager, _adapter_repository, _gpu_scheduler, _novel_service, _prompt_service
+    global _model_repository, _job_repository, _job_queue, _download_manager, _adapter_repository, _gpu_scheduler
+    global _novel_service, _prompt_service, _context_service
     _config = config
     layout = layout_from_config(config)
     layout.ensure()
@@ -159,6 +163,11 @@ def get_app(config: Config):
     _download_manager = DownloadManager(config, _job_queue, model_repository=_model_repository)
     _novel_service = NovelService.from_config(config)
     _prompt_service = PromptService.from_config(config, novel_service=_novel_service)
+    _context_service = ContextService.from_config(
+        config,
+        novel_service=_novel_service,
+        prompt_service=_prompt_service,
+    )
     configure_api_state(
         config=config,
         download_manager=_download_manager,
@@ -167,6 +176,7 @@ def get_app(config: Config):
         diagnostics_exporter=lambda cfg: export_diagnostics(cfg),
         novel_service=_novel_service,
         prompt_service=_prompt_service,
+        context_service=_context_service,
     )
     _adapter_repository = AdapterRepository(config)
     runtime_cfg = config.runtime
@@ -215,6 +225,7 @@ def get_app(config: Config):
     app.include_router(diagnostics_router)
     app.include_router(novels_router)
     app.include_router(prompts_router)
+    app.include_router(context_router)
 
     @app.middleware("http")
     async def request_id_middleware(request: Request, call_next):

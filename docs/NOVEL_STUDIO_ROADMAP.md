@@ -4,6 +4,11 @@ Novel Studio is developed in stages on top of the existing LLM-Studio backend
 and Flutter Windows client.
 
 Stage 2 Prompt Studio details: [NOVEL_STAGE2_PROMPT_STUDIO.md](NOVEL_STAGE2_PROMPT_STUDIO.md).
+Stage 3 Context Assembler details: [NOVEL_STAGE3_CONTEXT_ASSEMBLER.md](NOVEL_STAGE3_CONTEXT_ASSEMBLER.md).
+
+Stage 3 is implemented: Novel records can be selected, prioritized, formatted,
+budgeted, truncated, persisted, and rendered through the Stage 2
+`PromptRenderer`. Runtime generation remains reserved for Stage 4.
 
 ## 阶段 0：工程基线整理与开发入口
 

@@ -99,6 +99,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "prompts": {
         "db_path": "./data/novels/novels.sqlite",
     },
+    "context": {
+        "db_path": "./data/novels/novels.sqlite",
+    },
     "finetune": {
         "method": "qlora",
         "lora_r": 16,
@@ -300,6 +303,7 @@ class Config:
             "uploads": ("temp_dir",),
             "novels": ("db_path",),
             "prompts": ("db_path",),
+            "context": ("db_path",),
         }.items():
             cfg = self._section(section)
             for key in keys:

@@ -15,6 +15,7 @@ class ApiState:
     diagnostics_exporter: Any | None = None
     novel_service: Any | None = None
     prompt_service: Any | None = None
+    context_service: Any | None = None
 
 
 _state = ApiState()

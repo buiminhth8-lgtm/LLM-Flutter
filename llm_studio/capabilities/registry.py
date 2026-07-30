@@ -60,6 +60,9 @@ _CAPABILITIES: tuple[CapabilityInfo, ...] = (
     CapabilityInfo("novel_studio", CapabilityStatus.NOT_IMPLEMENTED, "Novel Studio is a staged roadmap item; Stage 0 only prepares feature flags, documentation, and placeholders.", False),
     CapabilityInfo("novel_projects", CapabilityStatus.NOT_IMPLEMENTED, "Novel project CRUD is not implemented in Stage 0.", False),
     CapabilityInfo("prompt_studio", CapabilityStatus.NOT_IMPLEMENTED, "Prompt Studio templates are planned for a later stage.", False),
+    CapabilityInfo("context_assembler", CapabilityStatus.NOT_IMPLEMENTED, "Context Assembler is disabled until Novel Studio is enabled.", False),
+    CapabilityInfo("context_budget", CapabilityStatus.NOT_IMPLEMENTED, "Novel context budget management is disabled.", False),
+    CapabilityInfo("context_render_preview", CapabilityStatus.NOT_IMPLEMENTED, "Context-based Prompt preview is disabled.", False),
     CapabilityInfo("writing_workspace", CapabilityStatus.NOT_IMPLEMENTED, "The novel writing workspace is planned but not implemented.", False),
     CapabilityInfo("revision_system", CapabilityStatus.NOT_IMPLEMENTED, "Revision and version workflows are planned but not implemented.", False),
     CapabilityInfo("dataset_builder", CapabilityStatus.NOT_IMPLEMENTED, "Novel dataset building is planned but not implemented.", False),
@@ -78,7 +81,7 @@ def get_capabilities_for_config(config) -> tuple[CapabilityInfo, ...]:
     if not is_novel_studio_enabled(config):
         return _CAPABILITIES
     overrides = {
-        "novel_studio": (CapabilityStatus.PARTIAL, "Novel Studio Stage 2 foundation and Prompt Studio preview APIs are available.", True),
+        "novel_studio": (CapabilityStatus.PARTIAL, "Novel Studio Stage 3 foundation, Prompt Studio, and Context Assembler are available.", True),
         "novel_projects": (CapabilityStatus.AVAILABLE, "Novel project CRUD is available.", True),
         "novel_world_bible": (CapabilityStatus.AVAILABLE, "Novel world bible entries are available.", True),
         "novel_characters": (CapabilityStatus.AVAILABLE, "Novel character records are available.", True),
@@ -86,7 +89,9 @@ def get_capabilities_for_config(config) -> tuple[CapabilityInfo, ...]:
         "prompt_studio": (CapabilityStatus.AVAILABLE, "Prompt templates, immutable versions, and preview rendering are available.", True),
         "prompt_template_versions": (CapabilityStatus.AVAILABLE, "Prompt template version history and activation are available.", True),
         "prompt_render_preview": (CapabilityStatus.AVAILABLE, "Prompt rendering preview is available without calling Runtime or Runner.", True),
-        "context_assembler": (CapabilityStatus.NOT_IMPLEMENTED, "Context Assembler is planned for Stage 3 and not implemented in Stage 2.", False),
+        "context_assembler": (CapabilityStatus.AVAILABLE, "Novel records are selected, prioritized, budgeted, and assembled without calling Runtime.", True),
+        "context_budget": (CapabilityStatus.AVAILABLE, "Deterministic token and character budgets with priority-based truncation are available.", True),
+        "context_render_preview": (CapabilityStatus.AVAILABLE, "Assembled variables can be rendered through PromptRenderer without model generation.", True),
     }
     existing = {cap.name for cap in _CAPABILITIES}
     result: list[CapabilityInfo] = []
