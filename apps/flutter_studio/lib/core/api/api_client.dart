@@ -351,6 +351,13 @@ class LlmStudioClient {
     return (body['data'] as List?) ?? const [];
   }
 
+  Future<List<dynamic>> novelScenes(String chapterId) async {
+    final body = await _getMap(
+      '/v1/novels/chapters/${Uri.encodeComponent(chapterId)}/scenes',
+    );
+    return (body['data'] as List?) ?? const [];
+  }
+
   Future<List<dynamic>> promptTemplates({
     String? type,
     String? scope,
@@ -437,6 +444,34 @@ class LlmStudioClient {
         if (name != null && name.isNotEmpty) 'name': name,
       },
     );
+  }
+
+  Future<Map<String, dynamic>> assembleContext(Map<String, Object?> body) {
+    return _postMap('/v1/context/assemble', body: body);
+  }
+
+  Future<Map<String, dynamic>> renderContextPreview(Map<String, Object?> body) {
+    return _postMap('/v1/context/render-preview', body: body);
+  }
+
+  Future<Map<String, dynamic>> estimateContext(Map<String, Object?> body) {
+    return _postMap('/v1/context/estimate', body: body);
+  }
+
+  Future<List<dynamic>> contextRecords({
+    String? projectId,
+    String? chapterId,
+  }) async {
+    final query = <String, String>{
+      if (projectId != null && projectId.isNotEmpty) 'project_id': projectId,
+      if (chapterId != null && chapterId.isNotEmpty) 'chapter_id': chapterId,
+    };
+    final path = Uri(
+      path: '/v1/context/records',
+      queryParameters: query.isEmpty ? null : query,
+    ).toString();
+    final body = await _getMap(path);
+    return (body['data'] as List?) ?? const [];
   }
 
   Future<String> ragQuery(String query, {int topK = 5}) async {

@@ -3,6 +3,7 @@ import 'models/novel_chapter_dto.dart';
 import 'models/novel_character_dto.dart';
 import 'models/novel_plot_thread_dto.dart';
 import 'models/novel_project_dto.dart';
+import 'models/novel_scene_dto.dart';
 import 'models/novel_timeline_event_dto.dart';
 import 'models/novel_volume_dto.dart';
 import 'models/novel_world_entry_dto.dart';
@@ -146,6 +147,14 @@ class NovelApiClient {
     return items
         .whereType<Map>()
         .map((item) => NovelTimelineEventDto.fromMap(item))
+        .toList();
+  }
+
+  Future<List<NovelSceneDto>> listScenes(String chapterId) async {
+    final items = await _client.novelScenes(chapterId);
+    return items
+        .whereType<Map>()
+        .map((item) => NovelSceneDto.fromMap(item))
         .toList();
   }
 }

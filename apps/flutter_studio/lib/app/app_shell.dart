@@ -13,6 +13,9 @@ import '../features/benchmarks/benchmark_controller.dart';
 import '../features/benchmarks/benchmarks_page.dart';
 import '../features/chat/chat_controller.dart';
 import '../features/chat/chat_page.dart';
+import '../features/context_assembler/context_api_client.dart';
+import '../features/context_assembler/context_assembler_page.dart';
+import '../features/context_assembler/context_controller.dart';
 import '../features/diagnostics/diagnostics_controller.dart';
 import '../features/diagnostics/diagnostics_page.dart';
 import '../features/downloads/download_controller.dart';
@@ -94,6 +97,9 @@ class _StudioShellState extends State<StudioShell> {
   late final PromptController _prompts = PromptController(
     PromptApiClient(_client),
   );
+  late final ContextController _contextAssembler = ContextController(
+    ContextApiClient(_client),
+  );
 
   @override
   void initState() {
@@ -149,6 +155,7 @@ class _StudioShellState extends State<StudioShell> {
     _diagnostics,
     _novels,
     _prompts,
+    _contextAssembler,
   ];
 
   void _onNotifierChanged() {
@@ -244,6 +251,8 @@ class _StudioShellState extends State<StudioShell> {
         _storage.refresh().catchError((_) {}),
         if (_novelStudioAvailable()) _novels.refresh().catchError((_) {}),
         if (_promptStudioAvailable()) _prompts.refresh().catchError((_) {}),
+        if (_contextAssemblerAvailable())
+          _contextAssembler.refresh().catchError((_) {}),
       ]);
       await _savePreferences();
     });
@@ -537,6 +546,17 @@ class _StudioShellState extends State<StudioShell> {
     });
   }
 
+  bool _contextAssemblerAvailable() {
+    return _status.state.capabilities.any((item) {
+      if (item is! Map) {
+        return false;
+      }
+      return item['name'] == 'context_assembler' &&
+          item['status'] == 'available' &&
+          item['frontend_exposed'] == true;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_shell.initialSetupCheckDone && widget.autoRefresh) {
@@ -676,6 +696,7 @@ class _StudioShellState extends State<StudioShell> {
       ),
       NovelProjectsPage(controller: _novels),
       PromptStudioPage(controller: _prompts),
+      ContextAssemblerPage(controller: _contextAssembler),
       SettingsPage(
         apiBaseController: _settings.apiBaseController,
         userIdController: _settings.userIdController,
@@ -724,6 +745,7 @@ class _StudioShellState extends State<StudioShell> {
               onSelected: _navigation.select,
               showNovelStudio: _novelStudioAvailable(),
               showPromptStudio: _promptStudioAvailable(),
+              showContextAssembler: _contextAssemblerAvailable(),
             ),
           ),
           const VerticalDivider(width: 1),

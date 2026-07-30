@@ -48,5 +48,5 @@ def test_prompt_capabilities_are_stage2_when_enabled(monkeypatch, tmp_path):
     assert caps["prompt_studio"]["status"] == "available"
     assert caps["prompt_template_versions"]["status"] == "available"
     assert caps["prompt_render_preview"]["status"] == "available"
-    assert caps["context_assembler"]["status"] == "not_implemented"
+    assert caps["context_assembler"]["status"] == "available"
     assert caps["writing_workspace"]["status"] == "not_implemented"

@@ -98,6 +98,11 @@ def required_permission_for_request(method: str, path: str) -> Permission | None
             return Permission.DELETE_PROMPTS
         return Permission.MANAGE_PROMPTS
 
+    if path.startswith("/v1/context"):
+        if method in {"GET", "POST"}:
+            return Permission.VIEW_CONTEXT
+        return Permission.MANAGE_CONTEXT
+
     if path.startswith("/v1/vision"):
         return Permission.CHAT
 

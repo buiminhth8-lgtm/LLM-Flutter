@@ -3,6 +3,7 @@
 Novel Studio roadmap: [docs/NOVEL_STUDIO_ROADMAP.md](docs/NOVEL_STUDIO_ROADMAP.md).
 Novel Studio Stage 1 foundation: [docs/NOVEL_STAGE1_FOUNDATION.md](docs/NOVEL_STAGE1_FOUNDATION.md).
 Novel Studio Stage 2 Prompt Studio: [docs/NOVEL_STAGE2_PROMPT_STUDIO.md](docs/NOVEL_STAGE2_PROMPT_STUDIO.md).
+Novel Studio Stage 3 Context Assembler: [docs/NOVEL_STAGE3_CONTEXT_ASSEMBLER.md](docs/NOVEL_STAGE3_CONTEXT_ASSEMBLER.md).
 
 认证恢复、API Key 重新生成和本机 admin 恢复流程见 [docs/AUTH_RECOVERY.md](docs/AUTH_RECOVERY.md)。
 

@@ -31,6 +31,8 @@ class Permission(StrEnum):
     VIEW_PROMPTS = "view_prompts"
     MANAGE_PROMPTS = "manage_prompts"
     DELETE_PROMPTS = "delete_prompts"
+    VIEW_CONTEXT = "view_context"
+    MANAGE_CONTEXT = "manage_context"
 
 
 ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
@@ -40,6 +42,7 @@ ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.VIEW_MODELS,
             Permission.VIEW_NOVELS,
             Permission.VIEW_PROMPTS,
+            Permission.VIEW_CONTEXT,
         }
     ),
     Role.OPERATOR: frozenset(
@@ -54,6 +57,8 @@ ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.MANAGE_NOVELS,
             Permission.VIEW_PROMPTS,
             Permission.MANAGE_PROMPTS,
+            Permission.VIEW_CONTEXT,
+            Permission.MANAGE_CONTEXT,
         }
     ),
     Role.ADMIN: frozenset(Permission),
