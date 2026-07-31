@@ -78,3 +78,62 @@ class DatasetExportRecord:
     status: str
     created_at: str
     export_hash: str | None = None
+
+
+@dataclass(frozen=True)
+class DatasetVersion:
+    dataset_version_id: str
+    dataset_id: str
+    version: int
+    name: str
+    status: str
+    source_sample_count: int
+    train_sample_count: int
+    val_sample_count: int
+    rejected_duplicate_count: int
+    warning_count: int
+    train_char_count: int
+    val_char_count: int
+    train_token_estimate: int
+    val_token_estimate: int
+    content_hash: str
+    manifest_path: str
+    train_path: str
+    created_at: str
+    description: str | None = None
+    val_path: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+    warnings: list[dict[str, Any]] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class DatasetVersionSample:
+    dataset_version_sample_id: str
+    dataset_version_id: str
+    sample_id: str
+    split: str
+    sample_order: int
+    content_hash: str
+    source_hash: str | None
+    char_count: int
+    token_estimate: int
+    created_at: str
+    duplicate_group_id: str | None = None
+    warnings: list[dict[str, Any]] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class TrainingRecipe:
+    recipe_id: str
+    dataset_version_id: str
+    method: str
+    recommended_config: dict[str, Any]
+    user_config: dict[str, Any]
+    status: str
+    created_at: str
+    updated_at: str
+    base_model_id: str | None = None
+    recommendation_reason: str | None = None
+    estimated_vram_gb: float | None = None
+    estimated_train_time_minutes: int | None = None
+    warnings: list[dict[str, Any]] = field(default_factory=list)

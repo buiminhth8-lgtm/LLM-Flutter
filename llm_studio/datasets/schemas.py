@@ -61,3 +61,39 @@ class ExportDatasetRequest(BaseModel):
     format: str = "sft_jsonl"
     approved_only: bool = True
     file_name: str | None = None
+
+
+class DatasetSplitRequest(BaseModel):
+    strategy: str = "group_by_chapter"
+    val_ratio: float = 0.1
+    seed: int = 42
+
+
+class DatasetDedupeRequest(BaseModel):
+    exact_hash: bool = True
+    near_duplicate: bool = True
+    near_duplicate_threshold: float = 0.92
+
+
+class FreezeDatasetRequest(BaseModel):
+    dataset_id: str | None = None
+    name: str
+    description: str | None = None
+    split: DatasetSplitRequest = Field(default_factory=DatasetSplitRequest)
+    dedupe: DatasetDedupeRequest = Field(default_factory=DatasetDedupeRequest)
+    export_format: str = "sft_jsonl"
+    created_by: str | None = None
+
+
+class RecommendRecipeRequest(BaseModel):
+    base_model_id: str | None = None
+    method: str = "qlora"
+    hardware: dict[str, Any] = Field(default_factory=dict)
+    preferences: dict[str, Any] = Field(default_factory=dict)
+
+
+class UpdateRecipeRequest(BaseModel):
+    base_model_id: str | None = None
+    method: str | None = None
+    user_config: dict[str, Any] | None = None
+    status: str | None = None

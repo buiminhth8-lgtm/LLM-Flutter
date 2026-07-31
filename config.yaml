@@ -96,6 +96,10 @@ features:
     enabled: true
   dataset_builder:
     enabled: true
+  dataset_versioning:
+    enabled: true
+  training_recipe_recommender:
+    enabled: true
 novels:
   db_path: "./data/novels/novels.sqlite"
 prompts:

@@ -8,6 +8,7 @@ Stage 3 Context Assembler details: [NOVEL_STAGE3_CONTEXT_ASSEMBLER.md](NOVEL_STA
 Stage 4 Writing details: [NOVEL_STAGE4_WRITING.md](NOVEL_STAGE4_WRITING.md).
 Stage 5 Revisions details: [NOVEL_STAGE5_REVISIONS.md](NOVEL_STAGE5_REVISIONS.md).
 Stage 6 Dataset Builder details: [NOVEL_STAGE6_DATASET_BUILDER.md](NOVEL_STAGE6_DATASET_BUILDER.md).
+Stage 7 Dataset Versioning details: [NOVEL_STAGE7_DATASET_VERSIONING.md](NOVEL_STAGE7_DATASET_VERSIONING.md).
 
 Stage 6 is implemented: approved revision candidates can be converted into
 reviewable SFT samples, sample review state is persisted, and approved samples
@@ -18,7 +19,7 @@ Stage 6 boundaries:
 - `revision_records` saves `original_text`, `edited_text`, `diff_json`, tags, score, status, hashes, and `accepted_for_dataset`.
 - `revision_autosaves` saves editing drafts separately and never changes formal revision text.
 - `training_datasets`, `training_samples`, and `dataset_exports` are mutable draft builder records.
-- DatasetVersion, frozen datasets, train/val split, TrainingRecipe, FineTune, RAG/Memory, and Evaluation remain later stages.
+- FineTuneRun, LoRA / QLoRA execution, Adapter registration, RAG/Memory, and Evaluation remain later stages.
 
 ## 阶段 0：工程基线整理与开发入口
 
@@ -61,6 +62,11 @@ Stage 6 boundaries:
 - 导出 draft SFT JSONL 到 `data/datasets/{dataset_id}`，不创建 DatasetVersion，不启动训练。
 
 ## 阶段 7：Dataset Version 冻结与训练配方推荐
+
+- `ready` / `dirty` dataset 可冻结为不可变 `dataset_versions`。
+- 写出 `train.jsonl`、可选 `val.jsonl` 和 `manifest.json`。
+- 支持 exact dedupe、near duplicate warning、grouped train/val split、token 估算。
+- 支持 draft `training_recipes` 推荐和 confirm，但不启动训练。
 
 ## 阶段 8：LoRA / QLoRA Fine-tune Center
 

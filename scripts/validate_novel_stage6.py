@@ -69,8 +69,8 @@ def run(args: argparse.Namespace) -> None:
             raise RuntimeError("dataset_builder capability is not available.")
         if _capability(capabilities, "dataset_sft_export") != "available":
             raise RuntimeError("dataset_sft_export capability is not available.")
-        if _capability(capabilities, "dataset_versioning") != "not_implemented":
-            raise RuntimeError("dataset_versioning must remain not_implemented.")
+        if _capability(capabilities, "dataset_versioning") not in {"available", "not_implemented"}:
+            raise RuntimeError("dataset_versioning capability has an unexpected status.")
 
         suffix = int(time.time())
         project = client.request(

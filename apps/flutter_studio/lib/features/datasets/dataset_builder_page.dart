@@ -7,11 +7,18 @@ import 'dataset_controller.dart';
 import 'dataset_state.dart';
 import 'models/training_dataset_dto.dart';
 import 'models/training_sample_dto.dart';
+import 'models/dataset_freeze_request_dto.dart';
+import 'widgets/dataset_dedupe_warning_panel.dart';
 import 'widgets/dataset_create_dialog.dart';
 import 'widgets/dataset_export_panel.dart';
+import 'widgets/dataset_freeze_dialog.dart';
 import 'widgets/dataset_list_panel.dart';
+import 'widgets/dataset_manifest_panel.dart';
+import 'widgets/dataset_split_preview_panel.dart';
+import 'widgets/dataset_version_list_panel.dart';
 import 'widgets/sample_detail_panel.dart';
 import 'widgets/sample_table.dart';
+import 'widgets/training_recipe_panel.dart';
 
 class DatasetBuilderPage extends StatefulWidget {
   const DatasetBuilderPage({super.key, required this.controller});
@@ -148,29 +155,77 @@ class _DatasetBuilderPageState extends State<DatasetBuilderPage> {
 
   Widget _buildDetailPane(DatasetState state) {
     final dataset = state.currentDataset;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    if (dataset == null) {
+      return const Center(child: Text('Select a dataset.'));
+    }
+    return ListView(
       children: [
-        if (dataset == null)
-          const Expanded(child: Center(child: Text('Select a dataset.')))
-        else ...[
-          _DatasetSummary(dataset: dataset),
-          const SizedBox(height: 12),
-          Expanded(
-            child: SampleDetailPanel(
-              sample: state.currentSample,
-              onSave: widget.controller.updateCurrentSample,
-              onApprove: widget.controller.approveCurrentSample,
-              onReject: (reason) =>
-                  widget.controller.rejectCurrentSample(reason: reason),
+        _DatasetSummary(dataset: dataset),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            OutlinedButton.icon(
+              key: const Key('dataset-mark-ready'),
+              onPressed: dataset.status == 'archived'
+                  ? null
+                  : widget.controller.markCurrentDatasetReady,
+              icon: const Icon(Icons.verified_outlined),
+              label: const Text('Mark Ready'),
             ),
+            const SizedBox(width: 8),
+            FilledButton.icon(
+              key: const Key('dataset-freeze'),
+              onPressed: dataset.status == 'ready' || dataset.status == 'dirty'
+                  ? _showFreezeDialog
+                  : null,
+              icon: const Icon(Icons.ac_unit_outlined),
+              label: const Text('Freeze'),
+            ),
+          ],
+        ),
+        if (dataset.status == 'dirty')
+          const Padding(
+            padding: EdgeInsets.only(top: 6),
+            child: Text('数据集已变化，需要重新冻结新版本。'),
           ),
-          const Divider(),
-          DatasetExportPanel(
-            exports: state.exports,
-            onExport: () => widget.controller.exportCurrentDataset(),
+        const SizedBox(height: 12),
+        DatasetVersionListPanel(
+          versions: state.versions,
+          currentVersionId: state.currentVersion?.datasetVersionId,
+          onSelect: widget.controller.selectVersion,
+        ),
+        const SizedBox(height: 8),
+        DatasetSplitPreviewPanel(version: state.currentVersion),
+        DatasetManifestPanel(
+          version: state.currentVersion,
+          manifest: state.currentManifest,
+        ),
+        DatasetDedupeWarningPanel(
+          warnings: state.currentVersion?.warnings ?? const [],
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 320,
+          child: SampleDetailPanel(
+            sample: state.currentSample,
+            onSave: widget.controller.updateCurrentSample,
+            onApprove: widget.controller.approveCurrentSample,
+            onReject: (reason) =>
+                widget.controller.rejectCurrentSample(reason: reason),
           ),
-        ],
+        ),
+        const Divider(),
+        DatasetExportPanel(
+          exports: state.exports,
+          onExport: () => widget.controller.exportCurrentDataset(),
+        ),
+        const Divider(),
+        TrainingRecipePanel(
+          recipe: state.currentRecipe,
+          onRecommend: widget.controller.recommendRecipe,
+          onSaveConfig: widget.controller.updateCurrentRecipe,
+          onConfirm: widget.controller.confirmCurrentRecipe,
+        ),
       ],
     );
   }
@@ -199,6 +254,23 @@ class _DatasetBuilderPageState extends State<DatasetBuilderPage> {
       minScore: minScore,
     );
   }
+
+  Future<void> _showFreezeDialog() async {
+    final dataset = widget.controller.state.currentDataset;
+    if (dataset == null) {
+      return;
+    }
+    final request = await showDialog<DatasetFreezeRequestDto>(
+      context: context,
+      builder: (_) => DatasetFreezeDialog(
+        defaultName:
+            '${dataset.name} v${widget.controller.state.versions.length + 1}',
+      ),
+    );
+    if (request != null) {
+      await widget.controller.freezeCurrentDataset(request);
+    }
+  }
 }
 
 class _DatasetSummary extends StatelessWidget {
@@ -221,6 +293,10 @@ class _DatasetSummary extends StatelessWidget {
           Text(
             '${dataset.sampleCount} samples · ${dataset.approvedSampleCount} approved · ${dataset.rejectedSampleCount} rejected',
           ),
+          if (dataset.status == 'frozen')
+            const Text(
+              'Frozen: old DatasetVersion is immutable; new sample changes will mark dirty.',
+            ),
         ],
       ),
     ),

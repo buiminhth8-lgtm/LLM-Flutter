@@ -98,6 +98,12 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "dataset_builder": {
             "enabled": True,
         },
+        "dataset_versioning": {
+            "enabled": True,
+        },
+        "training_recipe_recommender": {
+            "enabled": True,
+        },
     },
     "novels": {
         "db_path": "./data/novels/novels.sqlite",
