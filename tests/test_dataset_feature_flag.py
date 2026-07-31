@@ -50,7 +50,10 @@ def test_dataset_feature_flag_and_capabilities(monkeypatch, tmp_path):
     assert caps["dataset_builder"].status == CapabilityStatus.AVAILABLE
     assert caps["dataset_sft_export"].status == CapabilityStatus.AVAILABLE
     assert caps["dataset_preference_samples"].status == CapabilityStatus.PARTIAL
-    assert caps["dataset_versioning"].status == CapabilityStatus.NOT_IMPLEMENTED
+    assert caps["dataset_versioning"].status == CapabilityStatus.AVAILABLE
+    assert caps["dataset_freeze"].status == CapabilityStatus.AVAILABLE
+    assert caps["dataset_manifest"].status == CapabilityStatus.AVAILABLE
+    assert caps["training_recipe_recommender"].status == CapabilityStatus.AVAILABLE
     assert caps["finetune_center"].status == CapabilityStatus.NOT_IMPLEMENTED
 
 

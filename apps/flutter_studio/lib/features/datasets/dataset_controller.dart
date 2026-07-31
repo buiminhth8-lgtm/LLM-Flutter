@@ -4,7 +4,11 @@ import '../../core/api/api_exception.dart';
 import 'dataset_api_client.dart';
 import 'dataset_state.dart';
 import 'models/dataset_export_dto.dart';
+import 'models/dataset_freeze_request_dto.dart';
+import 'models/dataset_version_dto.dart';
+import 'models/recipe_recommend_request_dto.dart';
 import 'models/training_dataset_dto.dart';
+import 'models/training_recipe_dto.dart';
 import 'models/training_sample_dto.dart';
 
 class DatasetController extends ChangeNotifier {
@@ -55,9 +59,15 @@ class DatasetController extends ChangeNotifier {
       state = state.copyWith(
         currentDataset: dataset,
         currentSample: null,
+        currentVersion: null,
+        currentManifest: null,
+        currentRecipe: null,
         datasets: await _api.listDatasets(projectId: dataset.projectId),
         samples: const [],
         exports: const [],
+        versions: const [],
+        versionSamples: const [],
+        recipes: const [],
         notice: 'Dataset created.',
       );
       await _loadDataset(dataset.datasetId);
@@ -171,20 +181,125 @@ class DatasetController extends ChangeNotifier {
     return export;
   }
 
+  Future<void> markCurrentDatasetReady() async {
+    final dataset = state.currentDataset;
+    if (dataset == null) {
+      return;
+    }
+    await _run(() async {
+      await _api.markReady(dataset.datasetId);
+      await _loadDataset(dataset.datasetId);
+      state = state.copyWith(notice: 'Dataset marked ready for freeze.');
+    });
+  }
+
+  Future<DatasetVersionDto?> freezeCurrentDataset(
+    DatasetFreezeRequestDto request,
+  ) async {
+    final dataset = state.currentDataset;
+    if (dataset == null) {
+      return null;
+    }
+    DatasetVersionDto? version;
+    await _run(() async {
+      version = await _api.freezeDataset(
+        datasetId: dataset.datasetId,
+        request: request,
+      );
+      await _loadDataset(dataset.datasetId, selectedVersion: version);
+      await selectVersion(version!.datasetVersionId);
+      state = state.copyWith(notice: 'Dataset frozen as v${version!.version}.');
+    });
+    return version;
+  }
+
+  Future<void> selectVersion(String datasetVersionId) async {
+    await _run(() async {
+      final version = await _api.getVersion(datasetVersionId);
+      final samples = await _api.listVersionSamples(datasetVersionId);
+      final manifest = await _api.getManifest(datasetVersionId);
+      final recipes = await _api.listRecipes(datasetVersionId);
+      state = state.copyWith(
+        currentVersion: version,
+        versionSamples: samples,
+        currentManifest: manifest,
+        recipes: recipes,
+        currentRecipe: recipes.isEmpty ? null : recipes.first,
+        clearRecipe: recipes.isEmpty,
+      );
+    });
+  }
+
+  Future<TrainingRecipeDto?> recommendRecipe(
+    RecipeRecommendRequestDto request,
+  ) async {
+    final version = state.currentVersion;
+    if (version == null) {
+      return null;
+    }
+    TrainingRecipeDto? recipe;
+    await _run(() async {
+      recipe = await _api.recommendRecipe(
+        datasetVersionId: version.datasetVersionId,
+        request: request,
+      );
+      final recipes = await _api.listRecipes(version.datasetVersionId);
+      state = state.copyWith(
+        recipes: recipes,
+        currentRecipe: recipe,
+        notice: 'Recipe recommendation created.',
+      );
+    });
+    return recipe;
+  }
+
+  Future<void> updateCurrentRecipe(Map<String, Object?> body) async {
+    final recipe = state.currentRecipe;
+    if (recipe == null) {
+      return;
+    }
+    await _run(() async {
+      final updated = await _api.updateRecipe(recipe.recipeId, body);
+      state = state.copyWith(currentRecipe: updated);
+    });
+  }
+
+  Future<void> confirmCurrentRecipe() async {
+    final recipe = state.currentRecipe;
+    if (recipe == null) {
+      return;
+    }
+    await _run(() async {
+      final confirmed = await _api.confirmRecipe(recipe.recipeId);
+      state = state.copyWith(
+        currentRecipe: confirmed,
+        notice: 'Recipe confirmed. Training is still Stage 8.',
+      );
+    });
+  }
+
   Future<void> _loadDataset(
     String datasetId, {
     TrainingSampleDto? selectedSample,
+    DatasetVersionDto? selectedVersion,
   }) async {
     final dataset = await _api.getDataset(datasetId);
     final samples = await _api.listSamples(datasetId: datasetId);
     final exports = await _api.listExports(datasetId);
+    final versions = await _api.listVersions(datasetId);
     final sample = selectedSample ?? _selectedSample(samples);
+    final version = selectedVersion ?? _selectedVersion(versions);
     state = state.copyWith(
       currentDataset: dataset,
       samples: samples,
       exports: exports,
+      versions: versions,
+      currentVersion: version,
       currentSample: sample,
       clearSample: sample == null,
+      clearVersion: version == null,
+      clearManifest: version == null,
+      clearRecipe: version == null,
     );
   }
 
@@ -214,5 +329,18 @@ class DatasetController extends ChangeNotifier {
       }
     }
     return samples.isEmpty ? null : samples.first;
+  }
+
+  DatasetVersionDto? _selectedVersion(List<DatasetVersionDto> versions) {
+    final current = state.currentVersion;
+    if (current == null) {
+      return versions.isEmpty ? null : versions.first;
+    }
+    for (final version in versions) {
+      if (version.datasetVersionId == current.datasetVersionId) {
+        return version;
+      }
+    }
+    return versions.isEmpty ? null : versions.first;
   }
 }

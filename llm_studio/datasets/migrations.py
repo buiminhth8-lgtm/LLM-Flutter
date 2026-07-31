@@ -1,11 +1,19 @@
-"""SQLite migrations for Novel Studio Stage 6 Dataset Builder."""
+"""SQLite migrations for Novel Studio Dataset Builder records."""
 
 from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
 
-DATASET_TABLES = ("training_datasets", "training_samples", "dataset_exports")
+DATASET_TABLES = (
+    "training_datasets",
+    "training_samples",
+    "dataset_exports",
+    "dataset_versions",
+    "dataset_version_samples",
+    "dataset_change_marks",
+    "training_recipes",
+)
 
 
 def initialize_dataset_database(db_path: str | Path) -> None:
@@ -77,6 +85,90 @@ def initialize_dataset_database(db_path: str | Path) -> None:
         )
         conn.execute(
             """
+            CREATE TABLE IF NOT EXISTS dataset_versions (
+              id TEXT PRIMARY KEY,
+              dataset_id TEXT NOT NULL,
+              version INTEGER NOT NULL,
+              name TEXT NOT NULL,
+              description TEXT,
+              status TEXT NOT NULL DEFAULT 'frozen',
+              source_sample_count INTEGER NOT NULL DEFAULT 0,
+              train_sample_count INTEGER NOT NULL DEFAULT 0,
+              val_sample_count INTEGER NOT NULL DEFAULT 0,
+              rejected_duplicate_count INTEGER NOT NULL DEFAULT 0,
+              warning_count INTEGER NOT NULL DEFAULT 0,
+              train_char_count INTEGER NOT NULL DEFAULT 0,
+              val_char_count INTEGER NOT NULL DEFAULT 0,
+              train_token_estimate INTEGER NOT NULL DEFAULT 0,
+              val_token_estimate INTEGER NOT NULL DEFAULT 0,
+              content_hash TEXT NOT NULL,
+              manifest_path TEXT NOT NULL,
+              train_path TEXT NOT NULL,
+              val_path TEXT,
+              metadata_json TEXT NOT NULL DEFAULT '{}',
+              created_by TEXT,
+              created_at TEXT NOT NULL,
+              FOREIGN KEY(dataset_id) REFERENCES training_datasets(id)
+            );
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS dataset_version_samples (
+              id TEXT PRIMARY KEY,
+              dataset_version_id TEXT NOT NULL,
+              sample_id TEXT NOT NULL,
+              split TEXT NOT NULL,
+              sample_order INTEGER NOT NULL,
+              content_hash TEXT NOT NULL,
+              source_hash TEXT,
+              char_count INTEGER NOT NULL DEFAULT 0,
+              token_estimate INTEGER NOT NULL DEFAULT 0,
+              duplicate_group_id TEXT,
+              warnings_json TEXT NOT NULL DEFAULT '[]',
+              created_at TEXT NOT NULL,
+              FOREIGN KEY(dataset_version_id) REFERENCES dataset_versions(id),
+              FOREIGN KEY(sample_id) REFERENCES training_samples(id)
+            );
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS dataset_change_marks (
+              id TEXT PRIMARY KEY,
+              dataset_id TEXT NOT NULL,
+              reason TEXT NOT NULL,
+              changed_entity_type TEXT NOT NULL,
+              changed_entity_id TEXT,
+              previous_hash TEXT,
+              current_hash TEXT,
+              created_at TEXT NOT NULL,
+              FOREIGN KEY(dataset_id) REFERENCES training_datasets(id)
+            );
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS training_recipes (
+              id TEXT PRIMARY KEY,
+              dataset_version_id TEXT NOT NULL,
+              base_model_id TEXT,
+              method TEXT NOT NULL DEFAULT 'qlora',
+              recommended_config_json TEXT NOT NULL DEFAULT '{}',
+              user_config_json TEXT NOT NULL DEFAULT '{}',
+              recommendation_reason TEXT,
+              estimated_vram_gb REAL,
+              estimated_train_time_minutes INTEGER,
+              warnings_json TEXT NOT NULL DEFAULT '[]',
+              status TEXT NOT NULL DEFAULT 'draft',
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL,
+              FOREIGN KEY(dataset_version_id) REFERENCES dataset_versions(id)
+            );
+            """
+        )
+        conn.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_training_datasets_project
             ON training_datasets(project_id, created_at);
             """
@@ -103,5 +195,41 @@ def initialize_dataset_database(db_path: str | Path) -> None:
             """
             CREATE INDEX IF NOT EXISTS idx_dataset_exports_dataset
             ON dataset_exports(dataset_id, created_at);
+            """
+        )
+        conn.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_dataset_versions_dataset_version
+            ON dataset_versions(dataset_id, version);
+            """
+        )
+        conn.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_dataset_versions_dataset
+            ON dataset_versions(dataset_id, created_at);
+            """
+        )
+        conn.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_dataset_version_samples_version
+            ON dataset_version_samples(dataset_version_id, split, sample_order);
+            """
+        )
+        conn.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_dataset_version_samples_unique_sample
+            ON dataset_version_samples(dataset_version_id, sample_id);
+            """
+        )
+        conn.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_dataset_change_marks_dataset
+            ON dataset_change_marks(dataset_id, created_at);
+            """
+        )
+        conn.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_training_recipes_version
+            ON training_recipes(dataset_version_id, created_at);
             """
         )

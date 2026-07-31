@@ -52,3 +52,33 @@ def is_dataset_builder_enabled(config: Any) -> bool:
         return bool(dataset.get("enabled", True))
     except Exception:
         return False
+
+
+def is_dataset_versioning_enabled(config: Any) -> bool:
+    """Return whether Stage 7 DatasetVersion APIs should be exposed."""
+
+    if not is_dataset_builder_enabled(config):
+        return False
+    try:
+        features = config.get("features", {}) if config is not None else {}
+        versioning = features.get("dataset_versioning", {})
+        if not isinstance(versioning, dict):
+            return True
+        return bool(versioning.get("enabled", True))
+    except Exception:
+        return False
+
+
+def is_training_recipe_recommender_enabled(config: Any) -> bool:
+    """Return whether Stage 7 training recipe recommendation APIs should be exposed."""
+
+    if not is_dataset_versioning_enabled(config):
+        return False
+    try:
+        features = config.get("features", {}) if config is not None else {}
+        recipe = features.get("training_recipe_recommender", {})
+        if not isinstance(recipe, dict):
+            return True
+        return bool(recipe.get("enabled", True))
+    except Exception:
+        return False

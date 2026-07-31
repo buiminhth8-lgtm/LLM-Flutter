@@ -1,5 +1,11 @@
 import '../../core/api/api_client.dart';
 import 'models/dataset_export_dto.dart';
+import 'models/dataset_freeze_request_dto.dart';
+import 'models/dataset_manifest_dto.dart';
+import 'models/dataset_version_dto.dart';
+import 'models/dataset_version_sample_dto.dart';
+import 'models/recipe_recommend_request_dto.dart';
+import 'models/training_recipe_dto.dart';
 import 'models/training_dataset_dto.dart';
 import 'models/training_sample_dto.dart';
 
@@ -143,5 +149,89 @@ class DatasetApiClient {
         .whereType<Map>()
         .map(DatasetExportDto.fromMap)
         .toList(growable: false);
+  }
+
+  Future<TrainingDatasetDto> markReady(String datasetId) async {
+    final body = await _client.markDatasetReady(datasetId);
+    return TrainingDatasetDto.fromMap(body);
+  }
+
+  Future<TrainingDatasetDto> markDirty(String datasetId) async {
+    final body = await _client.markDatasetDirty(datasetId);
+    return TrainingDatasetDto.fromMap(body);
+  }
+
+  Future<DatasetVersionDto> freezeDataset({
+    required String datasetId,
+    required DatasetFreezeRequestDto request,
+  }) async {
+    final body = await _client.freezeDatasetVersion(datasetId, request.toMap());
+    return DatasetVersionDto.fromMap(body);
+  }
+
+  Future<List<DatasetVersionDto>> listVersions(String datasetId) async {
+    final items = await _client.datasetVersions(datasetId);
+    return items
+        .whereType<Map>()
+        .map(DatasetVersionDto.fromMap)
+        .toList(growable: false);
+  }
+
+  Future<DatasetVersionDto> getVersion(String datasetVersionId) async {
+    final body = await _client.datasetVersion(datasetVersionId);
+    return DatasetVersionDto.fromMap(body);
+  }
+
+  Future<DatasetManifestDto> getManifest(String datasetVersionId) async {
+    final body = await _client.datasetVersionManifest(datasetVersionId);
+    return DatasetManifestDto.fromMap(body);
+  }
+
+  Future<List<DatasetVersionSampleDto>> listVersionSamples(
+    String datasetVersionId, {
+    String? split,
+    bool? hasWarnings,
+  }) async {
+    final items = await _client.datasetVersionSamples(
+      datasetVersionId,
+      split: split,
+      hasWarnings: hasWarnings,
+    );
+    return items
+        .whereType<Map>()
+        .map(DatasetVersionSampleDto.fromMap)
+        .toList(growable: false);
+  }
+
+  Future<TrainingRecipeDto> recommendRecipe({
+    required String datasetVersionId,
+    required RecipeRecommendRequestDto request,
+  }) async {
+    final body = await _client.recommendDatasetRecipe(
+      datasetVersionId,
+      request.toMap(),
+    );
+    return TrainingRecipeDto.fromMap(body);
+  }
+
+  Future<List<TrainingRecipeDto>> listRecipes(String datasetVersionId) async {
+    final items = await _client.datasetVersionRecipes(datasetVersionId);
+    return items
+        .whereType<Map>()
+        .map(TrainingRecipeDto.fromMap)
+        .toList(growable: false);
+  }
+
+  Future<TrainingRecipeDto> updateRecipe(
+    String recipeId,
+    Map<String, Object?> body,
+  ) async {
+    final response = await _client.updateDatasetRecipe(recipeId, body);
+    return TrainingRecipeDto.fromMap(response);
+  }
+
+  Future<TrainingRecipeDto> confirmRecipe(String recipeId) async {
+    final body = await _client.confirmDatasetRecipe(recipeId);
+    return TrainingRecipeDto.fromMap(body);
   }
 }

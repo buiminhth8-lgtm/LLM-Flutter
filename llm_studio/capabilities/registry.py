@@ -6,8 +6,10 @@ from dataclasses import dataclass, replace
 
 from llm_studio.features import (
     is_dataset_builder_enabled,
+    is_dataset_versioning_enabled,
     is_novel_studio_enabled,
     is_revision_system_enabled,
+    is_training_recipe_recommender_enabled,
 )
 
 from .status import CapabilityStatus
@@ -77,7 +79,13 @@ _CAPABILITIES: tuple[CapabilityInfo, ...] = (
     CapabilityInfo("dataset_sft_export", CapabilityStatus.NOT_IMPLEMENTED, "Draft SFT JSONL export is planned for Dataset Builder.", False),
     CapabilityInfo("dataset_preference_samples", CapabilityStatus.NOT_IMPLEMENTED, "Preference sample structure is planned for Dataset Builder.", False),
     CapabilityInfo("dataset_versioning", CapabilityStatus.NOT_IMPLEMENTED, "Immutable DatasetVersion is planned for a later stage.", False),
+    CapabilityInfo("dataset_freeze", CapabilityStatus.NOT_IMPLEMENTED, "Dataset freeze is planned for DatasetVersion.", False),
+    CapabilityInfo("dataset_manifest", CapabilityStatus.NOT_IMPLEMENTED, "Dataset manifests are planned for DatasetVersion.", False),
+    CapabilityInfo("dataset_train_val_split", CapabilityStatus.NOT_IMPLEMENTED, "Dataset train/validation split is planned for DatasetVersion.", False),
+    CapabilityInfo("training_recipe_recommender", CapabilityStatus.NOT_IMPLEMENTED, "Training recipe recommendation is planned for a later stage.", False),
     CapabilityInfo("finetune_center", CapabilityStatus.NOT_IMPLEMENTED, "Novel-specific fine-tune workflows are not implemented.", False),
+    CapabilityInfo("finetune_runs", CapabilityStatus.NOT_IMPLEMENTED, "FineTuneRun execution is not implemented.", False),
+    CapabilityInfo("adapter_training", CapabilityStatus.NOT_IMPLEMENTED, "Adapter training and registration are not implemented.", False),
     CapabilityInfo("novel_rag_memory", CapabilityStatus.NOT_IMPLEMENTED, "Novel memory and long-form RAG are planned but not implemented.", False),
     CapabilityInfo("novel_evaluation", CapabilityStatus.NOT_IMPLEMENTED, "Novel evaluation workflows are planned but not implemented.", False),
 )
@@ -121,8 +129,28 @@ def get_capabilities_for_config(config) -> tuple[CapabilityInfo, ...]:
                 "dataset_builder": (CapabilityStatus.AVAILABLE, "Approved revision candidates can be transformed into reviewed training samples.", True),
                 "dataset_sft_export": (CapabilityStatus.AVAILABLE, "Approved SFT samples can be exported as draft JSONL files.", True),
                 "dataset_preference_samples": (CapabilityStatus.PARTIAL, "Preference sample fields and draft creation are available; DPO training is not implemented.", True),
-                "dataset_versioning": (CapabilityStatus.NOT_IMPLEMENTED, "Frozen DatasetVersion, manifests, hashes, and train/val split are planned for Stage 7.", False),
             }
+        )
+    if is_dataset_versioning_enabled(config):
+        overrides.update(
+            {
+                "dataset_versioning": (CapabilityStatus.AVAILABLE, "Approved samples can be frozen into immutable DatasetVersion records.", True),
+                "dataset_freeze": (CapabilityStatus.AVAILABLE, "Ready or dirty datasets can be frozen into train/val JSONL artifacts.", True),
+                "dataset_manifest": (CapabilityStatus.AVAILABLE, "DatasetVersion manifest.json records split, counts, hashes, and warnings.", True),
+                "dataset_train_val_split": (CapabilityStatus.AVAILABLE, "Dataset freeze supports grouped train/validation split without continuous token slicing.", True),
+            }
+        )
+    elif is_dataset_builder_enabled(config):
+        overrides["dataset_versioning"] = (
+            CapabilityStatus.NOT_IMPLEMENTED,
+            "DatasetVersion is disabled by feature flag.",
+            False,
+        )
+    if is_training_recipe_recommender_enabled(config):
+        overrides["training_recipe_recommender"] = (
+            CapabilityStatus.AVAILABLE,
+            "Draft LoRA/QLoRA recipe recommendation is available without launching training.",
+            True,
         )
     existing = {cap.name for cap in _CAPABILITIES}
     result: list[CapabilityInfo] = []

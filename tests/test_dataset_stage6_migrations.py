@@ -31,4 +31,5 @@ def test_dataset_stage6_tables_are_idempotent(tmp_path):
     assert "idx_training_samples_dataset" in indexes
     assert "idx_training_samples_revision" in indexes
     assert "idx_training_samples_dataset_content_hash" in indexes
-    assert "dataset_versions" not in tables
+    assert "dataset_versions" in tables
+    assert "finetune_runs" not in tables

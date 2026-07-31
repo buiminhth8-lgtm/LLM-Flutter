@@ -50,7 +50,9 @@ novels:
     assert enabled["revision_system"].status.value == "available"
     assert enabled["dataset_builder"].status.value == "available"
     assert enabled["dataset_sft_export"].status.value == "available"
-    assert enabled["dataset_versioning"].status.value == "not_implemented"
+    assert enabled["dataset_versioning"].status.value == "available"
+    assert enabled["training_recipe_recommender"].status.value == "available"
+    assert enabled["finetune_center"].status.value == "not_implemented"
 
 
 def test_writing_rbac_permissions():

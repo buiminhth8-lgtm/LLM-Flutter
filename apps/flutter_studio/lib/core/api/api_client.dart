@@ -768,6 +768,114 @@ class LlmStudioClient {
     return _getMap('/v1/datasets/exports/${Uri.encodeComponent(exportId)}');
   }
 
+  Future<Map<String, dynamic>> markDatasetReady(String datasetId) {
+    return _postMap(
+      '/v1/datasets/${Uri.encodeComponent(datasetId)}/mark-ready',
+      body: const {},
+    );
+  }
+
+  Future<Map<String, dynamic>> markDatasetDirty(String datasetId) {
+    return _postMap(
+      '/v1/datasets/${Uri.encodeComponent(datasetId)}/mark-dirty',
+      body: const {},
+    );
+  }
+
+  Future<Map<String, dynamic>> freezeDatasetVersion(
+    String datasetId,
+    Map<String, Object?> body,
+  ) {
+    return _postMap(
+      '/v1/datasets/${Uri.encodeComponent(datasetId)}/freeze',
+      body: body,
+      timeout: const Duration(minutes: 2),
+    );
+  }
+
+  Future<List<dynamic>> datasetVersions(String datasetId) async {
+    final body = await _getMap(
+      '/v1/datasets/${Uri.encodeComponent(datasetId)}/versions',
+    );
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> datasetVersion(String datasetVersionId) {
+    return _getMap(
+      '/v1/datasets/versions/${Uri.encodeComponent(datasetVersionId)}',
+    );
+  }
+
+  Future<Map<String, dynamic>> datasetVersionManifest(String datasetVersionId) {
+    return _getMap(
+      '/v1/datasets/versions/${Uri.encodeComponent(datasetVersionId)}/manifest',
+    );
+  }
+
+  Future<List<dynamic>> datasetVersionSamples(
+    String datasetVersionId, {
+    String? split,
+    bool? hasWarnings,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final query = <String, String>{
+      if (split != null && split.isNotEmpty) 'split': split,
+      if (hasWarnings != null) 'has_warnings': '$hasWarnings',
+      'limit': '$limit',
+      'offset': '$offset',
+    };
+    final path = Uri(
+      path:
+          '/v1/datasets/versions/${Uri.encodeComponent(datasetVersionId)}/samples',
+      queryParameters: query,
+    ).toString();
+    final body = await _getMap(path);
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> recommendDatasetRecipe(
+    String datasetVersionId,
+    Map<String, Object?> body,
+  ) {
+    return _postMap(
+      '/v1/datasets/versions/${Uri.encodeComponent(datasetVersionId)}/recommend-recipe',
+      body: body,
+    );
+  }
+
+  Future<List<dynamic>> datasetVersionRecipes(String datasetVersionId) async {
+    final body = await _getMap(
+      '/v1/datasets/versions/${Uri.encodeComponent(datasetVersionId)}/recipes',
+    );
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> datasetRecipe(String recipeId) {
+    return _getMap('/v1/datasets/recipes/${Uri.encodeComponent(recipeId)}');
+  }
+
+  Future<Map<String, dynamic>> updateDatasetRecipe(
+    String recipeId,
+    Map<String, Object?> body,
+  ) {
+    return _patchMap(
+      '/v1/datasets/recipes/${Uri.encodeComponent(recipeId)}',
+      body,
+    );
+  }
+
+  Future<Map<String, dynamic>> confirmDatasetRecipe(String recipeId) {
+    return _postMap(
+      '/v1/datasets/recipes/${Uri.encodeComponent(recipeId)}/confirm',
+      body: const {},
+    );
+  }
+
+  Future<Map<String, dynamic>> deleteDatasetRecipe(String recipeId) {
+    return _deleteMap('/v1/datasets/recipes/${Uri.encodeComponent(recipeId)}');
+  }
+
   Future<String> ragQuery(String query, {int topK = 5}) async {
     final body = await _postMap(
       '/v1/rag/query',

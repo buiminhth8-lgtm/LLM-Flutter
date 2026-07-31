@@ -24,9 +24,14 @@ from .formats import (
     safe_dataset_status,
     safe_dataset_type,
     safe_export_format,
+    safe_recipe_method,
+    safe_recipe_status,
     safe_sample_status,
     safe_sample_type,
+    safe_version_sample_split,
 )
+from .freeze_service import DatasetFreezeService
+from .recipe_recommender import TrainingRecipeRecommender
 from .repository import DatasetRepository
 from .sample_builder import DatasetSampleBuilder
 from .validators import validate_revision_for_dataset, validate_sample_draft
@@ -90,6 +95,8 @@ class DatasetService:
         self.prompt_service = prompt_service
         self.sample_builder = sample_builder or DatasetSampleBuilder()
         self.exporter = exporter or DatasetJsonlExporter(self.export_root)
+        self.freeze_service = DatasetFreezeService(self.records, export_root=self.export_root)
+        self.recipe_recommender = TrainingRecipeRecommender()
 
     @classmethod
     def from_config(
@@ -169,6 +176,8 @@ class DatasetService:
             **dataset,
             "samples": self.records.list_samples(dataset_id, limit=100),
             "exports": self.records.list_exports(dataset_id, limit=50),
+            "versions": self.records.list_dataset_versions(dataset_id, limit=50),
+            "change_marks": self.records.list_change_marks(dataset_id, limit=20),
         }
 
     def update_dataset(self, dataset_id: str, request: Any) -> dict[str, Any]:
@@ -196,6 +205,25 @@ class DatasetService:
 
     def archive_dataset(self, dataset_id: str) -> dict[str, Any]:
         return self.records.update_dataset(dataset_id, {"status": "archived"})
+
+    def mark_ready(self, dataset_id: str) -> dict[str, Any]:
+        dataset = self.records.get_dataset(dataset_id)
+        if dataset["status"] == "archived":
+            raise DatasetInvalidStatusError("archived datasets cannot be marked ready")
+        return self.records.update_dataset(dataset_id, {"status": "ready"})
+
+    def mark_dirty(self, dataset_id: str, reason: str = "manual") -> dict[str, Any]:
+        dataset = self.records.get_dataset(dataset_id)
+        if dataset["status"] == "archived":
+            raise DatasetInvalidStatusError("archived datasets cannot be marked dirty")
+        self.records.update_dataset(dataset_id, {"status": "dirty"})
+        self.records.mark_dataset_changed(
+            dataset_id,
+            reason=reason,
+            changed_entity_type="training_dataset",
+            changed_entity_id=dataset_id,
+        )
+        return self.records.get_dataset(dataset_id)
 
     def create_sample_from_revision(
         self,
@@ -385,6 +413,98 @@ class DatasetService:
 
     def get_export(self, export_id: str) -> dict[str, Any]:
         return self.records.get_export(export_id)
+
+    def freeze_dataset(self, dataset_id: str, request: Any) -> dict[str, Any]:
+        data = _model_dump(request)
+        data["dataset_id"] = dataset_id
+        return self.freeze_service.freeze_dataset(data)
+
+    def list_versions(
+        self,
+        dataset_id: str,
+        *,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[dict[str, Any]]:
+        return self.records.list_dataset_versions(dataset_id, limit=limit, offset=offset)
+
+    def get_version(self, dataset_version_id: str) -> dict[str, Any]:
+        version = self.records.get_dataset_version(dataset_version_id)
+        return {
+            **version,
+            "samples": self.records.list_dataset_version_samples(dataset_version_id, limit=100),
+            "recipes": self.records.list_training_recipes(dataset_version_id, limit=50),
+        }
+
+    def get_manifest(self, dataset_version_id: str) -> dict[str, Any]:
+        version = self.records.get_dataset_version(dataset_version_id)
+        return self.freeze_service.manifest_writer.read_manifest(version["manifest_path"])
+
+    def list_version_samples(
+        self,
+        dataset_version_id: str,
+        *,
+        split: str | None = None,
+        has_warnings: bool | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[dict[str, Any]]:
+        if split:
+            split = safe_version_sample_split(split)
+        return self.records.list_dataset_version_samples(
+            dataset_version_id,
+            split=split,
+            has_warnings=has_warnings,
+            limit=limit,
+            offset=offset,
+        )
+
+    def recommend_recipe(self, dataset_version_id: str, request: Any) -> dict[str, Any]:
+        version = self.records.get_dataset_version(dataset_version_id)
+        data = _model_dump(request)
+        recommendation = self.recipe_recommender.recommend(
+            version,
+            base_model_id=data.get("base_model_id"),
+            method=data.get("method"),
+            hardware=data.get("hardware") or {},
+            preferences=data.get("preferences") or {},
+        )
+        return self.records.create_training_recipe(recommendation)
+
+    def list_recipes(
+        self,
+        dataset_version_id: str,
+        *,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[dict[str, Any]]:
+        return self.records.list_training_recipes(dataset_version_id, limit=limit, offset=offset)
+
+    def get_recipe(self, recipe_id: str) -> dict[str, Any]:
+        return self.records.get_training_recipe(recipe_id)
+
+    def update_recipe(self, recipe_id: str, request: Any) -> dict[str, Any]:
+        data = _model_dump(request)
+        changes: dict[str, Any] = {}
+        if "base_model_id" in data:
+            changes["base_model_id"] = data.get("base_model_id")
+        if data.get("method") is not None:
+            changes["method"] = safe_recipe_method(data.get("method"))
+        if data.get("status") is not None:
+            changes["status"] = safe_recipe_status(data.get("status"))
+        if data.get("user_config") is not None:
+            changes["user_config_json"] = json.dumps(
+                data.get("user_config") or {},
+                ensure_ascii=False,
+                sort_keys=True,
+            )
+        return self.records.update_training_recipe(recipe_id, changes)
+
+    def confirm_recipe(self, recipe_id: str) -> dict[str, Any]:
+        return self.records.confirm_training_recipe(recipe_id)
+
+    def archive_recipe(self, recipe_id: str) -> dict[str, Any]:
+        return self.records.update_training_recipe(recipe_id, {"status": "archived"})
 
     def _build_draft(
         self,

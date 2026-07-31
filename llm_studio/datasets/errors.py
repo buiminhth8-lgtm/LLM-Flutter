@@ -38,6 +38,24 @@ class DatasetExportNotFoundError(DatasetError):
         super().__init__(f"Dataset export not found: {export_id}")
 
 
+class DatasetVersionNotFoundError(DatasetError):
+    code = api_errors.DATASET_VERSION_NOT_FOUND
+    status_code = 404
+
+    def __init__(self, dataset_version_id: str):
+        super().__init__(f"Dataset version not found: {dataset_version_id}")
+
+
+class DatasetVersionAlreadyExistsError(DatasetError):
+    code = api_errors.DATASET_VERSION_ALREADY_EXISTS
+    status_code = 409
+
+
+class DatasetVersionImmutableError(DatasetError):
+    code = api_errors.DATASET_VERSION_IMMUTABLE
+    status_code = 409
+
+
 class DatasetProjectNotFoundError(DatasetError):
     code = api_errors.DATASET_PROJECT_NOT_FOUND
     status_code = 404
@@ -92,6 +110,20 @@ class DatasetInvalidExportFormatError(DatasetError):
         super().__init__(f"Unsupported dataset export format: {value}")
 
 
+class DatasetSplitInvalidError(DatasetError):
+    code = api_errors.DATASET_SPLIT_INVALID
+
+    def __init__(self, value: str):
+        super().__init__(f"Unsupported dataset split setting: {value}")
+
+
+class DatasetRecipeInvalidMethodError(DatasetError):
+    code = api_errors.DATASET_RECIPE_INVALID_METHOD
+
+    def __init__(self, value: str):
+        super().__init__(f"Unsupported training recipe method: {value}")
+
+
 class DatasetSampleEmptyInstructionError(DatasetError):
     code = api_errors.DATASET_SAMPLE_EMPTY_INSTRUCTION
 
@@ -113,6 +145,70 @@ class DatasetNoApprovedSamplesError(DatasetError):
     code = api_errors.DATASET_NO_APPROVED_SAMPLES
 
 
+class DatasetFreezeNotReadyError(DatasetError):
+    code = api_errors.DATASET_FREEZE_NOT_READY
+
+
+class DatasetFreezeNoApprovedSamplesError(DatasetError):
+    code = api_errors.DATASET_FREEZE_NO_APPROVED_SAMPLES
+
+
+class DatasetFreezeFailedError(DatasetError):
+    code = api_errors.DATASET_FREEZE_FAILED
+    status_code = 500
+
+
+class DatasetDirtyMarkFailedError(DatasetError):
+    code = api_errors.DATASET_DIRTY_MARK_FAILED
+    status_code = 500
+
+
+class DatasetManifestNotFoundError(DatasetError):
+    code = api_errors.DATASET_MANIFEST_NOT_FOUND
+    status_code = 404
+
+
+class DatasetManifestInvalidError(DatasetError):
+    code = api_errors.DATASET_MANIFEST_INVALID
+
+
+class DatasetSplitTooSmallError(DatasetError):
+    code = api_errors.DATASET_SPLIT_TOO_SMALL
+
+
+class DatasetTokenStatsFailedError(DatasetError):
+    code = api_errors.DATASET_TOKEN_STATS_FAILED
+    status_code = 500
+
+
+class DatasetRecipeNotFoundError(DatasetError):
+    code = api_errors.DATASET_RECIPE_NOT_FOUND
+    status_code = 404
+
+    def __init__(self, recipe_id: str):
+        super().__init__(f"Training recipe not found: {recipe_id}")
+
+
+class DatasetRecipeRecommendFailedError(DatasetError):
+    code = api_errors.DATASET_RECIPE_RECOMMEND_FAILED
+    status_code = 500
+
+
+class DatasetRecipeConfirmFailedError(DatasetError):
+    code = api_errors.DATASET_RECIPE_CONFIRM_FAILED
+    status_code = 500
+
+
+class DatasetRecipeAlreadyConfirmedError(DatasetError):
+    code = api_errors.DATASET_RECIPE_ALREADY_CONFIRMED
+    status_code = 409
+
+
+class DatasetTrainingNotImplementedError(DatasetError):
+    code = api_errors.DATASET_TRAINING_NOT_IMPLEMENTED
+    status_code = 501
+
+
 class DatasetExportFailedError(DatasetError):
     code = api_errors.DATASET_EXPORT_FAILED
     status_code = 500
@@ -127,4 +223,4 @@ class DatasetVersionNotImplementedError(DatasetError):
     status_code = 501
 
     def __init__(self):
-        super().__init__("DatasetVersion and frozen datasets are planned for Stage 7.")
+        super().__init__("This DatasetVersion operation is not implemented.")
