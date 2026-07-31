@@ -37,3 +37,18 @@ def is_revision_system_enabled(config: Any) -> bool:
         return bool(revision.get("enabled", True))
     except Exception:
         return False
+
+
+def is_dataset_builder_enabled(config: Any) -> bool:
+    """Return whether the Stage 6 Dataset Builder API should be exposed."""
+
+    if not is_revision_system_enabled(config):
+        return False
+    try:
+        features = config.get("features", {}) if config is not None else {}
+        dataset = features.get("dataset_builder", {})
+        if not isinstance(dataset, dict):
+            return True
+        return bool(dataset.get("enabled", True))
+    except Exception:
+        return False

@@ -62,8 +62,8 @@ def run(args: argparse.Namespace) -> None:
         capabilities = client.request("GET", "/v1/capabilities")
         if _capability(capabilities, "revision_system") != "available":
             raise RuntimeError("revision_system capability is not available.")
-        if _capability(capabilities, "dataset_builder") != "not_implemented":
-            raise RuntimeError("dataset_builder must remain not_implemented.")
+        if _capability(capabilities, "dataset_versioning") not in {"", "not_implemented"}:
+            raise RuntimeError("dataset_versioning must remain not_implemented.")
 
         suffix = int(time.time())
         project = client.request(

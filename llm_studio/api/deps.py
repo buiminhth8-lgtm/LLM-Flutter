@@ -18,6 +18,7 @@ class ApiState:
     context_service: Any | None = None
     writing_service: Any | None = None
     revision_service: Any | None = None
+    dataset_service: Any | None = None
 
 
 _state = ApiState()

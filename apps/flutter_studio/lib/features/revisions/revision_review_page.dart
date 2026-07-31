@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../core/ui/app_section_header.dart';
+import '../datasets/dataset_controller.dart';
+import '../datasets/widgets/revision_to_sample_dialog.dart';
 import 'models/revision_record_dto.dart';
 import 'revision_controller.dart';
 import 'widgets/revision_autosave_indicator.dart';
@@ -14,9 +16,16 @@ import 'widgets/revision_status_badge.dart';
 import 'widgets/revision_tag_selector.dart';
 
 class RevisionReviewPage extends StatefulWidget {
-  const RevisionReviewPage({super.key, required this.controller});
+  const RevisionReviewPage({
+    super.key,
+    required this.controller,
+    this.datasetController,
+    this.onOpenDatasetSample,
+  });
 
   final RevisionController controller;
+  final DatasetController? datasetController;
+  final ValueChanged<String>? onOpenDatasetSample;
 
   @override
   State<RevisionReviewPage> createState() => _RevisionReviewPageState();
@@ -258,6 +267,22 @@ class _RevisionReviewPageState extends State<RevisionReviewPage> {
           value: state.acceptedForDataset,
           onChanged: widget.controller.setDatasetCandidate,
         ),
+        if (widget.datasetController != null) ...[
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            key: const Key('revision-add-to-dataset'),
+            onPressed: () => _addToDataset(revision),
+            icon: const Icon(Icons.dataset_outlined),
+            label: const Text('Add to Dataset'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            key: const Key('revision-create-sft-sample'),
+            onPressed: () => _addToDataset(revision),
+            icon: const Icon(Icons.playlist_add_outlined),
+            label: const Text('Create SFT Sample'),
+          ),
+        ],
         const SizedBox(height: 14),
         FilledButton.icon(
           key: const Key('revision-save'),
@@ -293,5 +318,35 @@ class _RevisionReviewPageState extends State<RevisionReviewPage> {
     _syncedRevisionId = revision.revisionId;
     _edited.text = revision.editedText;
     _notes.text = revision.qualityNotes ?? '';
+  }
+
+  Future<void> _addToDataset(RevisionRecordDto revision) async {
+    final datasets = widget.datasetController;
+    if (datasets == null) {
+      return;
+    }
+    await datasets.refresh();
+    if (!mounted) {
+      return;
+    }
+    final datasetId = await showDialog<String>(
+      context: context,
+      builder: (_) => RevisionToSampleDialog(
+        datasets: datasets.state.datasets,
+        revisionAccepted: revision.acceptedForDataset,
+        revisionApproved: revision.status == 'approved',
+      ),
+    );
+    if (datasetId == null) {
+      return;
+    }
+    final sample = await datasets.createSampleFromRevision(
+      datasetId: datasetId,
+      revisionId: revision.revisionId,
+      sampleType: 'sft',
+    );
+    if (sample != null) {
+      widget.onOpenDatasetSample?.call(sample.sampleId);
+    }
   }
 }

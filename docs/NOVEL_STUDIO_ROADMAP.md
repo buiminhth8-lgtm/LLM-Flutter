@@ -7,16 +7,18 @@ Stage 2 Prompt Studio details: [NOVEL_STAGE2_PROMPT_STUDIO.md](NOVEL_STAGE2_PROM
 Stage 3 Context Assembler details: [NOVEL_STAGE3_CONTEXT_ASSEMBLER.md](NOVEL_STAGE3_CONTEXT_ASSEMBLER.md).
 Stage 4 Writing details: [NOVEL_STAGE4_WRITING.md](NOVEL_STAGE4_WRITING.md).
 Stage 5 Revisions details: [NOVEL_STAGE5_REVISIONS.md](NOVEL_STAGE5_REVISIONS.md).
+Stage 6 Dataset Builder details: [NOVEL_STAGE6_DATASET_BUILDER.md](NOVEL_STAGE6_DATASET_BUILDER.md).
 
-Stage 5 is implemented: Stage 4 generation records can be turned into human
-revision assets, backend `diff_json` is persisted, autosaves protect long edits,
-and Flutter exposes Revision Review without creating dataset or training records.
+Stage 6 is implemented: approved revision candidates can be converted into
+reviewable SFT samples, sample review state is persisted, and approved samples
+can be exported as draft JSONL files.
 
-Stage 5 boundaries:
+Stage 6 boundaries:
 
 - `revision_records` saves `original_text`, `edited_text`, `diff_json`, tags, score, status, hashes, and `accepted_for_dataset`.
 - `revision_autosaves` saves editing drafts separately and never changes formal revision text.
-- Dataset Builder, SFT JSONL, FineTune, RAG/Memory, and Evaluation remain later stages.
+- `training_datasets`, `training_samples`, and `dataset_exports` are mutable draft builder records.
+- DatasetVersion, frozen datasets, train/val split, TrainingRecipe, FineTune, RAG/Memory, and Evaluation remain later stages.
 
 ## 阶段 0：工程基线整理与开发入口
 
@@ -53,6 +55,10 @@ Stage 5 boundaries:
 ## 阶段 5：Revision 人工修订与版本系统
 
 ## 阶段 6：Dataset Builder 数据集构建
+
+- `accepted_for_dataset=true` 且经过用户选择的 revision 可转换为 SFT sample。
+- `training_samples` 支持 pending / approved / rejected / archived 审核状态。
+- 导出 draft SFT JSONL 到 `data/datasets/{dataset_id}`，不创建 DatasetVersion，不启动训练。
 
 ## 阶段 7：Dataset Version 冻结与训练配方推荐
 

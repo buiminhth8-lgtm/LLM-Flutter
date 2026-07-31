@@ -59,9 +59,6 @@ models:
     )
     monkeypatch.setenv("LLM_STUDIO_CONFIG", str(cfg_path))
     app = get_app(Config(cfg_path))
-    paths = {path for route in app.routes if (path := getattr(route, "path", None))}
-    assert not any(path.startswith("/v1/datasets") for path in paths)
-
     client = TestClient(app)
     disabled = client.get("/v1/novels/projects")
     assert disabled.status_code == 404
@@ -72,6 +69,9 @@ models:
     revisions = client.get("/v1/revisions")
     assert revisions.status_code == 404
     assert revisions.json()["error"]["code"] == "REVISION_FEATURE_DISABLED"
+    datasets = client.get("/v1/datasets")
+    assert datasets.status_code == 404
+    assert datasets.json()["error"]["code"] == "DATASET_FEATURE_DISABLED"
 
     response = client.get("/v1/capabilities")
     assert response.status_code == 200
@@ -79,14 +79,15 @@ models:
     assert caps["novel_studio"]["status"] == CapabilityStatus.NOT_IMPLEMENTED.value
 
 
-def test_novel_scope_does_not_add_later_stage_services():
+def test_novel_scope_does_not_add_stage7_or_training_services():
     from pathlib import Path
 
     import llm_studio
 
     root = Path(llm_studio.__file__).parent
     forbidden_files = {
-        root / "datasets" / "builder.py",
-        root / "datasets" / "repository.py",
+        root / "datasets" / "versions.py",
+        root / "datasets" / "recipes.py",
+        root / "datasets" / "training.py",
     }
     assert not any(path.exists() for path in forbidden_files)

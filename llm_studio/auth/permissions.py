@@ -113,6 +113,11 @@ def required_permission_for_request(method: str, path: str) -> Permission | None
             return Permission.VIEW_REVISIONS
         return Permission.MANAGE_REVISIONS
 
+    if path.startswith("/v1/datasets"):
+        if method == "GET":
+            return Permission.VIEW_DATASETS
+        return Permission.MANAGE_DATASETS
+
     if path.startswith("/v1/vision"):
         return Permission.CHAT
 
