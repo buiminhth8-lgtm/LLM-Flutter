@@ -5,10 +5,11 @@ and Flutter Windows client.
 
 Stage 2 Prompt Studio details: [NOVEL_STAGE2_PROMPT_STUDIO.md](NOVEL_STAGE2_PROMPT_STUDIO.md).
 Stage 3 Context Assembler details: [NOVEL_STAGE3_CONTEXT_ASSEMBLER.md](NOVEL_STAGE3_CONTEXT_ASSEMBLER.md).
+Stage 4 Writing details: [NOVEL_STAGE4_WRITING.md](NOVEL_STAGE4_WRITING.md).
 
-Stage 3 is implemented: Novel records can be selected, prioritized, formatted,
-budgeted, truncated, persisted, and rendered through the Stage 2
-`PromptRenderer`. Runtime generation remains reserved for Stage 4.
+Stage 4 is implemented: Context Assembler and PromptRenderer feed the existing
+local model Runtime, generation records are persisted, Flutter consumes SSE,
+and outputs can be saved to chapter drafts without touching `final_content`.
 
 ## 阶段 0：工程基线整理与开发入口
 
@@ -36,6 +37,11 @@ budgeted, truncated, persisted, and rendered through the Stage 2
 ## 阶段 3：Context Assembler 上下文装配
 
 ## 阶段 4：Writing 本地小说生成闭环
+
+- `generation_records` 持久化 Prompt、上下文、模型参数、输出和状态。
+- 支持非流式生成、SSE 流式生成、取消和保存到章节草稿/摘要。
+- Flutter Writing Workspace 提供 Context Preview、生成参数、输出和历史。
+- 不包含 Revision、Diff、Dataset 或自动训练。
 
 ## 阶段 5：Revision 人工修订与版本系统
 

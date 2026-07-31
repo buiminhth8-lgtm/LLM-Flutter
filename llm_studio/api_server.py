@@ -60,6 +60,7 @@ from .api.routers.jobs import router as jobs_router
 from .api.routers.novels import router as novels_router
 from .api.routers.prompts import router as prompts_router
 from .api.routers.storage import router as storage_router
+from .api.routers.writing import router as writing_router
 from .auth import has_permission, normalize_role, required_permission_for_request
 from .auth.roles import Role
 from .benchmarks import BenchmarkConfig, BenchmarkRunner
@@ -101,6 +102,7 @@ from .security.uploads import (
     save_upload_file_safely,
 )
 from .vision import VisionRunner
+from .writing import WritingRuntimeBridge, WritingService
 
 # Loaded model runners keyed by model_path
 _runners: dict[str, BaseRunner] = {}
@@ -118,6 +120,7 @@ _gpu_scheduler: GpuTaskScheduler | None = None
 _novel_service: NovelService | None = None
 _prompt_service: PromptService | None = None
 _context_service: ContextService | None = None
+_writing_service: WritingService | None = None
 _current_model_id: str | None = None
 _runner_model_ids: dict[str, str] = {}
 
@@ -132,7 +135,7 @@ def get_app(config: Config):
 
     global _config, _rag_pipeline, _admin, _concurrency
     global _model_repository, _job_repository, _job_queue, _download_manager, _adapter_repository, _gpu_scheduler
-    global _novel_service, _prompt_service, _context_service
+    global _novel_service, _prompt_service, _context_service, _writing_service
     _config = config
     layout = layout_from_config(config)
     layout.ensure()
@@ -226,6 +229,7 @@ def get_app(config: Config):
     app.include_router(novels_router)
     app.include_router(prompts_router)
     app.include_router(context_router)
+    app.include_router(writing_router)
 
     @app.middleware("http")
     async def request_id_middleware(request: Request, call_next):
@@ -590,6 +594,30 @@ def get_app(config: Config):
         if model_path not in _vision_runners:
             raise api_error(400, MODEL_NOT_FOUND, "视觉模型未加载，请先加载模型。", request_id)
         return _vision_runners[model_path]
+
+    @asynccontextmanager
+    async def _writing_inference_scope(owner: str):
+        assert _concurrency is not None and _gpu_scheduler is not None
+        async with _concurrency.inference(
+            wait_timeout_seconds=float(config.runtime.get("request_timeout_seconds", 300))
+        ):
+            async with _gpu_scheduler.acquire(
+                _gpu_request(GpuTaskType.INFERENCE, "novel-writing", owner)
+            ):
+                yield
+
+    _writing_service = WritingService.from_config(
+        config,
+        novel_service=_novel_service,
+        prompt_service=_prompt_service,
+        context_service=_context_service,
+        runtime_bridge=WritingRuntimeBridge(
+            resolve_runner=_get_or_load_runner,
+            inference_scope=_writing_inference_scope,
+            adapter_repository=_adapter_repository,
+        ),
+    )
+    configure_api_state(writing_service=_writing_service)
 
     async def _load_text_model(model_id: str, request_id: str) -> dict:
         global _current_model_id

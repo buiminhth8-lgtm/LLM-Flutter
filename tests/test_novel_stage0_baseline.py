@@ -80,8 +80,8 @@ def test_novel_scope_does_not_add_later_stage_services():
 
     root = Path(llm_studio.__file__).parent
     forbidden_files = {
-        root / "writing" / "service.py",
         root / "revisions" / "repository.py",
+        root / "revisions" / "service.py",
         root / "datasets" / "builder.py",
         root / "datasets" / "repository.py",
     }

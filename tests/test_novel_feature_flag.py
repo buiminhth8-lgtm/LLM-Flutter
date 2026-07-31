@@ -54,4 +54,5 @@ def test_novel_capabilities_are_stage1_when_enabled(monkeypatch, tmp_path):
     assert caps["novel_characters"]["status"] == "available"
     assert caps["novel_chapters"]["status"] == "available"
     assert caps["prompt_studio"]["status"] == "available"
-    assert caps["writing_workspace"]["status"] == "not_implemented"
+    assert caps["writing_workspace"]["status"] == "available"
+    assert caps["revision_system"]["status"] == "not_implemented"

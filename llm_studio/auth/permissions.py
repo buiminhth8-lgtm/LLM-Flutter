@@ -103,6 +103,11 @@ def required_permission_for_request(method: str, path: str) -> Permission | None
             return Permission.VIEW_CONTEXT
         return Permission.MANAGE_CONTEXT
 
+    if path.startswith("/v1/writing"):
+        if method == "GET":
+            return Permission.VIEW_WRITING
+        return Permission.MANAGE_WRITING
+
     if path.startswith("/v1/vision"):
         return Permission.CHAT
 

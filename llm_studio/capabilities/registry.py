@@ -64,6 +64,8 @@ _CAPABILITIES: tuple[CapabilityInfo, ...] = (
     CapabilityInfo("context_budget", CapabilityStatus.NOT_IMPLEMENTED, "Novel context budget management is disabled.", False),
     CapabilityInfo("context_render_preview", CapabilityStatus.NOT_IMPLEMENTED, "Context-based Prompt preview is disabled.", False),
     CapabilityInfo("writing_workspace", CapabilityStatus.NOT_IMPLEMENTED, "The novel writing workspace is planned but not implemented.", False),
+    CapabilityInfo("writing_stream", CapabilityStatus.NOT_IMPLEMENTED, "Novel writing streaming is disabled until Stage 4 is enabled.", False),
+    CapabilityInfo("writing_save_to_chapter", CapabilityStatus.NOT_IMPLEMENTED, "Saving generated text to chapter drafts is disabled until Stage 4 is enabled.", False),
     CapabilityInfo("revision_system", CapabilityStatus.NOT_IMPLEMENTED, "Revision and version workflows are planned but not implemented.", False),
     CapabilityInfo("dataset_builder", CapabilityStatus.NOT_IMPLEMENTED, "Novel dataset building is planned but not implemented.", False),
     CapabilityInfo("finetune_center", CapabilityStatus.PARTIAL, "Core LoRA/QLoRA plumbing exists, but Novel-specific fine-tune workflows are not implemented.", False),
@@ -81,7 +83,7 @@ def get_capabilities_for_config(config) -> tuple[CapabilityInfo, ...]:
     if not is_novel_studio_enabled(config):
         return _CAPABILITIES
     overrides = {
-        "novel_studio": (CapabilityStatus.PARTIAL, "Novel Studio Stage 3 foundation, Prompt Studio, and Context Assembler are available.", True),
+        "novel_studio": (CapabilityStatus.PARTIAL, "Novel Studio foundations, Prompt Studio, Context Assembler, and local Writing Workspace are available.", True),
         "novel_projects": (CapabilityStatus.AVAILABLE, "Novel project CRUD is available.", True),
         "novel_world_bible": (CapabilityStatus.AVAILABLE, "Novel world bible entries are available.", True),
         "novel_characters": (CapabilityStatus.AVAILABLE, "Novel character records are available.", True),
@@ -92,6 +94,9 @@ def get_capabilities_for_config(config) -> tuple[CapabilityInfo, ...]:
         "context_assembler": (CapabilityStatus.AVAILABLE, "Novel records are selected, prioritized, budgeted, and assembled without calling Runtime.", True),
         "context_budget": (CapabilityStatus.AVAILABLE, "Deterministic token and character budgets with priority-based truncation are available.", True),
         "context_render_preview": (CapabilityStatus.AVAILABLE, "Assembled variables can be rendered through PromptRenderer without model generation.", True),
+        "writing_workspace": (CapabilityStatus.AVAILABLE, "Local novel writing reuses ContextAssembler, PromptRenderer, and the existing Runtime.", True),
+        "writing_stream": (CapabilityStatus.AVAILABLE, "Writing generation supports persisted SSE streaming and cooperative cancellation.", True),
+        "writing_save_to_chapter": (CapabilityStatus.AVAILABLE, "Successful generations can be saved to draft_content or summary; final_content is protected.", True),
     }
     existing = {cap.name for cap in _CAPABILITIES}
     result: list[CapabilityInfo] = []

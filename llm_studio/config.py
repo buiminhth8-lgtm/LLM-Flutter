@@ -102,6 +102,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "context": {
         "db_path": "./data/novels/novels.sqlite",
     },
+    "writing": {
+        "db_path": "./data/novels/novels.sqlite",
+    },
     "finetune": {
         "method": "qlora",
         "lora_r": 16,
@@ -304,6 +307,7 @@ class Config:
             "novels": ("db_path",),
             "prompts": ("db_path",),
             "context": ("db_path",),
+            "writing": ("db_path",),
         }.items():
             cfg = self._section(section)
             for key in keys:
