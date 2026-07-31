@@ -31,6 +31,9 @@ import '../features/prompt_studio/prompt_controller.dart';
 import '../features/prompt_studio/prompt_studio_page.dart';
 import '../features/rag/rag_controller.dart';
 import '../features/rag/rag_page.dart';
+import '../features/revisions/revision_api_client.dart';
+import '../features/revisions/revision_controller.dart';
+import '../features/revisions/revision_review_page.dart';
 import '../features/settings/settings_controller.dart';
 import '../features/settings/settings_page.dart';
 import '../features/setup/setup_page.dart';
@@ -103,8 +106,11 @@ class _StudioShellState extends State<StudioShell> {
   late final ContextController _contextAssembler = ContextController(
     ContextApiClient(_client),
   );
+  late final RevisionApiClient _revisionApi = RevisionApiClient(_client);
+  late final RevisionController _revisions = RevisionController(_revisionApi);
   late final WritingController _writing = WritingController(
     WritingApiClient(_client),
+    revisionApi: _revisionApi,
   );
 
   @override
@@ -163,6 +169,7 @@ class _StudioShellState extends State<StudioShell> {
     _prompts,
     _contextAssembler,
     _writing,
+    _revisions,
   ];
 
   void _onNotifierChanged() {
@@ -261,6 +268,7 @@ class _StudioShellState extends State<StudioShell> {
         if (_contextAssemblerAvailable())
           _contextAssembler.refresh().catchError((_) {}),
         if (_writingWorkspaceAvailable()) _writing.refresh().catchError((_) {}),
+        if (_revisionSystemAvailable()) _revisions.refresh().catchError((_) {}),
       ]);
       await _savePreferences();
     });
@@ -576,6 +584,17 @@ class _StudioShellState extends State<StudioShell> {
     });
   }
 
+  bool _revisionSystemAvailable() {
+    return _status.state.capabilities.any((item) {
+      if (item is! Map) {
+        return false;
+      }
+      return item['name'] == 'revision_system' &&
+          item['status'] == 'available' &&
+          item['frontend_exposed'] == true;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_shell.initialSetupCheckDone && widget.autoRefresh) {
@@ -716,7 +735,14 @@ class _StudioShellState extends State<StudioShell> {
       NovelProjectsPage(controller: _novels),
       PromptStudioPage(controller: _prompts),
       ContextAssemblerPage(controller: _contextAssembler),
-      WritingWorkspacePage(controller: _writing),
+      WritingWorkspacePage(
+        controller: _writing,
+        onOpenRevision: (revisionId) {
+          unawaited(_revisions.openRevision(revisionId));
+          _navigation.select(revisionReviewPageIndex);
+        },
+      ),
+      RevisionReviewPage(controller: _revisions),
       SettingsPage(
         apiBaseController: _settings.apiBaseController,
         userIdController: _settings.userIdController,
@@ -767,6 +793,7 @@ class _StudioShellState extends State<StudioShell> {
               showPromptStudio: _promptStudioAvailable(),
               showContextAssembler: _contextAssemblerAvailable(),
               showWritingWorkspace: _writingWorkspaceAvailable(),
+              showRevisionReview: _revisionSystemAvailable(),
             ),
           ),
           const VerticalDivider(width: 1),

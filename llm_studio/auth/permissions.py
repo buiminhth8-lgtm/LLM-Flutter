@@ -108,6 +108,11 @@ def required_permission_for_request(method: str, path: str) -> Permission | None
             return Permission.VIEW_WRITING
         return Permission.MANAGE_WRITING
 
+    if path.startswith("/v1/revisions"):
+        if method == "GET":
+            return Permission.VIEW_REVISIONS
+        return Permission.MANAGE_REVISIONS
+
     if path.startswith("/v1/vision"):
         return Permission.CHAT
 

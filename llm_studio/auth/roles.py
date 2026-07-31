@@ -35,6 +35,8 @@ class Permission(StrEnum):
     MANAGE_CONTEXT = "manage_context"
     VIEW_WRITING = "view_writing"
     MANAGE_WRITING = "manage_writing"
+    VIEW_REVISIONS = "view_revisions"
+    MANAGE_REVISIONS = "manage_revisions"
 
 
 ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
@@ -46,6 +48,7 @@ ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.VIEW_PROMPTS,
             Permission.VIEW_CONTEXT,
             Permission.VIEW_WRITING,
+            Permission.VIEW_REVISIONS,
         }
     ),
     Role.OPERATOR: frozenset(
@@ -64,6 +67,8 @@ ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.MANAGE_CONTEXT,
             Permission.VIEW_WRITING,
             Permission.MANAGE_WRITING,
+            Permission.VIEW_REVISIONS,
+            Permission.MANAGE_REVISIONS,
         }
     ),
     Role.ADMIN: frozenset(Permission),

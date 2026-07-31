@@ -3,16 +3,20 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../../core/api/api_exception.dart';
+import '../revisions/models/revision_record_dto.dart';
+import '../revisions/revision_api_client.dart';
 import 'models/target_length_dto.dart';
+import 'models/writing_generation_record_dto.dart';
 import 'models/writing_generation_request_dto.dart';
 import 'models/writing_stream_event_dto.dart';
 import 'writing_api_client.dart';
 import 'writing_state.dart';
 
 class WritingController extends ChangeNotifier {
-  WritingController(this._api);
+  WritingController(this._api, {this.revisionApi});
 
   final WritingApiClient _api;
+  final RevisionApiClient? revisionApi;
   StreamSubscription<WritingStreamEventDto>? _streamSubscription;
   WritingState state = const WritingState();
 
@@ -80,7 +84,7 @@ class WritingController extends ChangeNotifier {
     await _run(() async {
       state = state.copyWith(
         scenes: chapterId == null ? const [] : await _api.listScenes(chapterId),
-        history: await _api.listGenerations(
+        history: await _historyWithRevisionMap(
           projectId: state.selectedProjectId,
           chapterId: chapterId,
         ),
@@ -311,6 +315,28 @@ class WritingController extends ChangeNotifier {
     });
   }
 
+  Future<String?> createRevisionFromGeneration(
+    String generationId, {
+    String? editedText,
+  }) async {
+    final revisions = revisionApi;
+    if (revisions == null) {
+      _setError('Revision system is not available.');
+      return null;
+    }
+    String? revisionId;
+    await _run(() async {
+      final revision = await revisions.createRevisionFromGeneration(
+        generationId: generationId,
+        editedText: editedText,
+      );
+      revisionId = revision.revisionId;
+      await _refreshHistory();
+      state = state.copyWith(notice: 'Revision created.');
+    });
+    return revisionId;
+  }
+
   void _handleStreamEvent(WritingStreamEventDto event) {
     switch (event.type) {
       case 'start':
@@ -345,7 +371,7 @@ class WritingController extends ChangeNotifier {
     final scenes = chapterId == null
         ? const <dynamic>[]
         : await _api.listScenes(chapterId);
-    final history = await _api.listGenerations(
+    final history = await _historyWithRevisionMap(
       projectId: projectId,
       chapterId: chapterId,
     );
@@ -366,7 +392,7 @@ class WritingController extends ChangeNotifier {
       return;
     }
     try {
-      final history = await _api.listGenerations(
+      final history = await _historyWithRevisionMap(
         projectId: projectId,
         chapterId: state.selectedChapterId,
       );
@@ -375,6 +401,30 @@ class WritingController extends ChangeNotifier {
     } catch (error) {
       _setError(_message(error));
     }
+  }
+
+  Future<List<WritingGenerationRecordDto>> _historyWithRevisionMap({
+    String? projectId,
+    String? chapterId,
+  }) async {
+    final history = await _api.listGenerations(
+      projectId: projectId,
+      chapterId: chapterId,
+    );
+    final revisions = revisionApi == null || projectId == null
+        ? const <RevisionRecordDto>[]
+        : await revisionApi!.listRevisions(
+            projectId: projectId,
+            chapterId: chapterId,
+          );
+    state = state.copyWith(
+      revisionIdsByGeneration: {
+        for (final revision in revisions)
+          if (revision.generationId != null)
+            revision.generationId!: revision.revisionId,
+      },
+    );
+    return history;
   }
 
   String _draftFor(String? chapterId) => _draftFrom(state.chapters, chapterId);

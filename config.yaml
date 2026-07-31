@@ -92,6 +92,8 @@ security:
 features:
   novel_studio:
     enabled: false
+  revision_system:
+    enabled: true
 novels:
   db_path: "./data/novels/novels.sqlite"
 prompts:
@@ -100,6 +102,9 @@ context:
   db_path: "./data/novels/novels.sqlite"
 writing:
   db_path: "./data/novels/novels.sqlite"
+revisions:
+  db_path: "./data/novels/novels.sqlite"
+  autosave_retention: 20
 
 # Unified model repository. Legacy configs with top-level models_dir are still
 # migrated at load time, but new installs should use this section only.

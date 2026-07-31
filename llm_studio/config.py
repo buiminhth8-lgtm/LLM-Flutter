@@ -92,6 +92,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "novel_studio": {
             "enabled": False,
         },
+        "revision_system": {
+            "enabled": True,
+        },
     },
     "novels": {
         "db_path": "./data/novels/novels.sqlite",
@@ -104,6 +107,10 @@ DEFAULT_CONFIG: dict[str, Any] = {
     },
     "writing": {
         "db_path": "./data/novels/novels.sqlite",
+    },
+    "revisions": {
+        "db_path": "./data/novels/novels.sqlite",
+        "autosave_retention": 20,
     },
     "finetune": {
         "method": "qlora",

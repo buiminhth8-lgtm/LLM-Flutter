@@ -26,7 +26,9 @@ def test_novel_capabilities_are_placeholders():
     assert caps["writing_workspace"].status == CapabilityStatus.NOT_IMPLEMENTED
     assert caps["revision_system"].status == CapabilityStatus.NOT_IMPLEMENTED
     assert caps["dataset_builder"].status == CapabilityStatus.NOT_IMPLEMENTED
-    assert caps["finetune_center"].status == CapabilityStatus.PARTIAL
+    assert caps["revision_diff"].status == CapabilityStatus.NOT_IMPLEMENTED
+    assert caps["revision_autosave"].status == CapabilityStatus.NOT_IMPLEMENTED
+    assert caps["finetune_center"].status == CapabilityStatus.NOT_IMPLEMENTED
     assert caps["novel_rag_memory"].status == CapabilityStatus.NOT_IMPLEMENTED
     assert caps["novel_evaluation"].status == CapabilityStatus.NOT_IMPLEMENTED
     assert caps["novel_studio"].frontend_exposed is False
@@ -58,14 +60,18 @@ models:
     monkeypatch.setenv("LLM_STUDIO_CONFIG", str(cfg_path))
     app = get_app(Config(cfg_path))
     paths = {path for route in app.routes if (path := getattr(route, "path", None))}
-    assert not any(path.startswith("/v1/writing") for path in paths)
-    assert not any(path.startswith("/v1/revisions") for path in paths)
     assert not any(path.startswith("/v1/datasets") for path in paths)
 
     client = TestClient(app)
     disabled = client.get("/v1/novels/projects")
     assert disabled.status_code == 404
     assert disabled.json()["error"]["code"] == "NOVEL_FEATURE_DISABLED"
+    writing = client.get("/v1/writing/generations")
+    assert writing.status_code == 404
+    assert writing.json()["error"]["code"] == "WRITING_FEATURE_DISABLED"
+    revisions = client.get("/v1/revisions")
+    assert revisions.status_code == 404
+    assert revisions.json()["error"]["code"] == "REVISION_FEATURE_DISABLED"
 
     response = client.get("/v1/capabilities")
     assert response.status_code == 200
@@ -80,8 +86,6 @@ def test_novel_scope_does_not_add_later_stage_services():
 
     root = Path(llm_studio.__file__).parent
     forbidden_files = {
-        root / "revisions" / "repository.py",
-        root / "revisions" / "service.py",
         root / "datasets" / "builder.py",
         root / "datasets" / "repository.py",
     }
