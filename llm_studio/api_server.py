@@ -59,6 +59,7 @@ from .api.routers.downloads import router as downloads_router
 from .api.routers.jobs import router as jobs_router
 from .api.routers.novels import router as novels_router
 from .api.routers.prompts import router as prompts_router
+from .api.routers.revisions import router as revisions_router
 from .api.routers.storage import router as storage_router
 from .api.routers.writing import router as writing_router
 from .auth import has_permission, normalize_role, required_permission_for_request
@@ -86,6 +87,7 @@ from .models.storage import layout_from_config
 from .novels import NovelService
 from .prompts import PromptService
 from .rag import RAGPipeline
+from .revisions import RevisionService
 from .runner import BaseRunner, create_runner
 from .runtime.capabilities import detect_runtime_capabilities
 from .runtime.concurrency import ModelConcurrencyController, QueueFullError
@@ -121,6 +123,7 @@ _novel_service: NovelService | None = None
 _prompt_service: PromptService | None = None
 _context_service: ContextService | None = None
 _writing_service: WritingService | None = None
+_revision_service: RevisionService | None = None
 _current_model_id: str | None = None
 _runner_model_ids: dict[str, str] = {}
 
@@ -135,7 +138,7 @@ def get_app(config: Config):
 
     global _config, _rag_pipeline, _admin, _concurrency
     global _model_repository, _job_repository, _job_queue, _download_manager, _adapter_repository, _gpu_scheduler
-    global _novel_service, _prompt_service, _context_service, _writing_service
+    global _novel_service, _prompt_service, _context_service, _writing_service, _revision_service
     _config = config
     layout = layout_from_config(config)
     layout.ensure()
@@ -230,6 +233,7 @@ def get_app(config: Config):
     app.include_router(prompts_router)
     app.include_router(context_router)
     app.include_router(writing_router)
+    app.include_router(revisions_router)
 
     @app.middleware("http")
     async def request_id_middleware(request: Request, call_next):
@@ -617,7 +621,15 @@ def get_app(config: Config):
             adapter_repository=_adapter_repository,
         ),
     )
-    configure_api_state(writing_service=_writing_service)
+    _revision_service = RevisionService.from_config(
+        config,
+        novel_service=_novel_service,
+        writing_service=_writing_service,
+    )
+    configure_api_state(
+        writing_service=_writing_service,
+        revision_service=_revision_service,
+    )
 
     async def _load_text_model(model_id: str, request_id: str) -> dict:
         global _current_model_id

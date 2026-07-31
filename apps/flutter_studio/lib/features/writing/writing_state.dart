@@ -14,6 +14,7 @@ class WritingState {
     this.models = const [],
     this.adapters = const [],
     this.history = const [],
+    this.revisionIdsByGeneration = const {},
     this.selectedProjectId,
     this.selectedChapterId,
     this.selectedSceneId,
@@ -40,6 +41,7 @@ class WritingState {
   final List<Map<String, dynamic>> models;
   final List<Map<String, dynamic>> adapters;
   final List<WritingGenerationRecordDto> history;
+  final Map<String, String> revisionIdsByGeneration;
   final String? selectedProjectId;
   final String? selectedChapterId;
   final String? selectedSceneId;
@@ -66,6 +68,7 @@ class WritingState {
     List<Map<String, dynamic>>? models,
     List<Map<String, dynamic>>? adapters,
     List<WritingGenerationRecordDto>? history,
+    Map<String, String>? revisionIdsByGeneration,
     String? selectedProjectId,
     String? selectedChapterId,
     String? selectedSceneId,
@@ -101,6 +104,8 @@ class WritingState {
     models: models ?? this.models,
     adapters: adapters ?? this.adapters,
     history: history ?? this.history,
+    revisionIdsByGeneration:
+        revisionIdsByGeneration ?? this.revisionIdsByGeneration,
     selectedProjectId: clearProject
         ? null
         : selectedProjectId ?? this.selectedProjectId,

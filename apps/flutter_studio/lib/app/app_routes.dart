@@ -6,7 +6,8 @@ const novelStudioPageIndex = 9;
 const promptStudioPageIndex = 10;
 const contextAssemblerPageIndex = 11;
 const writingWorkspacePageIndex = 12;
-const settingsPageIndex = 13;
+const revisionReviewPageIndex = 13;
+const settingsPageIndex = 14;
 
 class ShellDestination {
   const ShellDestination({
@@ -92,6 +93,7 @@ Widget buildShellNavigation({
   bool showPromptStudio = false,
   bool showContextAssembler = false,
   bool showWritingWorkspace = false,
+  bool showRevisionReview = false,
 }) {
   return ListView(
     padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
@@ -138,6 +140,14 @@ Widget buildShellNavigation({
             selectedIndex: selectedIndex,
             icon: Icons.edit_note_outlined,
             label: 'Writing',
+            onSelected: onSelected,
+          ),
+        if (showRevisionReview)
+          SideNavItem(
+            index: revisionReviewPageIndex,
+            selectedIndex: selectedIndex,
+            icon: Icons.rate_review_outlined,
+            label: 'Revision',
             onSelected: onSelected,
           ),
       ],

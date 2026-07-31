@@ -5,6 +5,7 @@ Novel Studio Stage 1 foundation: [docs/NOVEL_STAGE1_FOUNDATION.md](docs/NOVEL_ST
 Novel Studio Stage 2 Prompt Studio: [docs/NOVEL_STAGE2_PROMPT_STUDIO.md](docs/NOVEL_STAGE2_PROMPT_STUDIO.md).
 Novel Studio Stage 3 Context Assembler: [docs/NOVEL_STAGE3_CONTEXT_ASSEMBLER.md](docs/NOVEL_STAGE3_CONTEXT_ASSEMBLER.md).
 Novel Studio Stage 4 Writing Workspace: [docs/NOVEL_STAGE4_WRITING.md](docs/NOVEL_STAGE4_WRITING.md).
+Novel Studio Stage 5 Revisions: [docs/NOVEL_STAGE5_REVISIONS.md](docs/NOVEL_STAGE5_REVISIONS.md).
 
 认证恢复、API Key 重新生成和本机 admin 恢复流程见 [docs/AUTH_RECOVERY.md](docs/AUTH_RECOVERY.md)。
 
@@ -51,6 +52,7 @@ LLM-Studio/
 │   ├── storage/                  # 磁盘空间和 cleanup
 │   ├── diagnostics/              # 脱敏诊断包
 │   ├── writing/                  # Novel Stage 4 本地生成与生成记录
+│   ├── revisions/                # Novel Stage 5 人工修订、Diff 与 autosave
 │   ├── auth/                     # RBAC 角色和权限
 │   └── security/                 # 上传安全等
 ├── apps/flutter_studio/          # Flutter Windows 桌面客户端
@@ -655,8 +657,10 @@ C:\Users\zkjr\...
 | `writing_workspace` | available* | yes | Novel Studio 开启时，复用 ContextAssembler、PromptRenderer 与现有 Runtime |
 | `writing_stream` | available* | yes | SSE delta、协作式取消和完整/部分输出持久化 |
 | `writing_save_to_chapter` | available* | yes | 只写 `draft_content` 或 `summary`，不写 `final_content` |
-| `revision_system` | not_implemented | no | 阶段 5 边界，阶段 4 不保存人工修改 |
-| `dataset_builder` | not_implemented | no | 阶段 4 不创建训练样本或导出数据集 |
+| `revision_system` | available* | yes | 保存人工修订、审核状态、评分、标签和数据集候选标记 |
+| `revision_diff` | available* | yes | 后端生成并持久化 `diff_json` |
+| `revision_autosave` | available* | yes | 自动保存编辑草稿，不改变正式 revision |
+| `dataset_builder` | not_implemented | no | 阶段 5 不创建训练样本或导出数据集 |
 
 \* 需要 `features.novel_studio.enabled=true`。
 

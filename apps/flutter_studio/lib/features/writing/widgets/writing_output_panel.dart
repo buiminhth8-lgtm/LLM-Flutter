@@ -10,6 +10,7 @@ class WritingOutputPanel extends StatelessWidget {
     required this.onStop,
     required this.onSave,
     required this.onAppend,
+    this.onEditAsRevision,
   });
 
   final String output;
@@ -19,33 +20,48 @@ class WritingOutputPanel extends StatelessWidget {
   final VoidCallback onStop;
   final VoidCallback onSave;
   final VoidCallback onAppend;
+  final VoidCallback? onEditAsRevision;
 
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('AI 输出', style: Theme.of(context).textTheme.titleMedium),
-          const Spacer(),
-          if (generating)
-            OutlinedButton.icon(
-              key: const Key('writing-stop'),
-              onPressed: onStop,
-              icon: const Icon(Icons.stop_circle_outlined),
-              label: const Text('Stop'),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (generating)
+                  OutlinedButton.icon(
+                    key: const Key('writing-stop'),
+                    onPressed: onStop,
+                    icon: const Icon(Icons.stop_circle_outlined),
+                    label: const Text('Stop'),
+                  ),
+                FilledButton.tonal(
+                  key: const Key('writing-save-draft'),
+                  onPressed: canSave && !saving ? onSave : null,
+                  child: const Text('Save to Draft'),
+                ),
+                OutlinedButton(
+                  key: const Key('writing-append-draft'),
+                  onPressed: canSave && !saving ? onAppend : null,
+                  child: const Text('Append to Draft'),
+                ),
+                OutlinedButton.icon(
+                  key: const Key('writing-edit-revision'),
+                  onPressed: canSave && !saving ? onEditAsRevision : null,
+                  icon: const Icon(Icons.rate_review_outlined),
+                  label: const Text('Edit as Revision'),
+                ),
+              ],
             ),
-          const SizedBox(width: 8),
-          FilledButton.tonal(
-            key: const Key('writing-save-draft'),
-            onPressed: canSave && !saving ? onSave : null,
-            child: const Text('Save to Draft'),
-          ),
-          const SizedBox(width: 8),
-          OutlinedButton(
-            key: const Key('writing-append-draft'),
-            onPressed: canSave && !saving ? onAppend : null,
-            child: const Text('Append to Draft'),
           ),
         ],
       ),

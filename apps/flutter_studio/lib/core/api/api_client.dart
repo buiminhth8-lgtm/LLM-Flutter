@@ -539,6 +539,99 @@ class LlmStudioClient {
     );
   }
 
+  Future<List<dynamic>> revisions({
+    String? projectId,
+    String? chapterId,
+    String? generationId,
+    String? status,
+    int? userScore,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final query = <String, String>{
+      if (projectId != null && projectId.isNotEmpty) 'project_id': projectId,
+      if (chapterId != null && chapterId.isNotEmpty) 'chapter_id': chapterId,
+      if (generationId != null && generationId.isNotEmpty)
+        'generation_id': generationId,
+      if (status != null && status.isNotEmpty) 'status': status,
+      if (userScore != null) 'user_score': '$userScore',
+      'limit': '$limit',
+      'offset': '$offset',
+    };
+    final path = Uri(path: '/v1/revisions', queryParameters: query).toString();
+    final body = await _getMap(path);
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> revision(String revisionId) {
+    return _getMap('/v1/revisions/${Uri.encodeComponent(revisionId)}');
+  }
+
+  Future<Map<String, dynamic>> updateRevision(
+    String revisionId,
+    Map<String, Object?> body,
+  ) {
+    return _patchMap('/v1/revisions/${Uri.encodeComponent(revisionId)}', body);
+  }
+
+  Future<Map<String, dynamic>> deleteRevision(String revisionId) {
+    return _deleteMap('/v1/revisions/${Uri.encodeComponent(revisionId)}');
+  }
+
+  Future<Map<String, dynamic>> createRevisionFromGeneration(
+    Map<String, Object?> body,
+  ) {
+    return _postMap('/v1/revisions/from-generation', body: body);
+  }
+
+  Future<Map<String, dynamic>> createRevisionFromChapterDraft(
+    Map<String, Object?> body,
+  ) {
+    return _postMap('/v1/revisions/from-chapter-draft', body: body);
+  }
+
+  Future<Map<String, dynamic>> createManualRevision(Map<String, Object?> body) {
+    return _postMap('/v1/revisions/manual', body: body);
+  }
+
+  Future<Map<String, dynamic>> approveRevision(String revisionId) {
+    return _postMap(
+      '/v1/revisions/${Uri.encodeComponent(revisionId)}/approve',
+      body: const {},
+    );
+  }
+
+  Future<Map<String, dynamic>> rejectRevision(
+    String revisionId, {
+    String? reason,
+  }) {
+    return _postMap(
+      '/v1/revisions/${Uri.encodeComponent(revisionId)}/reject',
+      body: {if (reason != null && reason.isNotEmpty) 'reason': reason},
+    );
+  }
+
+  Future<Map<String, dynamic>> markRevisionDatasetCandidate(
+    String revisionId,
+    bool accepted,
+  ) {
+    return _postMap(
+      '/v1/revisions/${Uri.encodeComponent(revisionId)}/dataset-candidate',
+      body: {'accepted': accepted},
+    );
+  }
+
+  Future<Map<String, dynamic>> autosaveRevision(Map<String, Object?> body) {
+    return _postMap('/v1/revisions/autosave', body: body);
+  }
+
+  Future<List<dynamic>> revisionAutosaves(String revisionId) async {
+    final body = await _getMap(
+      '/v1/revisions/${Uri.encodeComponent(revisionId)}/autosaves',
+    );
+    return (body['data'] as List?) ?? const [];
+  }
+
   Future<String> ragQuery(String query, {int topK = 5}) async {
     final body = await _postMap(
       '/v1/rag/query',

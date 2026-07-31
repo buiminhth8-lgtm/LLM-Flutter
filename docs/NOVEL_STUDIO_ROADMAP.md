@@ -6,10 +6,17 @@ and Flutter Windows client.
 Stage 2 Prompt Studio details: [NOVEL_STAGE2_PROMPT_STUDIO.md](NOVEL_STAGE2_PROMPT_STUDIO.md).
 Stage 3 Context Assembler details: [NOVEL_STAGE3_CONTEXT_ASSEMBLER.md](NOVEL_STAGE3_CONTEXT_ASSEMBLER.md).
 Stage 4 Writing details: [NOVEL_STAGE4_WRITING.md](NOVEL_STAGE4_WRITING.md).
+Stage 5 Revisions details: [NOVEL_STAGE5_REVISIONS.md](NOVEL_STAGE5_REVISIONS.md).
 
-Stage 4 is implemented: Context Assembler and PromptRenderer feed the existing
-local model Runtime, generation records are persisted, Flutter consumes SSE,
-and outputs can be saved to chapter drafts without touching `final_content`.
+Stage 5 is implemented: Stage 4 generation records can be turned into human
+revision assets, backend `diff_json` is persisted, autosaves protect long edits,
+and Flutter exposes Revision Review without creating dataset or training records.
+
+Stage 5 boundaries:
+
+- `revision_records` saves `original_text`, `edited_text`, `diff_json`, tags, score, status, hashes, and `accepted_for_dataset`.
+- `revision_autosaves` saves editing drafts separately and never changes formal revision text.
+- Dataset Builder, SFT JSONL, FineTune, RAG/Memory, and Evaluation remain later stages.
 
 ## 阶段 0：工程基线整理与开发入口
 

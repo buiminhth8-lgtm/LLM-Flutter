@@ -17,6 +17,7 @@ class ApiState:
     prompt_service: Any | None = None
     context_service: Any | None = None
     writing_service: Any | None = None
+    revision_service: Any | None = None
 
 
 _state = ApiState()

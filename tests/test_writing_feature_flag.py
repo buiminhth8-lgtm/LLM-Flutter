@@ -47,7 +47,7 @@ novels:
     }
     assert enabled["writing_workspace"].status.value == "available"
     assert enabled["writing_stream"].status.value == "available"
-    assert enabled["revision_system"].status.value == "not_implemented"
+    assert enabled["revision_system"].status.value == "available"
     assert enabled["dataset_builder"].status.value == "not_implemented"
 
 

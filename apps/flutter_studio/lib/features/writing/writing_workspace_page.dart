@@ -27,9 +27,14 @@ const writingModeLabels = <String, String>{
 };
 
 class WritingWorkspacePage extends StatefulWidget {
-  const WritingWorkspacePage({super.key, required this.controller});
+  const WritingWorkspacePage({
+    super.key,
+    required this.controller,
+    this.onOpenRevision,
+  });
 
   final WritingController controller;
+  final ValueChanged<String>? onOpenRevision;
 
   @override
   State<WritingWorkspacePage> createState() => _WritingWorkspacePageState();
@@ -196,6 +201,7 @@ class _WritingWorkspacePageState extends State<WritingWorkspacePage> {
                           onSave: () => widget.controller.saveToChapter(),
                           onAppend: () =>
                               widget.controller.saveToChapter(append: true),
+                          onEditAsRevision: _createRevisionFromActiveOutput,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -218,6 +224,10 @@ class _WritingWorkspacePageState extends State<WritingWorkspacePage> {
                               WritingGenerationHistoryPanel(
                                 records: state.history,
                                 onSelected: widget.controller.openGeneration,
+                                revisionIdsByGeneration:
+                                    state.revisionIdsByGeneration,
+                                onCreateRevision: _createRevisionFromGeneration,
+                                onViewRevision: widget.onOpenRevision,
                               ),
                             ],
                           ),
@@ -358,4 +368,27 @@ class _WritingWorkspacePageState extends State<WritingWorkspacePage> {
 
   static double _double(TextEditingController controller, double fallback) =>
       double.tryParse(controller.text.trim()) ?? fallback;
+
+  Future<void> _createRevisionFromGeneration(String generationId) async {
+    final revisionId = await widget.controller.createRevisionFromGeneration(
+      generationId,
+    );
+    if (revisionId != null) {
+      widget.onOpenRevision?.call(revisionId);
+    }
+  }
+
+  Future<void> _createRevisionFromActiveOutput() async {
+    final generationId = widget.controller.state.activeGenerationId;
+    if (generationId == null) {
+      return;
+    }
+    final revisionId = await widget.controller.createRevisionFromGeneration(
+      generationId,
+      editedText: widget.controller.state.output,
+    );
+    if (revisionId != null) {
+      widget.onOpenRevision?.call(revisionId);
+    }
+  }
 }

@@ -53,7 +53,9 @@ def test_context_capabilities_are_available_when_novel_feature_is_enabled():
     assert caps["context_budget"].status.value == "available"
     assert caps["context_render_preview"].frontend_exposed is True
     assert caps["writing_workspace"].status.value == "available"
-    assert caps["revision_system"].status.value == "not_implemented"
+    assert caps["revision_system"].status.value == "available"
+    assert caps["revision_diff"].status.value == "available"
+    assert caps["revision_autosave"].status.value == "available"
 
 
 def test_context_routes_reuse_read_only_context_permission():

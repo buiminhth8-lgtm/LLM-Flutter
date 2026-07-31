@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
-from llm_studio.features import is_novel_studio_enabled
+from llm_studio.features import is_novel_studio_enabled, is_revision_system_enabled
 
 from .status import CapabilityStatus
 
@@ -67,8 +67,10 @@ _CAPABILITIES: tuple[CapabilityInfo, ...] = (
     CapabilityInfo("writing_stream", CapabilityStatus.NOT_IMPLEMENTED, "Novel writing streaming is disabled until Stage 4 is enabled.", False),
     CapabilityInfo("writing_save_to_chapter", CapabilityStatus.NOT_IMPLEMENTED, "Saving generated text to chapter drafts is disabled until Stage 4 is enabled.", False),
     CapabilityInfo("revision_system", CapabilityStatus.NOT_IMPLEMENTED, "Revision and version workflows are planned but not implemented.", False),
+    CapabilityInfo("revision_diff", CapabilityStatus.NOT_IMPLEMENTED, "Revision diff persistence is planned but not implemented.", False),
+    CapabilityInfo("revision_autosave", CapabilityStatus.NOT_IMPLEMENTED, "Revision autosaves are planned but not implemented.", False),
     CapabilityInfo("dataset_builder", CapabilityStatus.NOT_IMPLEMENTED, "Novel dataset building is planned but not implemented.", False),
-    CapabilityInfo("finetune_center", CapabilityStatus.PARTIAL, "Core LoRA/QLoRA plumbing exists, but Novel-specific fine-tune workflows are not implemented.", False),
+    CapabilityInfo("finetune_center", CapabilityStatus.NOT_IMPLEMENTED, "Novel-specific fine-tune workflows are not implemented.", False),
     CapabilityInfo("novel_rag_memory", CapabilityStatus.NOT_IMPLEMENTED, "Novel memory and long-form RAG are planned but not implemented.", False),
     CapabilityInfo("novel_evaluation", CapabilityStatus.NOT_IMPLEMENTED, "Novel evaluation workflows are planned but not implemented.", False),
 )
@@ -83,7 +85,7 @@ def get_capabilities_for_config(config) -> tuple[CapabilityInfo, ...]:
     if not is_novel_studio_enabled(config):
         return _CAPABILITIES
     overrides = {
-        "novel_studio": (CapabilityStatus.PARTIAL, "Novel Studio foundations, Prompt Studio, Context Assembler, and local Writing Workspace are available.", True),
+        "novel_studio": (CapabilityStatus.PARTIAL, "Novel Studio foundations, Prompt Studio, Context Assembler, local Writing Workspace, and Revision Review are available.", True),
         "novel_projects": (CapabilityStatus.AVAILABLE, "Novel project CRUD is available.", True),
         "novel_world_bible": (CapabilityStatus.AVAILABLE, "Novel world bible entries are available.", True),
         "novel_characters": (CapabilityStatus.AVAILABLE, "Novel character records are available.", True),
@@ -98,6 +100,14 @@ def get_capabilities_for_config(config) -> tuple[CapabilityInfo, ...]:
         "writing_stream": (CapabilityStatus.AVAILABLE, "Writing generation supports persisted SSE streaming and cooperative cancellation.", True),
         "writing_save_to_chapter": (CapabilityStatus.AVAILABLE, "Successful generations can be saved to draft_content or summary; final_content is protected.", True),
     }
+    if is_revision_system_enabled(config):
+        overrides.update(
+            {
+                "revision_system": (CapabilityStatus.AVAILABLE, "Human revision records can be created from generation history, chapter drafts, or manual text.", True),
+                "revision_diff": (CapabilityStatus.AVAILABLE, "Backend-generated diff_json is persisted for every formal revision save.", True),
+                "revision_autosave": (CapabilityStatus.AVAILABLE, "Revision editor autosaves are stored separately from formal revision records.", True),
+            }
+        )
     existing = {cap.name for cap in _CAPABILITIES}
     result: list[CapabilityInfo] = []
     for cap in _CAPABILITIES:

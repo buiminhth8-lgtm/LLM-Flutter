@@ -50,4 +50,6 @@ def test_prompt_capabilities_are_stage2_when_enabled(monkeypatch, tmp_path):
     assert caps["prompt_render_preview"]["status"] == "available"
     assert caps["context_assembler"]["status"] == "available"
     assert caps["writing_workspace"]["status"] == "available"
-    assert caps["revision_system"]["status"] == "not_implemented"
+    assert caps["revision_system"]["status"] == "available"
+    assert caps["revision_diff"]["status"] == "available"
+    assert caps["revision_autosave"]["status"] == "available"
