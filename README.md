@@ -4,6 +4,7 @@ Novel Studio roadmap: [docs/NOVEL_STUDIO_ROADMAP.md](docs/NOVEL_STUDIO_ROADMAP.m
 Novel Studio Stage 1 foundation: [docs/NOVEL_STAGE1_FOUNDATION.md](docs/NOVEL_STAGE1_FOUNDATION.md).
 Novel Studio Stage 2 Prompt Studio: [docs/NOVEL_STAGE2_PROMPT_STUDIO.md](docs/NOVEL_STAGE2_PROMPT_STUDIO.md).
 Novel Studio Stage 3 Context Assembler: [docs/NOVEL_STAGE3_CONTEXT_ASSEMBLER.md](docs/NOVEL_STAGE3_CONTEXT_ASSEMBLER.md).
+Novel Studio Stage 4 Writing Workspace: [docs/NOVEL_STAGE4_WRITING.md](docs/NOVEL_STAGE4_WRITING.md).
 
 认证恢复、API Key 重新生成和本机 admin 恢复流程见 [docs/AUTH_RECOVERY.md](docs/AUTH_RECOVERY.md)。
 
@@ -49,6 +50,7 @@ LLM-Studio/
 │   ├── benchmarks/               # 推理基准测试
 │   ├── storage/                  # 磁盘空间和 cleanup
 │   ├── diagnostics/              # 脱敏诊断包
+│   ├── writing/                  # Novel Stage 4 本地生成与生成记录
 │   ├── auth/                     # RBAC 角色和权限
 │   └── security/                 # 上传安全等
 ├── apps/flutter_studio/          # Flutter Windows 桌面客户端
@@ -431,6 +433,7 @@ Flutter 页面：
 - Benchmarks：实验性本机基准测试。
 - Storage：cleanup preview 和执行。
 - Diagnostics：导出脱敏诊断包。
+- Writing：小说上下文预览、本地流式生成、停止、生成历史和 Save to Draft。
 - Settings：本地/远程后端、API 设置、后端日志、重启/停止后端。
 
 后端日志支持在 Settings 中查看和复制，复制前会脱敏。
@@ -649,6 +652,13 @@ C:\Users\zkjr\...
 | `flutter_linux` | not_implemented | no | Planned |
 | `flutter_macos` | not_implemented | no | Planned |
 | `flutter_web` | not_implemented | no | 旧 Web UI 已被 Flutter Windows 取代 |
+| `writing_workspace` | available* | yes | Novel Studio 开启时，复用 ContextAssembler、PromptRenderer 与现有 Runtime |
+| `writing_stream` | available* | yes | SSE delta、协作式取消和完整/部分输出持久化 |
+| `writing_save_to_chapter` | available* | yes | 只写 `draft_content` 或 `summary`，不写 `final_content` |
+| `revision_system` | not_implemented | no | 阶段 5 边界，阶段 4 不保存人工修改 |
+| `dataset_builder` | not_implemented | no | 阶段 4 不创建训练样本或导出数据集 |
+
+\* 需要 `features.novel_studio.enabled=true`。
 
 ## 开发验证
 

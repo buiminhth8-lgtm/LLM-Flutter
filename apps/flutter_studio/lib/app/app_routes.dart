@@ -5,7 +5,8 @@ import 'app_shell_widgets.dart';
 const novelStudioPageIndex = 9;
 const promptStudioPageIndex = 10;
 const contextAssemblerPageIndex = 11;
-const settingsPageIndex = 12;
+const writingWorkspacePageIndex = 12;
+const settingsPageIndex = 13;
 
 class ShellDestination {
   const ShellDestination({
@@ -90,6 +91,7 @@ Widget buildShellNavigation({
   bool showNovelStudio = false,
   bool showPromptStudio = false,
   bool showContextAssembler = false,
+  bool showWritingWorkspace = false,
 }) {
   return ListView(
     padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
@@ -128,6 +130,14 @@ Widget buildShellNavigation({
             selectedIndex: selectedIndex,
             icon: Icons.account_tree_outlined,
             label: 'Context Preview',
+            onSelected: onSelected,
+          ),
+        if (showWritingWorkspace)
+          SideNavItem(
+            index: writingWorkspacePageIndex,
+            selectedIndex: selectedIndex,
+            icon: Icons.edit_note_outlined,
+            label: 'Writing',
             onSelected: onSelected,
           ),
       ],

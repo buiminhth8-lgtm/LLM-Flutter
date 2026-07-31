@@ -474,6 +474,71 @@ class LlmStudioClient {
     return (body['data'] as List?) ?? const [];
   }
 
+  Future<Map<String, dynamic>> writingGenerate(Map<String, Object?> body) {
+    return _postMap(
+      '/v1/writing/generate',
+      body: body,
+      timeout: const Duration(minutes: 10),
+    );
+  }
+
+  Stream<Map<String, dynamic>> writingStream(Map<String, Object?> body) {
+    final sse = _sseClient ?? SseClient();
+    return sse.postJsonEvents(
+      uri: Uri.parse('$baseUrl/v1/writing/stream'),
+      headers: _authHeaders(),
+      body: body,
+    );
+  }
+
+  Future<Map<String, dynamic>> writingGeneration(String generationId) {
+    return _getMap(
+      '/v1/writing/generations/${Uri.encodeComponent(generationId)}',
+    );
+  }
+
+  Future<List<dynamic>> writingGenerations({
+    String? projectId,
+    String? chapterId,
+    String? mode,
+    String? status,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final query = <String, String>{
+      if (projectId != null && projectId.isNotEmpty) 'project_id': projectId,
+      if (chapterId != null && chapterId.isNotEmpty) 'chapter_id': chapterId,
+      if (mode != null && mode.isNotEmpty) 'mode': mode,
+      if (status != null && status.isNotEmpty) 'status': status,
+      'limit': '$limit',
+      'offset': '$offset',
+    };
+    final path = Uri(
+      path: '/v1/writing/generations',
+      queryParameters: query,
+    ).toString();
+    final body = await _getMap(path);
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> saveWritingGeneration(
+    String generationId, {
+    String target = 'draft_content',
+    bool append = false,
+  }) {
+    return _postMap(
+      '/v1/writing/generations/${Uri.encodeComponent(generationId)}/save-to-chapter',
+      body: {'target': target, 'append': append},
+    );
+  }
+
+  Future<Map<String, dynamic>> cancelWritingGeneration(String generationId) {
+    return _postMap(
+      '/v1/writing/generations/${Uri.encodeComponent(generationId)}/cancel',
+      body: const {},
+    );
+  }
+
   Future<String> ragQuery(String query, {int topK = 5}) async {
     final body = await _postMap(
       '/v1/rag/query',
