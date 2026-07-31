@@ -7,7 +7,8 @@ const promptStudioPageIndex = 10;
 const contextAssemblerPageIndex = 11;
 const writingWorkspacePageIndex = 12;
 const revisionReviewPageIndex = 13;
-const settingsPageIndex = 14;
+const datasetBuilderPageIndex = 14;
+const settingsPageIndex = 15;
 
 class ShellDestination {
   const ShellDestination({
@@ -94,6 +95,7 @@ Widget buildShellNavigation({
   bool showContextAssembler = false,
   bool showWritingWorkspace = false,
   bool showRevisionReview = false,
+  bool showDatasetBuilder = false,
 }) {
   return ListView(
     padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
@@ -148,6 +150,14 @@ Widget buildShellNavigation({
             selectedIndex: selectedIndex,
             icon: Icons.rate_review_outlined,
             label: 'Revision',
+            onSelected: onSelected,
+          ),
+        if (showDatasetBuilder)
+          SideNavItem(
+            index: datasetBuilderPageIndex,
+            selectedIndex: selectedIndex,
+            icon: Icons.dataset_outlined,
+            label: 'Dataset',
             onSelected: onSelected,
           ),
       ],

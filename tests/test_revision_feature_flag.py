@@ -44,7 +44,9 @@ novels:
     assert enabled["revision_system"].status.value == "available"
     assert enabled["revision_diff"].status.value == "available"
     assert enabled["revision_autosave"].status.value == "available"
-    assert enabled["dataset_builder"].status.value == "not_implemented"
+    assert enabled["dataset_builder"].status.value == "available"
+    assert enabled["dataset_sft_export"].status.value == "available"
+    assert enabled["dataset_versioning"].status.value == "not_implemented"
     assert enabled["finetune_center"].status.value == "not_implemented"
 
 

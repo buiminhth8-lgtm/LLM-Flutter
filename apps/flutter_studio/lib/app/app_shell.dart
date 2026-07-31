@@ -16,6 +16,9 @@ import '../features/chat/chat_page.dart';
 import '../features/context_assembler/context_api_client.dart';
 import '../features/context_assembler/context_assembler_page.dart';
 import '../features/context_assembler/context_controller.dart';
+import '../features/datasets/dataset_api_client.dart';
+import '../features/datasets/dataset_builder_page.dart';
+import '../features/datasets/dataset_controller.dart';
 import '../features/diagnostics/diagnostics_controller.dart';
 import '../features/diagnostics/diagnostics_page.dart';
 import '../features/downloads/download_controller.dart';
@@ -108,6 +111,9 @@ class _StudioShellState extends State<StudioShell> {
   );
   late final RevisionApiClient _revisionApi = RevisionApiClient(_client);
   late final RevisionController _revisions = RevisionController(_revisionApi);
+  late final DatasetController _datasets = DatasetController(
+    DatasetApiClient(_client),
+  );
   late final WritingController _writing = WritingController(
     WritingApiClient(_client),
     revisionApi: _revisionApi,
@@ -170,6 +176,7 @@ class _StudioShellState extends State<StudioShell> {
     _contextAssembler,
     _writing,
     _revisions,
+    _datasets,
   ];
 
   void _onNotifierChanged() {
@@ -269,6 +276,7 @@ class _StudioShellState extends State<StudioShell> {
           _contextAssembler.refresh().catchError((_) {}),
         if (_writingWorkspaceAvailable()) _writing.refresh().catchError((_) {}),
         if (_revisionSystemAvailable()) _revisions.refresh().catchError((_) {}),
+        if (_datasetBuilderAvailable()) _datasets.refresh().catchError((_) {}),
       ]);
       await _savePreferences();
     });
@@ -595,6 +603,17 @@ class _StudioShellState extends State<StudioShell> {
     });
   }
 
+  bool _datasetBuilderAvailable() {
+    return _status.state.capabilities.any((item) {
+      if (item is! Map) {
+        return false;
+      }
+      return item['name'] == 'dataset_builder' &&
+          item['status'] == 'available' &&
+          item['frontend_exposed'] == true;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_shell.initialSetupCheckDone && widget.autoRefresh) {
@@ -742,7 +761,14 @@ class _StudioShellState extends State<StudioShell> {
           _navigation.select(revisionReviewPageIndex);
         },
       ),
-      RevisionReviewPage(controller: _revisions),
+      RevisionReviewPage(
+        controller: _revisions,
+        datasetController: _datasets,
+        onOpenDatasetSample: (sampleId) {
+          _navigation.select(datasetBuilderPageIndex);
+        },
+      ),
+      DatasetBuilderPage(controller: _datasets),
       SettingsPage(
         apiBaseController: _settings.apiBaseController,
         userIdController: _settings.userIdController,
@@ -794,6 +820,7 @@ class _StudioShellState extends State<StudioShell> {
               showContextAssembler: _contextAssemblerAvailable(),
               showWritingWorkspace: _writingWorkspaceAvailable(),
               showRevisionReview: _revisionSystemAvailable(),
+              showDatasetBuilder: _datasetBuilderAvailable(),
             ),
           ),
           const VerticalDivider(width: 1),

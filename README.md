@@ -6,6 +6,7 @@ Novel Studio Stage 2 Prompt Studio: [docs/NOVEL_STAGE2_PROMPT_STUDIO.md](docs/NO
 Novel Studio Stage 3 Context Assembler: [docs/NOVEL_STAGE3_CONTEXT_ASSEMBLER.md](docs/NOVEL_STAGE3_CONTEXT_ASSEMBLER.md).
 Novel Studio Stage 4 Writing Workspace: [docs/NOVEL_STAGE4_WRITING.md](docs/NOVEL_STAGE4_WRITING.md).
 Novel Studio Stage 5 Revisions: [docs/NOVEL_STAGE5_REVISIONS.md](docs/NOVEL_STAGE5_REVISIONS.md).
+Novel Studio Stage 6 Dataset Builder: [docs/NOVEL_STAGE6_DATASET_BUILDER.md](docs/NOVEL_STAGE6_DATASET_BUILDER.md).
 
 认证恢复、API Key 重新生成和本机 admin 恢复流程见 [docs/AUTH_RECOVERY.md](docs/AUTH_RECOVERY.md)。
 
@@ -53,6 +54,7 @@ LLM-Studio/
 │   ├── diagnostics/              # 脱敏诊断包
 │   ├── writing/                  # Novel Stage 4 本地生成与生成记录
 │   ├── revisions/                # Novel Stage 5 人工修订、Diff 与 autosave
+│   ├── datasets/                 # Novel Stage 6 Dataset Builder 与 draft JSONL 导出
 │   ├── auth/                     # RBAC 角色和权限
 │   └── security/                 # 上传安全等
 ├── apps/flutter_studio/          # Flutter Windows 桌面客户端
@@ -660,7 +662,10 @@ C:\Users\zkjr\...
 | `revision_system` | available* | yes | 保存人工修订、审核状态、评分、标签和数据集候选标记 |
 | `revision_diff` | available* | yes | 后端生成并持久化 `diff_json` |
 | `revision_autosave` | available* | yes | 自动保存编辑草稿，不改变正式 revision |
-| `dataset_builder` | not_implemented | no | 阶段 5 不创建训练样本或导出数据集 |
+| `dataset_builder` | available* | yes | 从 approved revision candidates 创建可审核 training samples |
+| `dataset_sft_export` | available* | yes | 导出 approved SFT samples 为 draft JSONL |
+| `dataset_preference_samples` | partial* | yes | 预留 chosen/rejected preference 样本结构，不实现 DPO 训练 |
+| `dataset_versioning` | not_implemented | no | DatasetVersion、frozen、train/val split 放到阶段 7 |
 
 \* 需要 `features.novel_studio.enabled=true`。
 

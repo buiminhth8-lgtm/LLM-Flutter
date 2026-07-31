@@ -94,6 +94,8 @@ features:
     enabled: false
   revision_system:
     enabled: true
+  dataset_builder:
+    enabled: true
 novels:
   db_path: "./data/novels/novels.sqlite"
 prompts:
@@ -105,6 +107,9 @@ writing:
 revisions:
   db_path: "./data/novels/novels.sqlite"
   autosave_retention: 20
+datasets:
+  db_path: "./data/novels/novels.sqlite"
+  export_dir: "./data/datasets"
 
 # Unified model repository. Legacy configs with top-level models_dir are still
 # migrated at load time, but new installs should use this section only.

@@ -632,6 +632,142 @@ class LlmStudioClient {
     return (body['data'] as List?) ?? const [];
   }
 
+  Future<List<dynamic>> datasets({
+    String? projectId,
+    String? type,
+    String? status,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final query = <String, String>{
+      if (projectId != null && projectId.isNotEmpty) 'project_id': projectId,
+      if (type != null && type.isNotEmpty) 'type': type,
+      if (status != null && status.isNotEmpty) 'status': status,
+      'limit': '$limit',
+      'offset': '$offset',
+    };
+    final path = Uri(path: '/v1/datasets', queryParameters: query).toString();
+    final body = await _getMap(path);
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> createDataset(Map<String, Object?> body) {
+    return _postMap('/v1/datasets', body: body);
+  }
+
+  Future<Map<String, dynamic>> dataset(String datasetId) {
+    return _getMap('/v1/datasets/${Uri.encodeComponent(datasetId)}');
+  }
+
+  Future<Map<String, dynamic>> updateDataset(
+    String datasetId,
+    Map<String, Object?> body,
+  ) {
+    return _patchMap('/v1/datasets/${Uri.encodeComponent(datasetId)}', body);
+  }
+
+  Future<Map<String, dynamic>> deleteDataset(String datasetId) {
+    return _deleteMap('/v1/datasets/${Uri.encodeComponent(datasetId)}');
+  }
+
+  Future<Map<String, dynamic>> createDatasetSampleFromRevision(
+    String datasetId,
+    Map<String, Object?> body,
+  ) {
+    return _postMap(
+      '/v1/datasets/${Uri.encodeComponent(datasetId)}/samples/from-revision',
+      body: body,
+    );
+  }
+
+  Future<Map<String, dynamic>> bulkCreateDatasetSamplesFromRevisions(
+    String datasetId,
+    Map<String, Object?> body,
+  ) {
+    return _postMap(
+      '/v1/datasets/${Uri.encodeComponent(datasetId)}/samples/bulk-from-revisions',
+      body: body,
+    );
+  }
+
+  Future<List<dynamic>> datasetSamples(
+    String datasetId, {
+    String? status,
+    String? sampleType,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final query = <String, String>{
+      if (status != null && status.isNotEmpty) 'status': status,
+      if (sampleType != null && sampleType.isNotEmpty)
+        'sample_type': sampleType,
+      'limit': '$limit',
+      'offset': '$offset',
+    };
+    final path = Uri(
+      path: '/v1/datasets/${Uri.encodeComponent(datasetId)}/samples',
+      queryParameters: query,
+    ).toString();
+    final body = await _getMap(path);
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> datasetSample(String sampleId) {
+    return _getMap('/v1/datasets/samples/${Uri.encodeComponent(sampleId)}');
+  }
+
+  Future<Map<String, dynamic>> updateDatasetSample(
+    String sampleId,
+    Map<String, Object?> body,
+  ) {
+    return _patchMap(
+      '/v1/datasets/samples/${Uri.encodeComponent(sampleId)}',
+      body,
+    );
+  }
+
+  Future<Map<String, dynamic>> deleteDatasetSample(String sampleId) {
+    return _deleteMap('/v1/datasets/samples/${Uri.encodeComponent(sampleId)}');
+  }
+
+  Future<Map<String, dynamic>> approveDatasetSample(String sampleId) {
+    return _postMap(
+      '/v1/datasets/samples/${Uri.encodeComponent(sampleId)}/approve',
+      body: const {},
+    );
+  }
+
+  Future<Map<String, dynamic>> rejectDatasetSample(
+    String sampleId, {
+    String? reason,
+  }) {
+    return _postMap(
+      '/v1/datasets/samples/${Uri.encodeComponent(sampleId)}/reject',
+      body: {if (reason != null && reason.isNotEmpty) 'reason': reason},
+    );
+  }
+
+  Future<Map<String, dynamic>> exportDataset(
+    String datasetId,
+    Map<String, Object?> body,
+  ) {
+    return _postMap(
+      '/v1/datasets/${Uri.encodeComponent(datasetId)}/export',
+      body: body,
+    );
+  }
+
+  Future<List<dynamic>> datasetExports(String datasetId) async {
+    final body = await _getMap(
+      '/v1/datasets/${Uri.encodeComponent(datasetId)}/exports',
+    );
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> datasetExport(String exportId) {
+    return _getMap('/v1/datasets/exports/${Uri.encodeComponent(exportId)}');
+  }
+
   Future<String> ragQuery(String query, {int topK = 5}) async {
     final body = await _postMap(
       '/v1/rag/query',

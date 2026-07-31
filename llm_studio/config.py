@@ -95,6 +95,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "revision_system": {
             "enabled": True,
         },
+        "dataset_builder": {
+            "enabled": True,
+        },
     },
     "novels": {
         "db_path": "./data/novels/novels.sqlite",
@@ -111,6 +114,10 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "revisions": {
         "db_path": "./data/novels/novels.sqlite",
         "autosave_retention": 20,
+    },
+    "datasets": {
+        "db_path": "./data/novels/novels.sqlite",
+        "export_dir": "./data/datasets",
     },
     "finetune": {
         "method": "qlora",

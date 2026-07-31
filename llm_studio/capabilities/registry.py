@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
-from llm_studio.features import is_novel_studio_enabled, is_revision_system_enabled
+from llm_studio.features import (
+    is_dataset_builder_enabled,
+    is_novel_studio_enabled,
+    is_revision_system_enabled,
+)
 
 from .status import CapabilityStatus
 
@@ -70,6 +74,9 @@ _CAPABILITIES: tuple[CapabilityInfo, ...] = (
     CapabilityInfo("revision_diff", CapabilityStatus.NOT_IMPLEMENTED, "Revision diff persistence is planned but not implemented.", False),
     CapabilityInfo("revision_autosave", CapabilityStatus.NOT_IMPLEMENTED, "Revision autosaves are planned but not implemented.", False),
     CapabilityInfo("dataset_builder", CapabilityStatus.NOT_IMPLEMENTED, "Novel dataset building is planned but not implemented.", False),
+    CapabilityInfo("dataset_sft_export", CapabilityStatus.NOT_IMPLEMENTED, "Draft SFT JSONL export is planned for Dataset Builder.", False),
+    CapabilityInfo("dataset_preference_samples", CapabilityStatus.NOT_IMPLEMENTED, "Preference sample structure is planned for Dataset Builder.", False),
+    CapabilityInfo("dataset_versioning", CapabilityStatus.NOT_IMPLEMENTED, "Immutable DatasetVersion is planned for a later stage.", False),
     CapabilityInfo("finetune_center", CapabilityStatus.NOT_IMPLEMENTED, "Novel-specific fine-tune workflows are not implemented.", False),
     CapabilityInfo("novel_rag_memory", CapabilityStatus.NOT_IMPLEMENTED, "Novel memory and long-form RAG are planned but not implemented.", False),
     CapabilityInfo("novel_evaluation", CapabilityStatus.NOT_IMPLEMENTED, "Novel evaluation workflows are planned but not implemented.", False),
@@ -85,7 +92,7 @@ def get_capabilities_for_config(config) -> tuple[CapabilityInfo, ...]:
     if not is_novel_studio_enabled(config):
         return _CAPABILITIES
     overrides = {
-        "novel_studio": (CapabilityStatus.PARTIAL, "Novel Studio foundations, Prompt Studio, Context Assembler, local Writing Workspace, and Revision Review are available.", True),
+        "novel_studio": (CapabilityStatus.PARTIAL, "Novel Studio foundations, Prompt Studio, Context Assembler, local Writing Workspace, Revision Review, and Dataset Builder are available.", True),
         "novel_projects": (CapabilityStatus.AVAILABLE, "Novel project CRUD is available.", True),
         "novel_world_bible": (CapabilityStatus.AVAILABLE, "Novel world bible entries are available.", True),
         "novel_characters": (CapabilityStatus.AVAILABLE, "Novel character records are available.", True),
@@ -106,6 +113,15 @@ def get_capabilities_for_config(config) -> tuple[CapabilityInfo, ...]:
                 "revision_system": (CapabilityStatus.AVAILABLE, "Human revision records can be created from generation history, chapter drafts, or manual text.", True),
                 "revision_diff": (CapabilityStatus.AVAILABLE, "Backend-generated diff_json is persisted for every formal revision save.", True),
                 "revision_autosave": (CapabilityStatus.AVAILABLE, "Revision editor autosaves are stored separately from formal revision records.", True),
+            }
+        )
+    if is_dataset_builder_enabled(config):
+        overrides.update(
+            {
+                "dataset_builder": (CapabilityStatus.AVAILABLE, "Approved revision candidates can be transformed into reviewed training samples.", True),
+                "dataset_sft_export": (CapabilityStatus.AVAILABLE, "Approved SFT samples can be exported as draft JSONL files.", True),
+                "dataset_preference_samples": (CapabilityStatus.PARTIAL, "Preference sample fields and draft creation are available; DPO training is not implemented.", True),
+                "dataset_versioning": (CapabilityStatus.NOT_IMPLEMENTED, "Frozen DatasetVersion, manifests, hashes, and train/val split are planned for Stage 7.", False),
             }
         )
     existing = {cap.name for cap in _CAPABILITIES}
