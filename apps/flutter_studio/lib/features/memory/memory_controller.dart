@@ -84,10 +84,7 @@ class MemoryController extends ChangeNotifier {
           priority: 5,
         ),
       );
-      state = state.copyWith(
-        currentDocument: document,
-        notice: 'Memory note created.',
-      );
+      state = state.copyWith(currentDocument: document, notice: '记忆笔记已创建。');
       await refresh();
     });
   }
@@ -99,10 +96,7 @@ class MemoryController extends ChangeNotifier {
     }
     await _run(() async {
       await _api.archiveMemoryDocument(document.documentId);
-      state = state.copyWith(
-        clearDocument: true,
-        notice: 'Memory document archived.',
-      );
+      state = state.copyWith(clearDocument: true, notice: '记忆文档已归档。');
       await refresh();
     });
   }
@@ -121,7 +115,7 @@ class MemoryController extends ChangeNotifier {
       state = state.copyWith(
         lastBuildResult: result,
         notice:
-            'Build complete: +${result.documentsCreated}, updated ${result.documentsUpdated}.',
+            '构建完成：新增 ${result.documentsCreated} 个，更新 ${result.documentsUpdated} 个。',
       );
       await refresh();
     });
@@ -137,7 +131,7 @@ class MemoryController extends ChangeNotifier {
       final result = await _api.rebuildProjectMemoryIndex(projectId);
       state = state.copyWith(
         lastIndexResult: result,
-        notice: 'Index rebuilt: ${result.chunksIndexed} chunks.',
+        notice: '索引已重建：${result.chunksIndexed} 个片段。',
       );
       await refresh();
     });
@@ -191,7 +185,7 @@ class MemoryController extends ChangeNotifier {
       state = state.copyWith(
         selectedChapterId: chapterId,
         summaries: await _api.listChapterSummaries(chapterId),
-        notice: 'Summary created.',
+        notice: '摘要已创建。',
       );
     });
   }
@@ -208,7 +202,7 @@ class MemoryController extends ChangeNotifier {
       state = state.copyWith(
         selectedChapterId: chapterId,
         summaries: await _api.listChapterSummaries(chapterId),
-        notice: 'Summary generated.',
+        notice: '摘要已生成。',
       );
     });
   }
@@ -218,7 +212,7 @@ class MemoryController extends ChangeNotifier {
       await _api.activateChapterSummary(chapterId, summaryId);
       state = state.copyWith(
         summaries: await _api.listChapterSummaries(chapterId),
-        notice: 'Summary activated.',
+        notice: '摘要已设为生效。',
       );
     });
   }

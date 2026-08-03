@@ -28,7 +28,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Export SFT JSONL'), findsOneWidget);
+    expect(find.text('导出 SFT JSONL'), findsOneWidget);
     expect(find.textContaining('export.jsonl'), findsOneWidget);
     await tester.tap(find.byKey(const Key('dataset-export-sft')));
     expect(exported, isTrue);

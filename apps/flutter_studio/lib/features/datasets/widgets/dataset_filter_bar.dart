@@ -24,7 +24,7 @@ class DatasetFilterBar extends StatelessWidget {
       TextField(
         controller: projectController,
         decoration: const InputDecoration(
-          labelText: 'Project filter',
+          labelText: '项目筛选',
           border: OutlineInputBorder(),
         ),
         onSubmitted: onProjectSubmitted,
@@ -33,11 +33,11 @@ class DatasetFilterBar extends StatelessWidget {
       DropdownButtonFormField<String>(
         initialValue: type,
         decoration: const InputDecoration(
-          labelText: 'Type',
+          labelText: '类型',
           border: OutlineInputBorder(),
         ),
         items: const [
-          DropdownMenuItem(value: null, child: Text('All')),
+          DropdownMenuItem(value: null, child: Text('全部')),
           DropdownMenuItem(value: 'sft', child: Text('sft')),
           DropdownMenuItem(value: 'preference', child: Text('preference')),
           DropdownMenuItem(value: 'mixed', child: Text('mixed')),
@@ -48,11 +48,11 @@ class DatasetFilterBar extends StatelessWidget {
       DropdownButtonFormField<String>(
         initialValue: status,
         decoration: const InputDecoration(
-          labelText: 'Status',
+          labelText: '状态',
           border: OutlineInputBorder(),
         ),
         items: const [
-          DropdownMenuItem(value: null, child: Text('All')),
+          DropdownMenuItem(value: null, child: Text('全部')),
           DropdownMenuItem(value: 'draft', child: Text('draft')),
           DropdownMenuItem(value: 'reviewing', child: Text('reviewing')),
           DropdownMenuItem(value: 'ready', child: Text('ready')),

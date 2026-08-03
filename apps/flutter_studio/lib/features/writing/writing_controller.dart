@@ -313,7 +313,7 @@ class WritingController extends ChangeNotifier {
     final api = memoryApi;
     final projectId = state.selectedProjectId;
     if (api == null) {
-      _setError('Memory system is not available.');
+    _setError('记忆系统不可用。');
       return;
     }
     if (projectId == null || projectId.isEmpty) {
@@ -389,7 +389,7 @@ class WritingController extends ChangeNotifier {
   }) async {
     final revisions = revisionApi;
     if (revisions == null) {
-      _setError('Revision system is not available.');
+      _setError('修订系统当前不可用。');
       return null;
     }
     String? revisionId;
@@ -400,7 +400,7 @@ class WritingController extends ChangeNotifier {
       );
       revisionId = revision.revisionId;
       await _refreshHistory();
-      state = state.copyWith(notice: 'Revision created.');
+      state = state.copyWith(notice: '修订已创建。');
     });
     return revisionId;
   }

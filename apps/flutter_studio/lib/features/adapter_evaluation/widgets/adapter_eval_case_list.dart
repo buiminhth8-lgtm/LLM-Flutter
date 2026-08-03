@@ -15,7 +15,7 @@ class AdapterEvalCaseList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (cases.isEmpty) {
-      return const Text('No cases. Add a case before running evaluation.');
+      return const Text('暂无用例。请先添加用例再运行评估。');
     }
     return Column(
       children: [
@@ -24,7 +24,7 @@ class AdapterEvalCaseList extends StatelessWidget {
             key: Key('adapter-eval-case-${item.caseId}'),
             title: Text(item.title),
             subtitle: Text('${item.mode} · ${item.status}'),
-            trailing: Text('${item.results.length} results'),
+                      trailing: Text('${item.results.length} 个结果'),
             onTap: () => onSelect(item.caseId),
           ),
       ],

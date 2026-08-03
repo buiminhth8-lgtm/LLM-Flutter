@@ -16,7 +16,7 @@ class AdapterComparePage extends StatelessWidget {
     final state = controller.state;
     final caseDto = state.currentCase;
     if (caseDto == null) {
-      return const Center(child: Text('Select a case to compare outputs.'));
+      return const Center(child: Text('请选择用例以对比输出。'));
     }
     final projectId =
         caseDto.projectId ?? state.currentSession?.projectId ?? '';
@@ -40,9 +40,9 @@ class AdapterComparePage extends StatelessWidget {
                     Chip(label: Text(caseDto.status)),
                   ],
                 ),
-                Text('case_id: ${caseDto.caseId}'),
-                Text('mode: ${caseDto.mode}'),
-                Text('template_id: ${caseDto.templateId ?? '-'}'),
+                Text('用例 ID：${caseDto.caseId}'),
+                Text('模式：${caseDto.mode}'),
+                Text('?? ID?${caseDto.templateId ?? '-'}'),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
@@ -54,7 +54,7 @@ class AdapterComparePage extends StatelessWidget {
                           ? null
                           : controller.runCurrentCase,
                       icon: const Icon(Icons.play_arrow_outlined),
-                      label: const Text('Run Case'),
+                      label: const Text('运行用例'),
                     ),
                     OutlinedButton.icon(
                       key: const Key('adapter-eval-refresh-case'),
@@ -62,7 +62,7 @@ class AdapterComparePage extends StatelessWidget {
                           ? null
                           : () => controller.selectCase(caseDto.caseId),
                       icon: const Icon(Icons.refresh_outlined),
-                      label: const Text('Refresh Case'),
+                      label: const Text('刷新用例'),
                     ),
                   ],
                 ),
@@ -85,13 +85,8 @@ class AdapterComparePage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Revision Handoff',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const Text(
-                    'Create a Stage 5 revision candidate from a selected output. This does not create training samples.',
-                  ),
+                  Text('修订交接', style: Theme.of(context).textTheme.titleMedium),
+                  const Text('从选定输出创建阶段 5 修订候选，不会创建训练样本。'),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -111,7 +106,7 @@ class AdapterComparePage extends StatelessWidget {
           ),
         const SizedBox(height: 8),
         ExpansionTile(
-          title: const Text('Prompt / Context Snapshot'),
+          title: const Text('提示词 / 上下文快照'),
           children: [
             Padding(
               padding: const EdgeInsets.all(12),

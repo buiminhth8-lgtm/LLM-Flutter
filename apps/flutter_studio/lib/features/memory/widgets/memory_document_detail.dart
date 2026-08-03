@@ -11,7 +11,7 @@ class MemoryDocumentDetail extends StatelessWidget {
   Widget build(BuildContext context) {
     final item = document;
     if (item == null) {
-      return const Center(child: Text('Select a memory document.'));
+      return const Center(child: Text('请选择记忆文档。'));
     }
     return Card(
       child: Padding(

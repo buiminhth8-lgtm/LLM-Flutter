@@ -34,6 +34,6 @@ void main() {
       ),
     );
 
-    expect(find.text('Capability unavailable'), findsOneWidget);
+    expect(find.text('能力不可用'), findsOneWidget);
   });
 }

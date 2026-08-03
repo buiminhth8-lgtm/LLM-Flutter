@@ -18,9 +18,8 @@ class TrainingRecipePreviewPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const AppSectionHeader(
-            title: 'Training Recipe Preview',
-            subtitle:
-                'Recommend and confirm a draft recipe only; no training is started.',
+            title: '训练配方预览',
+            subtitle: '仅推荐并确认草稿配方，不启动训练。',
           ),
           Expanded(
             child: SingleChildScrollView(

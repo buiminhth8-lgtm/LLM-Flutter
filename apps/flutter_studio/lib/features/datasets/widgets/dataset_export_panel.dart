@@ -20,11 +20,11 @@ class DatasetExportPanel extends StatelessWidget {
         key: const Key('dataset-export-sft'),
         onPressed: onExport,
         icon: const Icon(Icons.file_download_outlined),
-        label: const Text('Export SFT JSONL'),
+        label: const Text('导出 SFT JSONL'),
       ),
       const SizedBox(height: 8),
       Text(
-        'Draft export only. DatasetVersion, train/val split, and training are Stage 7+.',
+        '仅导出草稿。数据集版本、训练/验证拆分和训练属于阶段 7+。',
         style: Theme.of(context).textTheme.bodySmall,
       ),
       const Divider(),
@@ -37,7 +37,7 @@ class DatasetExportPanel extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          subtitle: Text('${export.format} · ${export.sampleCount} samples'),
+          subtitle: Text('${export.format} · ${export.sampleCount} 个样本'),
         ),
     ],
   );

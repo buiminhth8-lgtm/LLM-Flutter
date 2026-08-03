@@ -39,55 +39,39 @@ class ShellDestinationGroup {
 
 const shellDestinationGroups = [
   ShellDestinationGroup(
-    label: 'Core',
+    label: '核心',
     destinations: [
       ShellDestination(
         index: 0,
         icon: Icons.monitor_heart_outlined,
-        label: 'Status',
+        label: '状态',
       ),
-      ShellDestination(index: 1, icon: Icons.storage_outlined, label: 'Models'),
-      ShellDestination(
-        index: 2,
-        icon: Icons.chat_bubble_outline,
-        label: 'Chat',
-      ),
+      ShellDestination(index: 1, icon: Icons.storage_outlined, label: '模型'),
+      ShellDestination(index: 2, icon: Icons.chat_bubble_outline, label: '聊天'),
     ],
   ),
   ShellDestinationGroup(
-    label: 'Workflows',
+    label: '工作流',
     destinations: [
       ShellDestination(
         index: 3,
         icon: Icons.cloud_download_outlined,
-        label: 'Downloads',
+        label: '下载',
       ),
       ShellDestination(index: 4, icon: Icons.article_outlined, label: 'RAG'),
-      ShellDestination(
-        index: 5,
-        icon: Icons.extension_outlined,
-        label: 'Adapters',
-      ),
-      ShellDestination(
-        index: 6,
-        icon: Icons.speed_outlined,
-        label: 'Benchmark',
-      ),
+      ShellDestination(index: 5, icon: Icons.extension_outlined, label: '适配器'),
+      ShellDestination(index: 6, icon: Icons.speed_outlined, label: '基准测试'),
     ],
   ),
   ShellDestinationGroup(
-    label: 'System',
+    label: '系统',
     destinations: [
       ShellDestination(
         index: 7,
         icon: Icons.cleaning_services_outlined,
-        label: 'Storage',
+        label: '存储',
       ),
-      ShellDestination(
-        index: 8,
-        icon: Icons.bug_report_outlined,
-        label: 'Diagnostics',
-      ),
+      ShellDestination(index: 8, icon: Icons.bug_report_outlined, label: '诊断'),
     ],
   ),
 ];
@@ -121,19 +105,19 @@ Widget buildShellNavigation({
           ),
       ],
       if (showNovelStudio) ...[
-        const SideNavSection(label: 'Creative'),
+        const SideNavSection(label: '创作'),
         SideNavItem(
           index: novelStudioPageIndex,
           selectedIndex: selectedIndex,
           icon: Icons.auto_stories_outlined,
-          label: 'Novel Studio',
+          label: '小说工作台',
           onSelected: onSelected,
         ),
         SideNavItem(
           index: novelProjectsPageIndex,
           selectedIndex: selectedIndex,
           icon: Icons.library_books_outlined,
-          label: 'Projects',
+          label: '项目',
           onSelected: onSelected,
         ),
         if (showPromptStudio)
@@ -141,7 +125,7 @@ Widget buildShellNavigation({
             index: promptStudioPageIndex,
             selectedIndex: selectedIndex,
             icon: Icons.description_outlined,
-            label: 'Prompt Studio',
+            label: '提示词工作室',
             onSelected: onSelected,
           ),
         if (showContextAssembler)
@@ -149,7 +133,7 @@ Widget buildShellNavigation({
             index: contextAssemblerPageIndex,
             selectedIndex: selectedIndex,
             icon: Icons.account_tree_outlined,
-            label: 'Context Preview',
+            label: '上下文预览',
             onSelected: onSelected,
           ),
         if (showWritingWorkspace)
@@ -157,7 +141,7 @@ Widget buildShellNavigation({
             index: writingWorkspacePageIndex,
             selectedIndex: selectedIndex,
             icon: Icons.edit_note_outlined,
-            label: 'Writing',
+            label: '写作',
             onSelected: onSelected,
           ),
         if (showRevisionReview)
@@ -165,7 +149,7 @@ Widget buildShellNavigation({
             index: revisionReviewPageIndex,
             selectedIndex: selectedIndex,
             icon: Icons.rate_review_outlined,
-            label: 'Revision',
+            label: '修订版本',
             onSelected: onSelected,
           ),
         if (showDatasetBuilder)
@@ -173,7 +157,7 @@ Widget buildShellNavigation({
             index: datasetBuilderPageIndex,
             selectedIndex: selectedIndex,
             icon: Icons.dataset_outlined,
-            label: 'Dataset',
+            label: '数据集',
             onSelected: onSelected,
           ),
         if (showFinetuneCenter)
@@ -181,7 +165,7 @@ Widget buildShellNavigation({
             index: finetuneCenterPageIndex,
             selectedIndex: selectedIndex,
             icon: Icons.memory_outlined,
-            label: 'Fine-tune',
+            label: '微调',
             onSelected: onSelected,
           ),
         if (showAdapterEvaluation)
@@ -189,7 +173,7 @@ Widget buildShellNavigation({
             index: adapterEvaluationPageIndex,
             selectedIndex: selectedIndex,
             icon: Icons.compare_outlined,
-            label: 'Adapter Eval',
+            label: '适配器评估',
             onSelected: onSelected,
           ),
         if (showMemoryCenter)
@@ -197,7 +181,7 @@ Widget buildShellNavigation({
             index: memoryCenterPageIndex,
             selectedIndex: selectedIndex,
             icon: Icons.psychology_alt_outlined,
-            label: 'Memory',
+            label: '记忆',
             onSelected: onSelected,
           ),
         if (showEvaluationCenter)
@@ -205,7 +189,7 @@ Widget buildShellNavigation({
             index: evaluationCenterPageIndex,
             selectedIndex: selectedIndex,
             icon: Icons.fact_check_outlined,
-            label: 'Evaluation',
+            label: '评估',
             onSelected: onSelected,
           ),
       ],
@@ -214,7 +198,7 @@ Widget buildShellNavigation({
         index: settingsPageIndex,
         selectedIndex: selectedIndex,
         icon: Icons.settings_outlined,
-        label: 'Settings',
+        label: '设置',
         onSelected: onSelected,
       ),
     ],

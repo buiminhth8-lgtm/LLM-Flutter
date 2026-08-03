@@ -26,13 +26,13 @@ class ContextRenderPreviewPanel extends StatelessWidget {
                 ClipboardData(text: preview.renderedPrompt),
               ),
               icon: const Icon(Icons.copy_outlined),
-              tooltip: 'Copy rendered prompt',
+              tooltip: '复制已渲染提示词',
             ),
           ],
         ),
         SelectableText(preview.renderedPrompt),
         const SizedBox(height: 8),
-        Text('prompt_hash: ${preview.promptHash}'),
+        Text('提示词哈希：${preview.promptHash}'),
         if (preview.missingVariables.isNotEmpty)
           Text('缺失变量：${preview.missingVariables.join(', ')}'),
         if (preview.renderWarnings.isNotEmpty)

@@ -35,7 +35,7 @@ void main() {
       ),
     );
 
-    expect(find.textContaining('1980 tokens'), findsOneWidget);
+    expect(find.textContaining('1980 Token'), findsOneWidget);
     expect(find.textContaining('5320 字符'), findsOneWidget);
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
   });

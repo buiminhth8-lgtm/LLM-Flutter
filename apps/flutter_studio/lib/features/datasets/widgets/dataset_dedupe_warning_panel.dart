@@ -8,12 +8,12 @@ class DatasetDedupeWarningPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (warnings.isEmpty) {
-      return const Text('No dedupe warnings.');
+      return const Text('没有去重警告。');
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Warnings', style: TextStyle(fontWeight: FontWeight.w700)),
+        const Text('警告', style: TextStyle(fontWeight: FontWeight.w700)),
         for (final warning in warnings.take(4))
           Text('• ${warning['code']}: ${warning['message'] ?? ''}'),
       ],

@@ -45,35 +45,30 @@ class _EvaluationManualScorePanelState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Manual Evaluation',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
+          Text('人工评估', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           TextField(
             key: const Key('evaluation-manual-reviewer'),
             controller: _reviewer,
             decoration: const InputDecoration(
-              labelText: 'Reviewer id',
+              labelText: '审阅人 ID',
               border: OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              Expanded(child: _scoreField('Overall 1-5', _overall, 'overall')),
+              Expanded(child: _scoreField('总分 1-5', _overall, 'overall')),
               const SizedBox(width: 8),
-              Expanded(child: _scoreField('Style', _style, 'style')),
+              Expanded(child: _scoreField('风格', _style, 'style')),
             ],
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              Expanded(
-                child: _scoreField('Character', _character, 'character'),
-              ),
+              Expanded(child: _scoreField('人物', _character, 'character')),
               const SizedBox(width: 8),
-              Expanded(child: _scoreField('Plot', _plot, 'plot')),
+              Expanded(child: _scoreField('剧情', _plot, 'plot')),
             ],
           ),
           const SizedBox(height: 8),
@@ -83,7 +78,7 @@ class _EvaluationManualScorePanelState
             minLines: 3,
             maxLines: 6,
             decoration: const InputDecoration(
-              labelText: 'Manual notes',
+              labelText: '人工备注',
               border: OutlineInputBorder(),
             ),
           ),
@@ -104,17 +99,17 @@ class _EvaluationManualScorePanelState
               ),
             ),
             icon: const Icon(Icons.rate_review_outlined),
-            label: const Text('Save Manual Score'),
+            label: const Text('保存人工评分'),
           ),
           const Divider(height: 20),
-          Text('Saved scores (${widget.scores.length})'),
+          Text('已保存评分（${widget.scores.length}）'),
           for (final score in widget.scores.take(5))
             ListTile(
               dense: true,
               title: Text(
                 score.overallScore == null
-                    ? 'No overall score'
-                    : 'Overall ${score.overallScore!.toStringAsFixed(1)}',
+                    ? '暂无总分'
+                    : '总分 ${score.overallScore!.toStringAsFixed(1)}',
               ),
               subtitle: Text(score.notes ?? score.reviewerId ?? ''),
             ),

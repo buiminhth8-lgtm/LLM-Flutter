@@ -20,14 +20,13 @@ class RevisionListPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             AppSectionHeader(
-              title: 'Revision Records',
-              subtitle:
-                  'Human edited assets created from writing generations or drafts.',
+              title: '修订记录',
+              subtitle: '由写作生成结果或草稿创建的人工修订资产。',
               actions: [
                 IconButton.filledTonal(
                   onPressed: state.loading ? null : controller.refresh,
                   icon: const Icon(Icons.refresh),
-                  tooltip: 'Refresh',
+                  tooltip: '刷新',
                 ),
               ],
             ),

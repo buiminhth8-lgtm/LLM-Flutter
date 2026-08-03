@@ -51,7 +51,7 @@ class EvaluationController extends ChangeNotifier {
     await _run(() async {
       final run = await _api.createRun(request);
       runId = run.runId;
-      await _afterRunChanged(run, notice: 'Evaluation run completed.');
+      await _afterRunChanged(run, notice: '评估运行已完成。');
     }, running: true);
     return runId;
   }
@@ -65,7 +65,7 @@ class EvaluationController extends ChangeNotifier {
   }) {
     return createRun(
       CreateEvaluationRunRequest(
-        name: name ?? 'Evaluation for $targetType $targetId',
+        name: name ?? '评估：$targetType $targetId',
         targetType: targetType,
         targetId: targetId,
         projectId: projectId,
@@ -79,7 +79,7 @@ class EvaluationController extends ChangeNotifier {
     await _run(() async {
       final run = await _api.runSync(request);
       runId = run.runId;
-      await _afterRunChanged(run, notice: 'Evaluation run completed.');
+      await _afterRunChanged(run, notice: '评估运行已完成。');
     }, running: true);
     return runId;
   }
@@ -97,7 +97,7 @@ class EvaluationController extends ChangeNotifier {
     }
     await _run(() async {
       final updated = await _api.startRun(run.runId);
-      await _afterRunChanged(updated, notice: 'Evaluation run completed.');
+      await _afterRunChanged(updated, notice: '评估运行已完成。');
     }, running: true);
   }
 
@@ -108,7 +108,7 @@ class EvaluationController extends ChangeNotifier {
     }
     await _run(() async {
       final updated = await _api.cancelRun(run.runId);
-      await _afterRunChanged(updated, notice: 'Evaluation run cancelled.');
+      await _afterRunChanged(updated, notice: '评估运行已取消。');
     });
   }
 
@@ -119,7 +119,7 @@ class EvaluationController extends ChangeNotifier {
     }
     await _run(() async {
       final updated = await _api.archiveRun(run.runId);
-      await _afterRunChanged(updated, notice: 'Evaluation run archived.');
+      await _afterRunChanged(updated, notice: '评估运行已归档。');
     });
   }
 
@@ -130,21 +130,21 @@ class EvaluationController extends ChangeNotifier {
       if (run != null) {
         await _loadRun(run.runId);
       }
-      state = state.copyWith(notice: 'Finding status updated.');
+      state = state.copyWith(notice: '发现项状态已更新。');
     }, saving: true);
   }
 
   Future<void> addManualScore(ManualEvaluationScoreRequest request) async {
     final run = state.currentRun;
     if (run == null) {
-      state = state.copyWith(error: 'Please select an evaluation run first.');
+      state = state.copyWith(error: '请先选择评估运行。');
       notifyListeners();
       return;
     }
     await _run(() async {
       await _api.addManualScore(run.runId, request);
       await _loadRun(run.runId);
-      state = state.copyWith(notice: 'Manual score saved.');
+      state = state.copyWith(notice: '人工评分已保存。');
     }, saving: true);
   }
 
@@ -156,7 +156,7 @@ class EvaluationController extends ChangeNotifier {
     await _run(() async {
       final report = await _api.generateReport(run.runId);
       await _loadRun(run.runId, selectedReportId: report.reportId);
-      state = state.copyWith(notice: 'Evaluation report generated.');
+      state = state.copyWith(notice: '评估报告已生成。');
     }, saving: true);
   }
 

@@ -54,7 +54,7 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Prompt Studio'), findsNothing);
+    expect(find.text('提示词工作室'), findsNothing);
 
     await tester.pumpWidget(
       _wrap(
@@ -66,7 +66,7 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Prompt Studio', skipOffstage: false), findsOneWidget);
+    expect(find.text('提示词工作室', skipOffstage: false), findsOneWidget);
   });
 
   testWidgets('create template form submits and invalid JSON disables save', (
@@ -82,30 +82,23 @@ void main() {
     );
 
     await tester.pumpWidget(_wrap(PromptStudioPage(controller: controller)));
-    await tester.enterText(
-      find.widgetWithText(TextField, 'variables_schema JSON'),
-      '{bad',
-    );
+    await tester.enterText(find.widgetWithText(TextField, '变量结构 JSON'), '{bad');
     await tester.pump();
     expect(
       tester
-          .widget<FilledButton>(
-            find.widgetWithText(FilledButton, 'Create template'),
-          )
+          .widget<FilledButton>(find.widgetWithText(FilledButton, '创建模板'))
           .onPressed,
       isNull,
     );
 
     await tester.enterText(
-      find.widgetWithText(TextField, 'variables_schema JSON'),
+      find.widgetWithText(TextField, '变量结构 JSON'),
       '{"project_title":{"type":"string","required":true}}',
     );
     await tester.pump();
     expect(
       tester
-          .widget<FilledButton>(
-            find.widgetWithText(FilledButton, 'Create template'),
-          )
+          .widget<FilledButton>(find.widgetWithText(FilledButton, '创建模板'))
           .onPressed,
       isNotNull,
     );
@@ -134,7 +127,7 @@ void main() {
       renderResult: PromptRenderResultDto(
         templateId: 'template-1',
         templateVersionId: 'version-1',
-        renderedPrompt: 'Rendered prompt',
+        renderedPrompt: '已渲染提示词',
         missingVariables: ['chapter_outline'],
         warnings: [],
         promptHash: 'abc',
@@ -143,8 +136,8 @@ void main() {
 
     await tester.pumpWidget(_wrap(PromptStudioPage(controller: controller)));
 
-    expect(find.text('Rendered prompt'), findsWidgets);
-    expect(find.text('Missing variables: chapter_outline'), findsOneWidget);
-    expect(find.text('prompt_hash: abc'), findsOneWidget);
+    expect(find.text('已渲染提示词'), findsWidgets);
+    expect(find.text('缺失变量：chapter_outline'), findsOneWidget);
+    expect(find.text('提示词哈希：abc'), findsOneWidget);
   });
 }

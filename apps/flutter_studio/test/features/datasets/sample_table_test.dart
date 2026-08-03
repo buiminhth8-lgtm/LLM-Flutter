@@ -39,8 +39,8 @@ void main() {
     );
 
     expect(find.text('pending'), findsOneWidget);
-    expect(find.text('approved'), findsOneWidget);
-    expect(find.text('rejected'), findsOneWidget);
+    expect(find.text('已通过'), findsOneWidget);
+    expect(find.text('已拒绝'), findsOneWidget);
     await tester.tap(find.byKey(const Key('sample-row-s2')));
     expect(selected?.sampleId, 's2');
   });

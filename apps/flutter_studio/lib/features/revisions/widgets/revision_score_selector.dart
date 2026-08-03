@@ -18,11 +18,11 @@ class RevisionScoreSelector extends StatelessWidget {
     initialValue: value,
     isExpanded: true,
     decoration: const InputDecoration(
-      labelText: 'User Score',
+      labelText: '用户评分',
       border: OutlineInputBorder(),
     ),
     items: [
-      const DropdownMenuItem<int>(value: null, child: Text('No score')),
+      const DropdownMenuItem<int>(value: null, child: Text('暂无评分')),
       for (final score in revisionScores)
         DropdownMenuItem<int>(value: score.value, child: Text(score.label)),
     ],

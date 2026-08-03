@@ -14,8 +14,8 @@ class RevisionDatasetCandidateToggle extends StatelessWidget {
   Widget build(BuildContext context) => SwitchListTile(
     key: const Key('revision-dataset-candidate-toggle'),
     contentPadding: EdgeInsets.zero,
-    title: const Text('Dataset candidate'),
-    subtitle: const Text('Candidate flag only; no training sample is created.'),
+    title: const Text('数据集候选'),
+    subtitle: const Text('仅设置候选标记，不创建训练样本。'),
     value: value,
     onChanged: onChanged,
   );

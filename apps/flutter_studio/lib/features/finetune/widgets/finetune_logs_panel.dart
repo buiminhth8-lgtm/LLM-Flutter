@@ -14,7 +14,7 @@ class FinetuneLogsPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Logs', style: TextStyle(fontWeight: FontWeight.w700)),
+          const Text('日志', style: TextStyle(fontWeight: FontWeight.w700)),
           SizedBox(
             height: 160,
             child: ListView(

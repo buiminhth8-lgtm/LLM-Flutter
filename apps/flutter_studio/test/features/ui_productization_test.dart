@@ -174,10 +174,10 @@ void main() {
     );
 
     final load = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Load'),
+      find.widgetWithText(FilledButton, '加载'),
     );
     final activate = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Activate'),
+      find.widgetWithText(FilledButton, '启用'),
     );
     expect(load.onPressed, isNull);
     expect(activate.onPressed, isNull);
@@ -195,7 +195,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Experimental'), findsOneWidget);
+    expect(find.text('实验性'), findsOneWidget);
     expect(find.textContaining('仅供本机开发参考'), findsOneWidget);
   });
 
@@ -213,7 +213,7 @@ void main() {
     );
 
     final cleanup = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Execute cleanup'),
+      find.widgetWithText(FilledButton, '执行清理'),
     );
     expect(cleanup.onPressed, isNull);
     expect(find.text('未生成清理预览'), findsOneWidget);
@@ -231,7 +231,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Redacted'), findsOneWidget);
+    expect(find.text('已脱敏'), findsOneWidget);
     expect(find.textContaining('不会包含模型权重'), findsOneWidget);
   });
 
@@ -246,14 +246,14 @@ void main() {
       ),
     );
 
-    expect(find.text('Local paths restricted'), findsOneWidget);
+    expect(find.text('本地路径受限'), findsOneWidget);
     expect(find.textContaining('question'), findsWidgets);
   });
 
   testWidgets('Novel Studio placeholder is roadmap only', (tester) async {
     await tester.pumpWidget(_wrap(const NovelStudioPlaceholderPage()));
 
-    expect(find.text('Novel Studio is planned.'), findsOneWidget);
+    expect(find.text('小说工作台已规划。'), findsOneWidget);
     expect(find.text('阶段 0：工程基线准备中。'), findsOneWidget);
     expect(find.text('下一阶段：Novel 项目与基础资料库。'), findsOneWidget);
   });

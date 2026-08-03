@@ -45,8 +45,8 @@ class _AdapterEvalSessionsPageState extends State<AdapterEvalSessionsPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             AppSectionHeader(
-              title: 'Adapter Evaluation',
-              subtitle: 'Stage 9：同一提示下对比基础模型与 Adapter 输出，人工评分并生成轻量报告。',
+              title: '适配器评估',
+              subtitle: '阶段 9：同一提示下对比基础模型与适配器输出，人工评分并生成轻量报告。',
               actions: [
                 OutlinedButton.icon(
                   key: const Key('adapter-eval-open-full-evaluation'),
@@ -58,18 +58,18 @@ class _AdapterEvalSessionsPageState extends State<AdapterEvalSessionsPage> {
                           state.currentSession!.sessionId,
                         ),
                   icon: const Icon(Icons.fact_check_outlined),
-                  label: const Text('Open Full Evaluation'),
+                  label: const Text('打开完整评估'),
                 ),
                 FilledButton.icon(
                   key: const Key('adapter-eval-new-session'),
                   onPressed: state.loading ? null : _showCreateSession,
                   icon: const Icon(Icons.add_chart_outlined),
-                  label: const Text('New Session'),
+                  label: const Text('新建会话'),
                 ),
                 IconButton.filledTonal(
                   onPressed: state.loading ? null : widget.controller.refresh,
                   icon: const Icon(Icons.refresh),
-                  tooltip: 'Refresh',
+                  tooltip: '刷新',
                 ),
               ],
             ),

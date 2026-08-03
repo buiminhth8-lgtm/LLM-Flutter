@@ -11,7 +11,7 @@ class _UnsupportedBackendService implements BackendService {
   }) async {
     return const BackendLaunchResult(
       startedByApp: false,
-      message: 'Automatic backend startup is only available on desktop.',
+      message: '自动启动后端仅支持桌面端。',
     );
   }
 

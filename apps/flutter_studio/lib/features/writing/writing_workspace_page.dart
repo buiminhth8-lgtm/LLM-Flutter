@@ -102,14 +102,14 @@ class _WritingWorkspacePageState extends State<WritingWorkspacePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AppSectionHeader(
-            title: 'Writing Workspace',
+            title: '写作工作区',
             subtitle:
-                'Stage 4：复用 ContextAssembler、PromptRenderer 与本地 Runtime 生成小说草稿。',
+                '阶段 4：复用 ContextAssembler、PromptRenderer 与本地 Runtime 生成小说草稿。',
             actions: [
               IconButton.filledTonal(
                 onPressed: state.loading ? null : widget.controller.refresh,
                 icon: const Icon(Icons.refresh),
-                tooltip: 'Refresh',
+                tooltip: '刷新',
               ),
             ],
           ),
@@ -341,7 +341,7 @@ class _WritingWorkspacePageState extends State<WritingWorkspacePage> {
                                 maxTokens: _int(_maxTokens, 2048),
                               ),
                         icon: const Icon(Icons.preview_outlined),
-                        label: const Text('Render Context Preview'),
+                        label: const Text('渲染上下文预览'),
                       ),
                       const SizedBox(height: 8),
                       FilledButton.icon(
@@ -360,7 +360,7 @@ class _WritingWorkspacePageState extends State<WritingWorkspacePage> {
                                 ),
                               ),
                         icon: const Icon(Icons.auto_awesome),
-                        label: const Text('Generate'),
+                        label: const Text('生成'),
                       ),
                       const SizedBox(height: 14),
                       _buildMemoryPanel(state),
@@ -395,7 +395,7 @@ class _WritingWorkspacePageState extends State<WritingWorkspacePage> {
             key: const Key('writing-memory-enabled'),
             contentPadding: EdgeInsets.zero,
             value: state.memoryEnabled,
-            title: const Text('Memory / RAG'),
+            title: const Text('记忆 / RAG'),
             subtitle: const Text('开启后由后端 ContextAssembler 注入 retrieved_memory'),
             onChanged: widget.controller.setMemoryEnabled,
           ),
@@ -407,7 +407,7 @@ class _WritingWorkspacePageState extends State<WritingWorkspacePage> {
                   controller: _memoryTopK,
                   enabled: state.memoryEnabled,
                   decoration: const InputDecoration(
-                    labelText: 'Memory top_k',
+                    labelText: '记忆 top_k',
                     border: OutlineInputBorder(),
                   ),
                   onChanged: (value) => widget.controller.setMemoryTopK(
@@ -422,7 +422,7 @@ class _WritingWorkspacePageState extends State<WritingWorkspacePage> {
                   controller: _memoryMaxTokens,
                   enabled: state.memoryEnabled,
                   decoration: const InputDecoration(
-                    labelText: 'Max tokens',
+                    labelText: '最大 Token 数',
                     border: OutlineInputBorder(),
                   ),
                   onChanged: (value) => widget.controller.setMemoryMaxTokens(
@@ -457,7 +457,7 @@ class _WritingWorkspacePageState extends State<WritingWorkspacePage> {
                 ? () => widget.controller.retrieveMemoryPreview(_goal.text)
                 : null,
             icon: const Icon(Icons.search),
-            label: const Text('Show Retrieved Memory'),
+            label: const Text('显示检索记忆'),
           ),
         ],
       ),

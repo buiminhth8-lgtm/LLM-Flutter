@@ -60,13 +60,13 @@ class _ContextAssemblerPageState extends State<ContextAssemblerPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AppSectionHeader(
-            title: 'Context Preview',
-            subtitle: 'Stage 3：选择、排序并按预算装配小说资料，不调用模型。',
+            title: '上下文预览',
+            subtitle: '阶段 3：选择、排序并按预算装配小说资料，不调用模型。',
             actions: [
               IconButton.filledTonal(
                 onPressed: state.loading ? null : widget.controller.refresh,
                 icon: const Icon(Icons.refresh),
-                tooltip: 'Refresh',
+                tooltip: '刷新',
               ),
             ],
           ),
@@ -191,7 +191,7 @@ class _ContextAssemblerPageState extends State<ContextAssemblerPage> {
                                       targetLength: _targetLength.text,
                                     ),
                               icon: const Icon(Icons.account_tree_outlined),
-                              label: const Text('Assemble'),
+                              label: const Text('装配'),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -209,7 +209,7 @@ class _ContextAssemblerPageState extends State<ContextAssemblerPage> {
                                       renderPreview: true,
                                     ),
                               icon: const Icon(Icons.preview_outlined),
-                              label: const Text('Render Preview'),
+                              label: const Text('渲染预览'),
                             ),
                           ),
                         ],

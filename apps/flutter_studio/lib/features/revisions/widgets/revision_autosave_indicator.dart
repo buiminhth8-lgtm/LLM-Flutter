@@ -25,10 +25,10 @@ class RevisionAutosaveIndicator extends StatelessWidget {
       const SizedBox(width: 6),
       Text(
         autosaving
-            ? 'Autosaving'
+            ? '自动保存中'
             : lastAutosaveAt == null
-            ? 'No autosave yet'
-            : 'Autosaved $lastAutosaveAt',
+            ? '尚未自动保存'
+            : '$lastAutosaveAt 已自动保存',
       ),
     ],
   );

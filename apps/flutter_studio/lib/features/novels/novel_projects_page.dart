@@ -51,14 +51,13 @@ class _NovelProjectsPageState extends State<NovelProjectsPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AppSectionHeader(
-            title: 'Novel Studio',
-            subtitle:
-                'Stage 1 foundation: projects, chapters, characters, and world bible. No AI generation is connected.',
+            title: '小说工作台',
+            subtitle: '阶段 1 基础：项目、章节、人物和世界观设定；不连接 AI 生成。',
             actions: [
               IconButton.filledTonal(
                 onPressed: widget.controller.refresh,
                 icon: const Icon(Icons.refresh),
-                tooltip: 'Refresh',
+                tooltip: '刷新',
               ),
             ],
           ),
@@ -70,7 +69,7 @@ class _NovelProjectsPageState extends State<NovelProjectsPage> {
               actions: [
                 TextButton(
                   onPressed: () => setState(() {}),
-                  child: const Text('Dismiss'),
+                  child: const Text('关闭'),
                 ),
               ],
             ),
@@ -91,9 +90,8 @@ class _NovelProjectsPageState extends State<NovelProjectsPage> {
                 Expanded(
                   child: selected == null
                       ? const AppEmptyState(
-                          title: 'No novel project',
-                          message:
-                              'Create a project to start building the foundation library.',
+                          title: '暂无小说项目',
+                          message: '创建项目，开始搭建基础资料库。',
                           icon: Icons.menu_book_outlined,
                         )
                       : NovelProjectDetailPage(
@@ -138,7 +136,7 @@ class _ProjectList extends StatelessWidget {
         TextField(
           controller: titleController,
           decoration: const InputDecoration(
-            labelText: 'Project title',
+            labelText: '项目标题',
             border: OutlineInputBorder(),
           ),
         ),
@@ -146,7 +144,7 @@ class _ProjectList extends StatelessWidget {
         TextField(
           controller: genreController,
           decoration: const InputDecoration(
-            labelText: 'Genre',
+            labelText: '题材',
             border: OutlineInputBorder(),
           ),
         ),
@@ -156,7 +154,7 @@ class _ProjectList extends StatelessWidget {
           minLines: 2,
           maxLines: 3,
           decoration: const InputDecoration(
-            labelText: 'Description',
+            labelText: '描述',
             border: OutlineInputBorder(),
           ),
         ),
@@ -176,14 +174,14 @@ class _ProjectList extends StatelessWidget {
             descriptionController.clear();
           },
           icon: const Icon(Icons.add),
-          label: const Text('Create project'),
+          label: const Text('创建项目'),
         ),
         const SizedBox(height: 16),
         Expanded(
           child: state.projects.isEmpty
               ? const AppEmptyState(
-                  title: 'No projects',
-                  message: 'Novel projects are stored locally in SQLite.',
+                  title: '暂无项目',
+                  message: '小说项目保存在本地 SQLite 中。',
                   icon: Icons.menu_book_outlined,
                 )
               : ListView.separated(
@@ -253,7 +251,7 @@ class NovelProjectDetailPage extends StatelessWidget {
                       project.title,
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
-                    Text(project.description ?? 'No description'),
+                    Text(project.description ?? '暂无描述'),
                   ],
                 ),
               ),
@@ -261,10 +259,9 @@ class NovelProjectDetailPage extends StatelessWidget {
                 onPressed: () async {
                   final ok = await showAppConfirmDialog(
                     context,
-                    title: 'Delete project?',
-                    message:
-                        'This performs a soft delete. Child records are kept but hidden by default.',
-                    confirmLabel: 'Delete project',
+                    title: '删除项目？',
+                    message: '这会执行软删除。子记录会保留，但默认隐藏。',
+                    confirmLabel: '删除项目',
                     destructive: true,
                   );
                   if (ok == true) {
@@ -272,7 +269,7 @@ class NovelProjectDetailPage extends StatelessWidget {
                   }
                 },
                 icon: const Icon(Icons.delete_outline),
-                label: const Text('Delete project'),
+                label: const Text('删除项目'),
               ),
             ],
           ),
@@ -280,13 +277,13 @@ class NovelProjectDetailPage extends StatelessWidget {
           const TabBar(
             isScrollable: true,
             tabs: [
-              Tab(text: 'Overview'),
-              Tab(text: 'Volumes'),
-              Tab(text: 'Chapters'),
-              Tab(text: 'Characters'),
-              Tab(text: 'World Bible'),
-              Tab(text: 'Plot Threads'),
-              Tab(text: 'Timeline'),
+              Tab(text: '概览'),
+              Tab(text: '分卷'),
+              Tab(text: '章节'),
+              Tab(text: '人物'),
+              Tab(text: '世界观设定'),
+              Tab(text: '剧情线'),
+              Tab(text: '时间线'),
             ],
           ),
           const SizedBox(height: 12),
@@ -294,7 +291,7 @@ class NovelProjectDetailPage extends StatelessWidget {
             child: TabBarView(
               children: [
                 _Overview(project: project),
-                _PlannedPanel(title: 'Volumes', count: state.volumes.length),
+                _PlannedPanel(title: '分卷', count: state.volumes.length),
                 _ChaptersPanel(
                   controller: controller,
                   titleController: chapterTitle,
@@ -311,11 +308,8 @@ class NovelProjectDetailPage extends StatelessWidget {
                   titleController: worldTitle,
                   contentController: worldContent,
                 ),
-                _PlannedPanel(
-                  title: 'Plot Threads',
-                  count: state.plotThreads.length,
-                ),
-                _PlannedPanel(title: 'Timeline', count: state.timeline.length),
+                _PlannedPanel(title: '剧情线', count: state.plotThreads.length),
+                _PlannedPanel(title: '时间线', count: state.timeline.length),
               ],
             ),
           ),
@@ -334,24 +328,19 @@ class _Overview extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       children: [
-        ListTile(title: const Text('Slug'), subtitle: Text(project.slug)),
+        ListTile(title: const Text('标识'), subtitle: Text(project.slug)),
+        ListTile(title: const Text('题材'), subtitle: Text(project.genre ?? '-')),
         ListTile(
-          title: const Text('Genre'),
-          subtitle: Text(project.genre ?? '-'),
-        ),
-        ListTile(
-          title: const Text('Target style'),
+          title: const Text('目标文风'),
           subtitle: Text(project.targetStyle ?? '-'),
         ),
         ListTile(
-          title: const Text('Target audience'),
+          title: const Text('目标读者'),
           subtitle: Text(project.targetAudience ?? '-'),
         ),
         const ListTile(
-          title: Text('Stage 1 boundary'),
-          subtitle: Text(
-            'No generation, Prompt Studio, Revision, Dataset, or FineTune workflow is connected.',
-          ),
+          title: Text('阶段 1 边界'),
+          subtitle: Text('尚未连接生成、提示词工作室、修订、数据集或微调工作流。'),
         ),
       ],
     );
@@ -380,7 +369,7 @@ class _ChaptersPanel extends StatelessWidget {
               child: TextField(
                 controller: titleController,
                 decoration: const InputDecoration(
-                  labelText: 'Chapter title',
+                  labelText: '章节标题',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -390,7 +379,7 @@ class _ChaptersPanel extends StatelessWidget {
               child: TextField(
                 controller: outlineController,
                 decoration: const InputDecoration(
-                  labelText: 'Outline',
+                  labelText: '大纲',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -408,7 +397,7 @@ class _ChaptersPanel extends StatelessWidget {
                 titleController.clear();
                 outlineController.clear();
               },
-              child: const Text('Save draft'),
+              child: const Text('保存草稿'),
             ),
           ],
         ),
@@ -416,8 +405,8 @@ class _ChaptersPanel extends StatelessWidget {
         Expanded(
           child: chapters.isEmpty
               ? const AppEmptyState(
-                  title: 'No chapters',
-                  message: 'Create chapter outlines and local drafts only.',
+                  title: '暂无章节',
+                  message: '仅创建章节大纲和本地草稿。',
                   icon: Icons.article_outlined,
                 )
               : ListView(
@@ -428,7 +417,7 @@ class _ChaptersPanel extends StatelessWidget {
                           '${chapter.chapterIndex}. ${chapter.title}',
                         ),
                         subtitle: Text(
-                          '${chapter.status} / ${chapter.wordCount} words',
+                          '${chapter.status} / ${chapter.wordCount} 字',
                         ),
                       ),
                   ],
@@ -460,7 +449,7 @@ class _CharactersPanel extends StatelessWidget {
               child: TextField(
                 controller: nameController,
                 decoration: const InputDecoration(
-                  labelText: 'Character name',
+                  labelText: '人物名称',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -470,7 +459,7 @@ class _CharactersPanel extends StatelessWidget {
               child: TextField(
                 controller: roleController,
                 decoration: const InputDecoration(
-                  labelText: 'Role',
+                  labelText: '角色',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -488,7 +477,7 @@ class _CharactersPanel extends StatelessWidget {
                 nameController.clear();
                 roleController.clear();
               },
-              child: const Text('Create character'),
+              child: const Text('创建人物'),
             ),
           ],
         ),
@@ -533,7 +522,7 @@ class _WorldPanel extends StatelessWidget {
               child: TextField(
                 controller: categoryController,
                 decoration: const InputDecoration(
-                  labelText: 'Category',
+                  labelText: '类别',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -543,7 +532,7 @@ class _WorldPanel extends StatelessWidget {
               child: TextField(
                 controller: titleController,
                 decoration: const InputDecoration(
-                  labelText: 'Entry title',
+                  labelText: '条目标题',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -553,7 +542,7 @@ class _WorldPanel extends StatelessWidget {
               child: TextField(
                 controller: contentController,
                 decoration: const InputDecoration(
-                  labelText: 'Content',
+                  labelText: '内容',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -575,7 +564,7 @@ class _WorldPanel extends StatelessWidget {
                 titleController.clear();
                 contentController.clear();
               },
-              child: const Text('Create entry'),
+              child: const Text('创建条目'),
             ),
           ],
         ),
@@ -605,9 +594,8 @@ class _PlannedPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppEmptyState(
-      title: '$title planned',
-      message:
-          'API/DTO foundation exists. Full editing UI is planned for a later Stage 1 iteration. Current records: $count.',
+      title: '$title 已规划',
+      message: 'API/DTO 基础已存在。完整编辑 UI 计划在后续阶段 1 迭代补齐。当前记录数：$count。',
       icon: Icons.pending_actions_outlined,
     );
   }

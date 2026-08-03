@@ -49,7 +49,7 @@ class DownloadsPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AppSectionHeader(
-            title: 'Downloads',
+            title: '下载',
             subtitle: '下载通过后台 Job 运行；总大小未知时不显示伪造百分比，取消是协作式请求。',
             actions: [
               IconButton.filledTonal(
@@ -66,7 +66,7 @@ class DownloadsPage extends StatelessWidget {
                 width: 220,
                 child: InputDecorator(
                   decoration: const InputDecoration(
-                    labelText: 'Provider',
+                    labelText: '提供方',
                     border: OutlineInputBorder(),
                   ),
                   child: Text(
@@ -80,7 +80,7 @@ class DownloadsPage extends StatelessWidget {
                 child: TextField(
                   controller: repoController,
                   decoration: const InputDecoration(
-                    labelText: 'ModelScope model_id',
+                    labelText: 'ModelScope 模型 ID',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -91,7 +91,7 @@ class DownloadsPage extends StatelessWidget {
                 child: TextField(
                   controller: revisionController,
                   decoration: const InputDecoration(
-                    labelText: 'Revision',
+                    labelText: '修订版本',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -111,7 +111,7 @@ class DownloadsPage extends StatelessWidget {
                 child: TextField(
                   controller: allowPatternsController,
                   decoration: const InputDecoration(
-                    labelText: 'Allow patterns，用逗号分隔',
+                    labelText: '允许文件模式，用逗号分隔',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -121,7 +121,7 @@ class DownloadsPage extends StatelessWidget {
                 child: TextField(
                   controller: ignorePatternsController,
                   decoration: const InputDecoration(
-                    labelText: 'Ignore patterns，用逗号分隔',
+                    labelText: '忽略文件模式，用逗号分隔',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -133,7 +133,7 @@ class DownloadsPage extends StatelessWidget {
             child: downloads.isEmpty
                 ? const AppEmptyState(
                     title: '没有下载任务',
-                    message: '输入 ModelScope model_id 后创建后台下载任务。',
+                    message: '输入 ModelScope 模型 ID 后创建后台下载任务。',
                     icon: Icons.cloud_download_outlined,
                   )
                 : ListView.separated(
@@ -233,10 +233,8 @@ class _DownloadCard extends StatelessWidget {
                 Text(formatSpeed(task.speedBytesPerSecond)),
                 Text(formatEta(task.etaSeconds)),
                 if (task.totalFiles != null)
-                  Text(
-                    '${task.completedFiles ?? 0} / ${task.totalFiles} files',
-                  ),
-                if (task.resumeSupported) Text('重试会复用 $providerLabel cache'),
+                  Text('${task.completedFiles ?? 0} / ${task.totalFiles} 个文件'),
+                if (task.resumeSupported) Text('重试会复用 $providerLabel 缓存'),
               ],
             ),
             if (task.currentFile != null && task.currentFile!.isNotEmpty) ...[

@@ -26,7 +26,7 @@ class ContextPageHttpClient extends http.BaseClient {
           {
             'id': 'c1',
             'project_id': 'p1',
-            'title': 'Chapter',
+            'title': '章节',
             'chapter_index': 1,
             'word_count': 0,
             'status': 'outline',
@@ -53,7 +53,7 @@ class ContextPageHttpClient extends http.BaseClient {
         'project_id': 'p1',
         'chapter_id': 'c1',
         'mode': 'chapter_generate',
-        'variables': {'project_title': 'Novel', 'chapter_title': 'Chapter'},
+        'variables': {'project_title': 'Novel', 'chapter_title': '章节'},
         'selected_items': {
           'characters': ['char-1'],
         },
@@ -98,11 +98,11 @@ void main() {
         home: Scaffold(body: ContextAssemblerPage(controller: controller)),
       ),
     );
-    await tester.tap(find.text('Assemble'));
+    await tester.tap(find.text('装配'));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('project_title'), findsOneWidget);
-    expect(find.textContaining('42 tokens'), findsOneWidget);
+    expect(find.textContaining('42 Token'), findsOneWidget);
     expect(find.text('未发生截断或预算警告。'), findsOneWidget);
   });
 
@@ -124,7 +124,7 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Context Preview'), findsNothing);
+    expect(find.text('上下文预览'), findsNothing);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -139,6 +139,6 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Context Preview'), findsOneWidget);
+    expect(find.text('上下文预览'), findsOneWidget);
   });
 }

@@ -14,10 +14,18 @@ class SampleStatusBadge extends StatelessWidget {
       'exported' => Colors.blue,
       _ => Colors.orange,
     };
+    final label = switch (status) {
+      'draft' => '草稿',
+      'approved' => '已通过',
+      'rejected' => '已拒绝',
+      'archived' => '已归档',
+      'exported' => '已导出',
+      _ => status,
+    };
     return Chip(
       visualDensity: VisualDensity.compact,
       avatar: Icon(Icons.circle, color: color, size: 12),
-      label: Text(status),
+      label: Text(label),
     );
   }
 }

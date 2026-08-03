@@ -31,7 +31,7 @@ class MemoryRetrievalPanel extends StatelessWidget {
         minLines: 2,
         maxLines: 4,
         decoration: const InputDecoration(
-          labelText: 'Query Text',
+          labelText: '查询文本',
           border: OutlineInputBorder(),
         ),
       ),
@@ -54,7 +54,7 @@ class MemoryRetrievalPanel extends StatelessWidget {
               key: const Key('memory-max-tokens'),
               controller: maxTokensController,
               decoration: const InputDecoration(
-                labelText: 'max memory tokens',
+                labelText: '最大记忆 Token 数',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -69,7 +69,7 @@ class MemoryRetrievalPanel extends StatelessWidget {
               key: const Key('memory-retrieve'),
               onPressed: onRetrieve,
               icon: const Icon(Icons.search),
-              label: const Text('Retrieve'),
+              label: const Text('检索'),
             ),
           ),
           const SizedBox(width: 8),
@@ -81,7 +81,7 @@ class MemoryRetrievalPanel extends StatelessWidget {
                   ? null
                   : () => onEvaluateRetrieval?.call(result!.retrievalId!),
               icon: const Icon(Icons.fact_check_outlined),
-              label: const Text('Evaluate'),
+              label: const Text('评估'),
             ),
           ),
         ],
@@ -89,7 +89,7 @@ class MemoryRetrievalPanel extends StatelessWidget {
       const SizedBox(height: 8),
       if (result != null)
         Text(
-          'retrieval: ${result!.retrievalId ?? '-'} · selected ${result!.selectedChunks.length} · tokens ${result!.totalTokenEstimate}',
+          '检索：${result!.retrievalId ?? '-'} · 已选择 ${result!.selectedChunks.length} · Token ${result!.totalTokenEstimate}',
         ),
       Expanded(
         child: MemoryChunkResultList(chunks: result?.chunks ?? const []),

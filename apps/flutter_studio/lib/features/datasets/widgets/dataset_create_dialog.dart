@@ -25,7 +25,7 @@ class _DatasetCreateDialogState extends State<DatasetCreateDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Create Dataset'),
+    title: const Text('创建数据集'),
     content: SizedBox(
       width: 420,
       child: Column(
@@ -34,12 +34,12 @@ class _DatasetCreateDialogState extends State<DatasetCreateDialog> {
           TextField(
             key: const Key('dataset-name-input'),
             controller: _name,
-            decoration: const InputDecoration(labelText: 'Name'),
+            decoration: const InputDecoration(labelText: '名称'),
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
             initialValue: _type,
-            decoration: const InputDecoration(labelText: 'Type'),
+            decoration: const InputDecoration(labelText: '类型'),
             items: const [
               DropdownMenuItem(value: 'sft', child: Text('sft')),
               DropdownMenuItem(value: 'preference', child: Text('preference')),
@@ -50,12 +50,12 @@ class _DatasetCreateDialogState extends State<DatasetCreateDialog> {
           const SizedBox(height: 8),
           TextField(
             controller: _project,
-            decoration: const InputDecoration(labelText: 'Project ID'),
+            decoration: const InputDecoration(labelText: '项目 ID'),
           ),
           const SizedBox(height: 8),
           TextField(
             controller: _description,
-            decoration: const InputDecoration(labelText: 'Description'),
+            decoration: const InputDecoration(labelText: '描述'),
           ),
         ],
       ),
@@ -63,7 +63,7 @@ class _DatasetCreateDialogState extends State<DatasetCreateDialog> {
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancel'),
+        child: const Text('取消'),
       ),
       FilledButton(
         key: const Key('dataset-create-submit'),
@@ -79,7 +79,7 @@ class _DatasetCreateDialogState extends State<DatasetCreateDialog> {
                 : _description.text.trim(),
           ),
         ),
-        child: const Text('Create'),
+        child: const Text('创建'),
       ),
     ],
   );

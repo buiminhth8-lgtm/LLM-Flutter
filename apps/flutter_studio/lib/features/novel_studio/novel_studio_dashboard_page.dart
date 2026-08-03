@@ -71,14 +71,13 @@ class NovelStudioDashboardPage extends StatelessWidget {
     final guard = NovelStudioRouteGuard(capabilities);
     if (!guard.isAvailable('novel_studio')) {
       return AppEmptyState(
-        title: 'Novel Studio is disabled',
-        message:
-            'Enable features.novel_studio.enabled and refresh capabilities.',
+        title: '小说工作台已禁用',
+        message: '请启用 features.novel_studio.enabled 并刷新能力。',
         icon: Icons.auto_stories_outlined,
         action: OutlinedButton.icon(
           onPressed: onRefresh,
           icon: const Icon(Icons.refresh),
-          label: const Text('Refresh capabilities'),
+          label: const Text('刷新能力'),
         ),
       );
     }
@@ -86,20 +85,20 @@ class NovelStudioDashboardPage extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       children: [
         AppSectionHeader(
-          title: 'Novel Studio Dashboard',
+          title: '小说工作台仪表盘',
           subtitle:
               '从项目资料、Prompt、Context、Writing、Revision、Dataset、Fine-tune、Memory 到 Evaluation 的本地闭环入口。',
           actions: [
             OutlinedButton.icon(
               onPressed: onOpenPrompts,
               icon: const Icon(Icons.description_outlined),
-              label: const Text('Prompts'),
+              label: const Text('提示词'),
             ),
             const SizedBox(width: 8),
             FilledButton.icon(
               onPressed: onOpenProjects,
               icon: const Icon(Icons.add),
-              label: const Text('New / Open Project'),
+              label: const Text('新建 / 打开项目'),
             ),
           ],
         ),
@@ -156,13 +155,13 @@ class NovelStudioDashboardPage extends StatelessWidget {
           children: [
             Expanded(
               child: _JourneyCard(
-                title: 'Authoring path',
+                title: '创作路径',
                 icon: Icons.edit_note_outlined,
                 steps: const [
-                  'Project → Chapters → Prompt',
-                  'Context preview → Writing',
-                  'Save to Draft only when you choose it',
-                  'Revision stays separate from final_content',
+                  '项目 → 章节 → 提示词',
+                  '上下文预览 → 写作',
+                  '仅在你选择时保存到草稿',
+                  '修订稿与 final_content 保持分离',
                 ],
                 onOpen: onOpenWriting,
               ),
@@ -170,13 +169,13 @@ class NovelStudioDashboardPage extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _JourneyCard(
-                title: 'Improvement path',
+                title: '改进路径',
                 icon: Icons.science_outlined,
                 steps: const [
-                  'Approved Revision → Dataset',
-                  'Freeze DatasetVersion',
-                  'Confirm recipe → Fine-tune',
-                  'Compare adapters → Evaluation',
+                  '已批准修订 → 数据集',
+                  '冻结数据集版本',
+                  '确认配方 → 微调',
+                  '对比适配器 → 评估',
                 ],
                 onOpen: onOpenDataset,
               ),
@@ -225,7 +224,7 @@ class _JourneyCard extends StatelessWidget {
                 child: Text('• $step'),
               ),
             const SizedBox(height: 12),
-            OutlinedButton(onPressed: onOpen, child: const Text('Open')),
+            OutlinedButton(onPressed: onOpen, child: const Text('打开')),
           ],
         ),
       ),

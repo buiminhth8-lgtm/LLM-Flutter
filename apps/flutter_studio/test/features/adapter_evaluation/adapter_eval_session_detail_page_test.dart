@@ -31,7 +31,7 @@ void main() {
       find.byKey(const Key('adapter-eval-session-detail')),
       findsOneWidget,
     );
-    expect(find.text('base_model_id: qwen-local'), findsOneWidget);
+    expect(find.text('基础模型 ID：qwen-local'), findsOneWidget);
     expect(find.byKey(const Key('adapter-eval-add-case')), findsOneWidget);
     expect(find.byKey(const Key('adapter-eval-run-session')), findsOneWidget);
     expect(
@@ -39,6 +39,6 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Opening continuation'), findsOneWidget);
-    expect(find.text('recommendation: adapter_candidate'), findsOneWidget);
+    expect(find.text('建议：adapter_candidate'), findsOneWidget);
   });
 }

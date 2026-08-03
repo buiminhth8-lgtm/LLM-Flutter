@@ -11,7 +11,7 @@ class NovelStudioPlaceholderPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Novel Studio is planned.',
+            '小说工作台已规划。',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
           ),
           SizedBox(height: 12),

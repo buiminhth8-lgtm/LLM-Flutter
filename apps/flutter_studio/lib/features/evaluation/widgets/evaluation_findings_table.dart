@@ -19,7 +19,7 @@ class EvaluationFindingsTable extends StatelessWidget {
       return const Card(
         child: Padding(
           padding: EdgeInsets.all(16),
-          child: Text('No findings. Nice and quiet in the machinery room.'),
+          child: Text('暂无发现项。机房里安静得很。'),
         ),
       );
     }

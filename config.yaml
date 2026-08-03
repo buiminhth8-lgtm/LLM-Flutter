@@ -91,7 +91,7 @@ security:
 
 features:
   novel_studio:
-    enabled: false
+    enabled: true
   revision_system:
     enabled: true
   dataset_builder:

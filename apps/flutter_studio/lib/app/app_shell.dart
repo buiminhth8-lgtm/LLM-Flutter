@@ -101,9 +101,7 @@ class _StudioShellState extends State<StudioShell> {
   final _downloadAllowController = TextEditingController();
   final _downloadIgnoreController = TextEditingController();
   String _downloadProvider = 'modelscope';
-  final _systemController = TextEditingController(
-    text: 'You are a concise and reliable local assistant.',
-  );
+  final _systemController = TextEditingController(text: '你是一个简洁、可靠的本地助手。');
 
   late final ChatController _chat = ChatController(_client);
   late final ModelController _models = ModelController(_client);
@@ -249,7 +247,7 @@ class _StudioShellState extends State<StudioShell> {
       result = await _settings.regenerateApiKey(_client, userId);
     });
     if (result == null) {
-      throw StateError('API Key regeneration failed.');
+      throw StateError('API Key 重新生成失败。');
     }
     return result!;
   }
@@ -291,7 +289,7 @@ class _StudioShellState extends State<StudioShell> {
       } on AuthRequiredException {
         rethrow;
       } catch (error) {
-        logClientError('Unable to refresh current auth user: $error');
+        logClientError('无法刷新当前认证用户：$error');
       }
       await Future.wait([
         _status.refresh(),
@@ -347,7 +345,7 @@ class _StudioShellState extends State<StudioShell> {
     }
     final modelId = _models.activeModelId();
     if (modelId.isEmpty) {
-      _shell.setError('请先在 Models 页面加载模型。');
+      _shell.setError('请先在模型页面加载模型。');
       return;
     }
     _chatInputController.clear();
@@ -472,7 +470,7 @@ class _StudioShellState extends State<StudioShell> {
   Future<void> _startBenchmark() async => _guarded(() async {
     final modelId = _models.activeModelId();
     if (modelId.isEmpty) {
-      throw StudioApiException('请先加载模型，再启动 Benchmark。');
+      throw StudioApiException('请先加载模型，再启动基准测试。');
     }
     await _benchmarks.start(modelId);
     await _refreshAll();
@@ -505,35 +503,36 @@ class _StudioShellState extends State<StudioShell> {
     _navigation.select(8);
   });
 
-  Future<void> _createAdapterEvaluationFromRun(
-    FinetuneRunDto run,
-  ) async => _guarded(() async {
-    final adapterId = run.adapterId;
-    if (run.status != 'completed' || adapterId == null || adapterId.isEmpty) {
-      throw StudioApiException(
-        'Only completed fine-tune runs with a registered adapter can be evaluated.',
-        code: 'ADAPTER_EVAL_FINETUNE_RUN_NOT_COMPLETED',
-      );
-    }
-    await _adapterEval.createSession(
-      CreateAdapterEvalSessionRequest(
-        name: 'Evaluation for ${run.adapterName}',
-        description: 'Created from fine-tune run ${run.runId}.',
-        finetuneRunId: run.runId,
-        datasetVersionId: run.datasetVersionId,
-        baseModelId: run.baseModelId,
-        adapterId: adapterId,
-      ),
-    );
-    _navigation.select(adapterEvaluationPageIndex);
-  });
+  Future<void> _createAdapterEvaluationFromRun(FinetuneRunDto run) async =>
+      _guarded(() async {
+        final adapterId = run.adapterId;
+        if (run.status != 'completed' ||
+            adapterId == null ||
+            adapterId.isEmpty) {
+          throw StudioApiException(
+            '只有已完成且注册了适配器的微调任务才能评估。',
+            code: 'ADAPTER_EVAL_FINETUNE_RUN_NOT_COMPLETED',
+          );
+        }
+        await _adapterEval.createSession(
+          CreateAdapterEvalSessionRequest(
+            name: '${run.adapterName} 的评估',
+            description: '由微调任务 ${run.runId} 创建。',
+            finetuneRunId: run.runId,
+            datasetVersionId: run.datasetVersionId,
+            baseModelId: run.baseModelId,
+            adapterId: adapterId,
+          ),
+        );
+        _navigation.select(adapterEvaluationPageIndex);
+      });
 
   Future<void> _createEvaluationForGeneration(String generationId) async =>
       _guarded(() async {
         final runId = await _evaluation.createRunForTarget(
           targetType: 'generation',
           targetId: generationId,
-          name: 'Evaluation for generation $generationId',
+          name: '生成记录 $generationId 的评估',
         );
         if (runId != null) {
           await _evaluation.selectRun(runId);
@@ -546,7 +545,7 @@ class _StudioShellState extends State<StudioShell> {
         final runId = await _evaluation.createRunForTarget(
           targetType: 'revision',
           targetId: revisionId,
-          name: 'Evaluation for revision $revisionId',
+          name: '修订 $revisionId 的评估',
         );
         if (runId != null) {
           await _evaluation.selectRun(runId);
@@ -559,7 +558,7 @@ class _StudioShellState extends State<StudioShell> {
         final runId = await _evaluation.createRunForTarget(
           targetType: 'memory_retrieval',
           targetId: retrievalId,
-          name: 'Evaluation for memory retrieval $retrievalId',
+          name: '记忆检索 $retrievalId 的评估',
         );
         if (runId != null) {
           await _evaluation.selectRun(runId);
@@ -572,7 +571,7 @@ class _StudioShellState extends State<StudioShell> {
         final runId = await _evaluation.createRunForTarget(
           targetType: 'adapter_eval_session',
           targetId: sessionId,
-          name: 'Evaluation for adapter session $sessionId',
+          name: '适配器会话 $sessionId 的评估',
         );
         if (runId != null) {
           await _evaluation.selectRun(runId);
@@ -641,22 +640,22 @@ class _StudioShellState extends State<StudioShell> {
     final modelId =
         _models.selectedModelId ??
         (loaded ? '${_models.currentModel?['model_id'] ?? ''}' : '');
-    return modelId.isEmpty ? 'No model loaded' : modelId;
+    return modelId.isEmpty ? '未加载模型' : modelId;
   }
 
   String _topAdapterLabel() {
     final adapter =
         _models.currentModel?['adapter_id'] ?? _models.currentModel?['adapter'];
     final label = '${adapter ?? ''}'.trim();
-    return label.isEmpty ? 'None' : label;
+    return label.isEmpty ? '无' : label;
   }
 
   String _topGpuLabel() {
     final running = _status.state.gpuScheduler?['running'];
     if (running is List && running.isNotEmpty) {
-      return 'Busy';
+      return '忙碌';
     }
-    return 'Idle';
+    return '空闲';
   }
 
   int _runningJobCount() {
@@ -1025,9 +1024,8 @@ class _StudioShellState extends State<StudioShell> {
         },
         onTestBackend: _testBackendConnection,
         onOpenDiagnostics: () => _navigation.select(8),
-        onOpenReleaseNotes: () => _shell.setError(
-          'Release notes are packaged in docs/RELEASE_NOTES.md.',
-        ),
+        onOpenReleaseNotes: () =>
+            _shell.setError('发布说明已打包在 docs/RELEASE_NOTES.md。'),
       ),
     ];
 
@@ -1067,13 +1065,13 @@ class _StudioShellState extends State<StudioShell> {
                 if (_shell.authRequired)
                   MaterialBanner(
                     content: const Text(
-                      '后端已经初始化，但当前客户端没有可用 API Key。请在 Settings 中填写 API Key，或重新生成 API Key。',
+                      '后端已经初始化，但当前客户端没有可用 API Key。请在设置中填写 API Key，或重新生成 API Key。',
                     ),
                     leading: const Icon(Icons.lock_outline),
                     actions: [
                       TextButton(
                         onPressed: () => _navigation.select(settingsPageIndex),
-                        child: const Text('打开 Settings'),
+                        child: const Text('打开设置'),
                       ),
                     ],
                   ),

@@ -36,7 +36,9 @@ class ModelController extends ChangeNotifier {
 
   Future<void> load(String modelId) async {
     final current = await _client.loadModel(modelId);
-    state = state.copyWith(selectedModelId: '${current['model_id'] ?? modelId}');
+    state = state.copyWith(
+      selectedModelId: '${current['model_id'] ?? modelId}',
+    );
     notifyListeners();
     await refresh();
   }

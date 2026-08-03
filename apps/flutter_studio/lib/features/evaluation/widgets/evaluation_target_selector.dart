@@ -29,7 +29,7 @@ class EvaluationTargetSelector extends StatelessWidget {
             DropdownMenuItem(value: entry.key, child: Text(entry.value)),
         ],
         decoration: const InputDecoration(
-          labelText: 'Target type',
+          labelText: '目标类型',
           border: OutlineInputBorder(),
         ),
         onChanged: (value) {
@@ -43,9 +43,9 @@ class EvaluationTargetSelector extends StatelessWidget {
         key: const Key('evaluation-target-id'),
         controller: targetIdController,
         decoration: const InputDecoration(
-          labelText: 'Target id',
+          labelText: '目标 ID',
           helperText:
-              'chapter_id, generation_id, revision_id, retrieval_id, session_id, or project_id',
+              'chapter_id、generation_id、revision_id、retrieval_id、session_id 或 project_id',
           border: OutlineInputBorder(),
         ),
       ),
@@ -54,7 +54,7 @@ class EvaluationTargetSelector extends StatelessWidget {
         key: const Key('evaluation-project-id'),
         controller: projectIdController,
         decoration: const InputDecoration(
-          labelText: 'Project id (optional filter/reference)',
+          labelText: '项目 ID（可选筛选 / 引用）',
           border: OutlineInputBorder(),
         ),
       ),
@@ -63,7 +63,7 @@ class EvaluationTargetSelector extends StatelessWidget {
         key: const Key('evaluation-chapter-id'),
         controller: chapterIdController,
         decoration: const InputDecoration(
-          labelText: 'Chapter id (optional reference)',
+          labelText: '章节 ID（可选引用）',
           border: OutlineInputBorder(),
         ),
       ),

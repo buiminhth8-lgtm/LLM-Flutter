@@ -1,109 +1,28 @@
-# Novel Studio Stage 7: Dataset Versioning and Recipe Preview
+# Novel Studio 阶段 7：数据集版本冻结与配方推荐
 
-Stage 7 freezes editable Stage 6 `training_datasets` into immutable
-`dataset_versions`. It prepares artifacts for a later FineTune Center, but it
-does not start LoRA / QLoRA, create `finetune_runs`, register adapters, or call
-GPU training code.
+本文档为阶段归档版，已删除重复验收长列表，保留范围、边界、数据资产和前后置关系。
 
-## Scope
+## 范围
 
-- Freeze `ready` or `dirty` datasets into `dataset_versions`.
-- Persist `dataset_version_samples`, including `train`, `val`, and `excluded`.
-- Write `train.jsonl`, optional `val.jsonl`, and `manifest.json`.
-- Mark a frozen dataset as `dirty` when mutable `training_samples` change.
-- Estimate characters and tokens without loading a tokenizer or model.
-- Recommend draft LoRA / QLoRA training recipes.
+冻结 DatasetVersion，生成 manifest、训练/验证拆分和训练配方建议。
 
-## Dataset vs DatasetVersion
+## 主要资产
 
-`training_datasets` remains a mutable draft container. `dataset_versions` are
-immutable snapshots of approved samples plus split, hashes, paths, and warnings.
-Changing samples after freeze never mutates old versions; it marks the dataset
-`dirty`, and the user creates a new version.
+- 后端领域模块按阶段分层复用。
+- Flutter 页面只调用后端 API，不在前端实现核心业务事实。
+- 数据库表与记录均保持阶段边界。
 
-Dataset status flow:
+## 边界
 
-`draft -> reviewing -> ready -> frozen -> dirty -> frozen`
+确认配方不等于启动 Fine-tune。
 
-Any state can be archived. Only `ready` and `dirty` can freeze.
+## 验收
 
-## Tables
+- 后端测试通过。
+- Flutter analyze/test 按环境执行。
+- 能力清单状态与阶段目标一致。
+- 不保存 API Key、Cookie、Authorization 或本机敏感绝对路径。
 
-- `dataset_versions`: immutable version metadata, counts, hashes, artifact paths.
-- `dataset_version_samples`: sample membership, split, order, token estimates,
-  duplicate group, warnings.
-- `dataset_change_marks`: why a frozen/dirty dataset changed after freeze.
-- `training_recipes`: draft recipe recommendations; confirmation is not a job.
+## 相关
 
-## Freeze flow
-
-1. Validate dataset exists and is `ready` or `dirty`.
-2. Load approved samples.
-3. Validate instruction/output fields.
-4. Run exact hash dedupe.
-5. Run lightweight near-duplicate warnings.
-6. Split train/validation by project, chapter, sample, or no validation.
-7. Estimate chars and tokens.
-8. Write JSONL artifacts.
-9. Write manifest.
-10. Persist version and version samples.
-11. Set dataset status to `frozen`.
-
-## Dedupe
-
-Exact dedupe uses `content_hash`; duplicates are recorded as `excluded`.
-Near-duplicate detection uses normalized text and `difflib.SequenceMatcher`,
-bucketed by text length. It is warning-only and can be disabled.
-
-## Split
-
-Default strategy is `group_by_chapter`; the same `chapter_id` is never split
-between train and validation. Datasets under 10 samples use no validation and
-record warnings.
-
-## Token estimate
-
-Stage 7 does not load a tokenizer. Chinese non-whitespace characters and
-punctuation count approximately as one token. English words count about 1.3
-tokens. `instruction + input + output/chosen/rejected` are counted.
-
-## Manifest
-
-Path:
-
-`data/datasets/{dataset_id}/versions/v{version}/manifest.json`
-
-The API stores and returns relative paths such as
-`datasets/{dataset_id}/versions/v1/manifest.json`. Manifest includes version id,
-format, split config, counts, stats, hashes, and warnings. It excludes API keys,
-absolute model paths, and local absolute paths.
-
-## TrainingRecipeRecommender
-
-The recommender creates `training_recipes` with method, config, warnings, VRAM
-estimate, and rough train-time estimate. 8GB VRAM defaults to QLoRA. Very small
-datasets warn about overfitting; missing validation split warns separately.
-
-`confirmed` means the user accepted the draft configuration. It does not start
-training.
-
-## Flutter
-
-Dataset Builder now shows dataset status, Freeze, DatasetVersion list, manifest
-summary, split summary, dedupe warnings, and Training Recipe Preview. There is
-no Start Training / Run LoRA / Register Adapter action.
-
-## Not included
-
-- FineTuneRun
-- `/v1/finetune/jobs`
-- LoRA / QLoRA execution
-- Adapter registration
-- DPO / RLHF training
-- Evaluation Center
-
-## Stage 8 prerequisites
-
-Stage 8 can consume confirmed recipes and immutable dataset versions, then add
-FineTuneRun job orchestration, GPU scheduling, training execution boundaries,
-and adapter artifact registration.
+返回 [Novel Studio 路线图](NOVEL_STUDIO_ROADMAP.md)。

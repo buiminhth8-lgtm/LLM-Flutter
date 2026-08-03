@@ -31,7 +31,7 @@ class FinetuneCenterPage extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Fine-tune Center',
+                  '微调中心',
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
               ),
@@ -51,7 +51,7 @@ class FinetuneCenterPage extends StatelessWidget {
                   ),
                 ),
                 icon: const Icon(Icons.playlist_add),
-                label: const Text('Create Run'),
+                label: const Text('创建任务'),
               ),
               IconButton(
                 onPressed: controller.refresh,
@@ -98,9 +98,7 @@ class FinetuneCenterPage extends StatelessWidget {
               ],
             ),
           ),
-          const Text(
-            'Stage 8 trains LoRA/QLoRA adapters. 适配器评估与基础模型对比属于 Stage 9。',
-          ),
+          const Text('阶段 8 训练 LoRA/QLoRA 适配器。适配器评估与基础模型对比属于阶段 9。'),
         ],
       ),
     );

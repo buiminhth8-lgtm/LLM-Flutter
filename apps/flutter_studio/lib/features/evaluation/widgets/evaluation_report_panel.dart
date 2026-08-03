@@ -26,19 +26,19 @@ class EvaluationReportPanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text('Reports', style: Theme.of(context).textTheme.titleMedium),
+              Text('报告', style: Theme.of(context).textTheme.titleMedium),
               const Spacer(),
               FilledButton.tonalIcon(
                 key: const Key('evaluation-generate-report'),
                 onPressed: onGenerate,
                 icon: const Icon(Icons.summarize_outlined),
-                label: const Text('Generate'),
+                label: const Text('生成'),
               ),
             ],
           ),
           const SizedBox(height: 8),
           if (reports.isEmpty)
-            const Text('No generated report yet.')
+            const Text('暂无生成报告。')
           else
             for (final report in reports.take(5))
               ListTile(
@@ -53,7 +53,7 @@ class EvaluationReportPanel extends StatelessWidget {
           const SizedBox(height: 8),
           Expanded(
             child: currentReport == null
-                ? const Center(child: Text('Select or generate a report.'))
+                ? const Center(child: Text('请选择或生成报告。'))
                 : EvaluationReportPage(report: currentReport!),
           ),
         ],

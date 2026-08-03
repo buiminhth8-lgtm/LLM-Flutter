@@ -109,7 +109,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Memory'), findsNothing);
+    expect(find.text('记忆'), findsNothing);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -124,6 +124,6 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Memory'), findsOneWidget);
+    expect(find.text('记忆'), findsOneWidget);
   });
 }

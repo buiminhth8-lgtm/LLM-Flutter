@@ -17,15 +17,12 @@ class DatasetVersionListPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (versions.isEmpty) {
-      return const Text('No frozen DatasetVersion yet.');
+      return const Text('暂无冻结的数据集版本。');
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
-          'Dataset Versions',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
+        const Text('数据集版本', style: TextStyle(fontWeight: FontWeight.w700)),
         const SizedBox(height: 6),
         for (final version in versions.take(5))
           ListTile(
@@ -33,7 +30,7 @@ class DatasetVersionListPanel extends StatelessWidget {
             selected: version.datasetVersionId == currentVersionId,
             title: Text('v${version.version} · ${version.status}'),
             subtitle: Text(
-              '${version.trainSampleCount} train / ${version.valSampleCount} val · ${version.warningCount} warnings',
+            '训练 ${version.trainSampleCount} / 验证 ${version.valSampleCount} · 警告 ${version.warningCount}',
             ),
             onTap: () => onSelect(version.datasetVersionId),
           ),

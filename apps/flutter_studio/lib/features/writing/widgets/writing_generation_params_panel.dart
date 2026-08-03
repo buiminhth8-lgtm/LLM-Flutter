@@ -22,17 +22,30 @@ class WritingGenerationParamsPanel extends StatelessWidget {
       const SizedBox(height: 8),
       Row(
         children: [
-          Expanded(child: _field('Temperature', temperature)),
+          Expanded(child: _field('温度', temperature, fieldKey: 'temperature')),
           const SizedBox(width: 8),
-          Expanded(child: _field('Top P', topP)),
+          Expanded(child: _field('Top P', topP, fieldKey: 'top-p')),
         ],
       ),
       const SizedBox(height: 8),
       Row(
         children: [
-          Expanded(child: _field('Max tokens', maxTokens, integer: true)),
+          Expanded(
+            child: _field(
+              '最大 Token 数',
+              maxTokens,
+              fieldKey: 'max-tokens',
+              integer: true,
+            ),
+          ),
           const SizedBox(width: 8),
-          Expanded(child: _field('Repeat penalty', repetitionPenalty)),
+          Expanded(
+            child: _field(
+              '重复惩罚',
+              repetitionPenalty,
+              fieldKey: 'repetition-penalty',
+            ),
+          ),
         ],
       ),
     ],
@@ -41,9 +54,10 @@ class WritingGenerationParamsPanel extends StatelessWidget {
   Widget _field(
     String label,
     TextEditingController controller, {
+    required String fieldKey,
     bool integer = false,
   }) => TextField(
-    key: Key('writing-${label.toLowerCase().replaceAll(' ', '-')}'),
+    key: Key('writing-$fieldKey'),
     controller: controller,
     keyboardType: TextInputType.numberWithOptions(decimal: !integer),
     decoration: InputDecoration(

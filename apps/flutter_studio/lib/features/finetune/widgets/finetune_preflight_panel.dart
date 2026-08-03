@@ -14,23 +14,20 @@ class FinetunePreflightPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Preflight',
-            style: TextStyle(fontWeight: FontWeight.w700),
-          ),
+          const Text('预检', style: TextStyle(fontWeight: FontWeight.w700)),
           if (result == null)
-            const Text('Run preflight before creating a training run.')
+            const Text('创建训练任务前请先运行预检。')
           else ...[
             Text(result!.ok ? 'ok=true' : 'ok=false'),
             if (result!.errors.isNotEmpty) ...[
               const SizedBox(height: 6),
-              const Text('Errors'),
+              const Text('错误'),
               for (final error in result!.errors)
                 Text('${error['code'] ?? ''}: ${error['message'] ?? ''}'),
             ],
             if (result!.warnings.isNotEmpty) ...[
               const SizedBox(height: 6),
-              const Text('Warnings'),
+              const Text('警告'),
               for (final warning in result!.warnings)
                 Text('${warning['code'] ?? ''}: ${warning['message'] ?? ''}'),
             ],

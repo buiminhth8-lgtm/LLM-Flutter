@@ -32,7 +32,7 @@ void main() {
       find.byKey(const Key('adapter-eval-create-revision-adapter')),
       findsOneWidget,
     );
-    await tester.tap(find.text('Prompt / Context Snapshot'));
+    await tester.tap(find.text('提示词 / 上下文快照'));
     await tester.pumpAndSettle();
     expect(find.text('Frozen prompt'), findsOneWidget);
   });

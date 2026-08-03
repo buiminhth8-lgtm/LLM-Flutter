@@ -23,13 +23,13 @@ class NovelStudioRecentActivity extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final stats = [
-      ('Projects', projectCount),
-      ('Chapters', chapterCount),
-      ('Generations', generationCount),
-      ('Revisions', revisionCount),
-      ('Datasets', datasetCount),
-      ('Fine-tune runs', finetuneRunCount),
-      ('Evaluation runs', evaluationRunCount),
+      ('项目', projectCount),
+      ('章节', chapterCount),
+      ('生成记录', generationCount),
+      ('修订', revisionCount),
+      ('数据集', datasetCount),
+      ('微调任务', finetuneRunCount),
+      ('评估运行', evaluationRunCount),
     ];
     return Card(
       child: Padding(
@@ -37,10 +37,7 @@ class NovelStudioRecentActivity extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Recent activity',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text('最近活动', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             for (final stat in stats)
               Padding(

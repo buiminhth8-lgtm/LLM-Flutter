@@ -28,9 +28,9 @@ void main() {
       ),
     );
 
-    expect(find.text('Temperature'), findsOneWidget);
+    expect(find.text('温度'), findsOneWidget);
     expect(find.text('Top P'), findsOneWidget);
-    expect(find.text('Max tokens'), findsOneWidget);
+    expect(find.text('最大 Token 数'), findsOneWidget);
     await tester.enterText(find.byKey(const Key('writing-max-tokens')), '4096');
     expect(maxTokens.text, '4096');
   });

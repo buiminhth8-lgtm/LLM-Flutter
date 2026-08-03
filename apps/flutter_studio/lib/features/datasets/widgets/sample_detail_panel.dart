@@ -42,7 +42,7 @@ class _SampleDetailPanelState extends State<SampleDetailPanel> {
     final sample = widget.sample;
     _sync(sample);
     if (sample == null) {
-      return const Center(child: Text('Select a sample.'));
+      return const Center(child: Text('请选择样本。'));
     }
     return ListView(
       key: const Key('sample-detail-panel'),
@@ -55,8 +55,8 @@ class _SampleDetailPanelState extends State<SampleDetailPanel> {
           ],
         ),
         const SizedBox(height: 8),
-        Text('Revision: ${sample.revisionId ?? '-'}'),
-        Text('Quality score: ${sample.qualityScore ?? '-'}'),
+        Text('修订：${sample.revisionId ?? '-'}'),
+        Text('质量评分：${sample.qualityScore ?? '-'}'),
         if (sample.warnings.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 8),
@@ -100,7 +100,7 @@ class _SampleDetailPanelState extends State<SampleDetailPanel> {
           controller: _notes,
           maxLines: 2,
           decoration: const InputDecoration(
-            labelText: 'review notes',
+            labelText: '审阅备注',
             border: OutlineInputBorder(),
           ),
         ),
@@ -116,21 +116,21 @@ class _SampleDetailPanelState extends State<SampleDetailPanel> {
             ),
           ),
           icon: const Icon(Icons.save_outlined),
-          label: const Text('Save Sample'),
+          label: const Text('保存样本'),
         ),
         const SizedBox(height: 8),
         OutlinedButton.icon(
           key: const Key('sample-approve'),
           onPressed: widget.onApprove,
           icon: const Icon(Icons.verified_outlined),
-          label: const Text('Approve Sample'),
+          label: const Text('批准样本'),
         ),
         const SizedBox(height: 8),
         OutlinedButton.icon(
           key: const Key('sample-reject'),
           onPressed: () => widget.onReject(_notes.text.trim()),
           icon: const Icon(Icons.block_outlined),
-          label: const Text('Reject Sample'),
+          label: const Text('拒绝样本'),
         ),
       ],
     );

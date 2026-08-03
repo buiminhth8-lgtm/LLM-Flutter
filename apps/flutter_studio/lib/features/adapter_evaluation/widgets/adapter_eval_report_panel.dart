@@ -11,10 +11,7 @@ class AdapterEvalReportPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     if (reports.isEmpty) {
       return const Card(
-        child: Padding(
-          padding: EdgeInsets.all(12),
-          child: Text('No report yet.'),
-        ),
+        child: Padding(padding: EdgeInsets.all(12), child: Text('暂无报告。')),
       );
     }
     final report = reports.first;
@@ -24,15 +21,12 @@ class AdapterEvalReportPanel extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Evaluation Report',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            Text('adapter_win_count: ${report.adapterWinCount}'),
-            Text('base_win_count: ${report.baseWinCount}'),
-            Text('average_base_score: ${report.averageBaseScore ?? '-'}'),
-            Text('average_adapter_score: ${report.averageAdapterScore ?? '-'}'),
-            Text('recommendation: ${report.recommendation}'),
+            Text('评估报告', style: Theme.of(context).textTheme.titleMedium),
+            Text('适配器胜出次数：${report.adapterWinCount}'),
+            Text('基础模型胜出次数：${report.baseWinCount}'),
+            Text('基础模型平均分：${report.averageBaseScore ?? '-'}'),
+            Text('适配器平均分：${report.averageAdapterScore ?? '-'}'),
+            Text('建议：${report.recommendation}'),
             if (report.summaryText != null) Text(report.summaryText!),
           ],
         ),

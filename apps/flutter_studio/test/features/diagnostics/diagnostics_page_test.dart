@@ -27,11 +27,11 @@ void main() {
       ),
     );
 
-    expect(find.text('Diagnostics'), findsOneWidget);
-    expect(find.text('Redacted'), findsOneWidget);
+    expect(find.text('诊断'), findsOneWidget);
+    expect(find.text('已脱敏'), findsOneWidget);
     expect(find.textContaining('不包含模型权重'), findsOneWidget);
-    await tester.tap(find.text('Refresh checks'));
-    await tester.tap(find.text('Export diagnostics'));
+    await tester.tap(find.text('刷新检查'));
+    await tester.tap(find.text('导出诊断'));
     expect(refreshed, isTrue);
     expect(exported, isTrue);
   });

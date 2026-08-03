@@ -8,7 +8,7 @@ class MemoryIndexStatusPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (status.isEmpty) {
-      return const Text('Index status unavailable.');
+      return const Text('索引状态不可用。');
     }
     final documents = Map<String, dynamic>.from(
       (status['documents'] as Map?) ?? {},
@@ -19,10 +19,7 @@ class MemoryIndexStatusPanel extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Index Status',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
+            const Text('索引状态', style: TextStyle(fontWeight: FontWeight.w700)),
             Text(
               'documents: ${documents['total'] ?? 0} active: ${documents['active'] ?? 0} stale: ${documents['stale'] ?? 0}',
             ),

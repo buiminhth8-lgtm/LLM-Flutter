@@ -70,8 +70,8 @@ class _RevisionReviewPageState extends State<RevisionReviewPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             AppSectionHeader(
-              title: 'Revision Review',
-              subtitle: 'Stage 5：人工修订、Diff、评分、审核和数据集候选标记。',
+              title: '修订审阅',
+              subtitle: '阶段 5：人工修订、Diff、评分、审核和数据集候选标记。',
               actions: [
                 RevisionAutosaveIndicator(
                   autosaving: state.autosaving,
@@ -80,7 +80,7 @@ class _RevisionReviewPageState extends State<RevisionReviewPage> {
                 IconButton.filledTonal(
                   onPressed: state.loading ? null : widget.controller.refresh,
                   icon: const Icon(Icons.refresh),
-                  tooltip: 'Refresh',
+                  tooltip: '刷新',
                 ),
               ],
             ),
@@ -121,7 +121,7 @@ class _RevisionReviewPageState extends State<RevisionReviewPage> {
       TextField(
         controller: _projectFilter,
         decoration: const InputDecoration(
-          labelText: 'Project filter',
+          labelText: '项目筛选',
           border: OutlineInputBorder(),
         ),
         onSubmitted: (value) => widget.controller.setFilters(
@@ -133,7 +133,7 @@ class _RevisionReviewPageState extends State<RevisionReviewPage> {
       TextField(
         controller: _chapterFilter,
         decoration: const InputDecoration(
-          labelText: 'Chapter filter',
+          labelText: '章节筛选',
           border: OutlineInputBorder(),
         ),
         onSubmitted: (value) => widget.controller.setFilters(
@@ -145,16 +145,16 @@ class _RevisionReviewPageState extends State<RevisionReviewPage> {
       DropdownButtonFormField<String>(
         initialValue: widget.controller.state.selectedStatus,
         decoration: const InputDecoration(
-          labelText: 'Status',
+          labelText: '状态',
           border: OutlineInputBorder(),
         ),
         items: const [
-          DropdownMenuItem(value: null, child: Text('All')),
-          DropdownMenuItem(value: 'draft', child: Text('draft')),
-          DropdownMenuItem(value: 'reviewing', child: Text('reviewing')),
-          DropdownMenuItem(value: 'approved', child: Text('approved')),
-          DropdownMenuItem(value: 'rejected', child: Text('rejected')),
-          DropdownMenuItem(value: 'archived', child: Text('archived')),
+          DropdownMenuItem(value: null, child: Text('全部')),
+          DropdownMenuItem(value: 'draft', child: Text('草稿')),
+          DropdownMenuItem(value: 'reviewing', child: Text('审核中')),
+          DropdownMenuItem(value: 'approved', child: Text('已通过')),
+          DropdownMenuItem(value: 'rejected', child: Text('已拒绝')),
+          DropdownMenuItem(value: 'archived', child: Text('已归档')),
         ],
         onChanged: (value) => widget.controller.setFilters(
           status: value,
@@ -165,11 +165,11 @@ class _RevisionReviewPageState extends State<RevisionReviewPage> {
       DropdownButtonFormField<int>(
         initialValue: widget.controller.state.selectedScore,
         decoration: const InputDecoration(
-          labelText: 'Score',
+          labelText: '评分',
           border: OutlineInputBorder(),
         ),
         items: const [
-          DropdownMenuItem(value: null, child: Text('All')),
+          DropdownMenuItem(value: null, child: Text('全部')),
           DropdownMenuItem(value: 1, child: Text('1')),
           DropdownMenuItem(value: 2, child: Text('2')),
           DropdownMenuItem(value: 3, child: Text('3')),
@@ -193,7 +193,7 @@ class _RevisionReviewPageState extends State<RevisionReviewPage> {
           title: Text(
             revision.generationId == null
                 ? revision.source
-                : 'Generation ${revision.generationId}',
+                : '生成记录 ${revision.generationId}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -209,7 +209,7 @@ class _RevisionReviewPageState extends State<RevisionReviewPage> {
 
   Widget _buildCenterPane(RevisionRecordDto? revision) {
     if (revision == null) {
-      return const Center(child: Text('Select a revision to review.'));
+      return const Center(child: Text('请选择要审阅的修订。'));
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -231,7 +231,7 @@ class _RevisionReviewPageState extends State<RevisionReviewPage> {
   Widget _buildMetaPane(RevisionRecordDto? revision) {
     final state = widget.controller.state;
     if (revision == null) {
-      return const Center(child: Text('No revision selected.'));
+      return const Center(child: Text('未选择修订。'));
     }
     return ListView(
       children: [
@@ -260,7 +260,7 @@ class _RevisionReviewPageState extends State<RevisionReviewPage> {
           maxLines: 7,
           onChanged: widget.controller.setQualityNotes,
           decoration: const InputDecoration(
-            labelText: 'Quality notes',
+            labelText: '质量备注',
             border: OutlineInputBorder(),
           ),
         ),
@@ -274,7 +274,7 @@ class _RevisionReviewPageState extends State<RevisionReviewPage> {
           key: const Key('revision-evaluate-revision'),
           onPressed: () => widget.onEvaluateRevision?.call(revision.revisionId),
           icon: const Icon(Icons.fact_check_outlined),
-          label: const Text('Evaluate Revision'),
+          label: const Text('评估修订'),
         ),
         if (widget.datasetController != null) ...[
           const SizedBox(height: 8),
@@ -282,14 +282,14 @@ class _RevisionReviewPageState extends State<RevisionReviewPage> {
             key: const Key('revision-add-to-dataset'),
             onPressed: () => _addToDataset(revision),
             icon: const Icon(Icons.dataset_outlined),
-            label: const Text('Add to Dataset'),
+            label: const Text('添加到数据集'),
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
             key: const Key('revision-create-sft-sample'),
             onPressed: () => _addToDataset(revision),
             icon: const Icon(Icons.playlist_add_outlined),
-            label: const Text('Create SFT Sample'),
+            label: const Text('创建 SFT 样本'),
           ),
         ],
         const SizedBox(height: 14),
@@ -299,14 +299,14 @@ class _RevisionReviewPageState extends State<RevisionReviewPage> {
               ? null
               : () => widget.controller.saveCurrent(_edited.text),
           icon: const Icon(Icons.save_outlined),
-          label: const Text('Save Revision'),
+          label: const Text('保存修订'),
         ),
         const SizedBox(height: 8),
         OutlinedButton.icon(
           key: const Key('revision-approve'),
           onPressed: widget.controller.approveCurrent,
           icon: const Icon(Icons.verified_outlined),
-          label: const Text('Approve'),
+          label: const Text('批准'),
         ),
         const SizedBox(height: 8),
         OutlinedButton.icon(
@@ -314,7 +314,7 @@ class _RevisionReviewPageState extends State<RevisionReviewPage> {
           onPressed: () =>
               widget.controller.rejectCurrent(reason: _notes.text.trim()),
           icon: const Icon(Icons.block_outlined),
-          label: const Text('Reject'),
+          label: const Text('拒绝'),
         ),
       ],
     );

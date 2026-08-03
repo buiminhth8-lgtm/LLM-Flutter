@@ -11,10 +11,10 @@ class StudioApiException implements Exception {
 
 class AuthRequiredException extends StudioApiException {
   AuthRequiredException(super.message, {String? code, super.statusCode})
-      : super(code: code ?? 'AUTH_REQUIRED');
+    : super(code: code ?? 'AUTH_REQUIRED');
 }
 
 class PermissionDeniedException extends StudioApiException {
   PermissionDeniedException(super.message, {String? code, super.statusCode})
-      : super(code: code ?? 'PERMISSION_DENIED');
+    : super(code: code ?? 'PERMISSION_DENIED');
 }

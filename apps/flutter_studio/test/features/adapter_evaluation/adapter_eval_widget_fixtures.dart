@@ -68,7 +68,7 @@ AdapterEvalReportDto adapterEvalReport() => AdapterEvalReportDto.fromMap({
 
 AdapterEvalSessionDto adapterEvalSession() => AdapterEvalSessionDto(
   sessionId: 'session-1',
-  name: 'Adapter comparison',
+  name: '适配器对比',
   projectId: 'project-1',
   finetuneRunId: 'run-1',
   datasetVersionId: 'dsv-1',

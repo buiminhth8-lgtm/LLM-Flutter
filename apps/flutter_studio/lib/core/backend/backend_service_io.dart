@@ -23,10 +23,7 @@ class DesktopBackendService implements BackendService {
     String localBackendRoot = '',
   }) async {
     if (await _isHealthy(apiBase)) {
-      return const BackendLaunchResult(
-        startedByApp: false,
-        message: 'Backend is already running.',
-      );
+      return const BackendLaunchResult(startedByApp: false, message: '后端已在运行。');
     }
 
     final root = _findProjectRoot(localBackendRoot);
@@ -38,7 +35,11 @@ class DesktopBackendService implements BackendService {
 
     _process = await Process.start(
       python.executable,
-      buildBackendServiceArgumentsForTesting(host: host, port: port, pythonPrefix: python.arguments),
+      buildBackendServiceArgumentsForTesting(
+        host: host,
+        port: port,
+        pythonPrefix: python.arguments,
+      ),
       workingDirectory: root.path,
       mode: ProcessStartMode.normal,
     );
@@ -52,21 +53,19 @@ class DesktopBackendService implements BackendService {
       if (await _isHealthy(apiBase)) {
         return const BackendLaunchResult(
           startedByApp: true,
-          message: 'Backend started by Flutter.',
+          message: 'Flutter 已启动后端。',
         );
       }
       if (exited) {
         throw StateError(
-          'Backend process exited before becoming healthy.\n'
+          '后端进程在健康检查通过前已退出。\n'
           '${recentLogs(limit: 20).join('\n')}',
         );
       }
       await Future<void>.delayed(const Duration(seconds: 1));
     }
 
-    throw TimeoutException(
-      'Backend startup timed out.\n${recentLogs(limit: 20).join('\n')}',
-    );
+    throw TimeoutException('后端启动超时。\n${recentLogs(limit: 20).join('\n')}');
   }
 
   @override
@@ -118,13 +117,13 @@ class DesktopBackendService implements BackendService {
       }
     }
 
-    throw StateError(
-      'Could not locate LLM-Studio project root. '
-      'Set LLM_STUDIO_ROOT to the repository directory.',
-    );
+    throw StateError('无法定位 LLM-Studio 项目根目录。请将 LLM_STUDIO_ROOT 设置为仓库目录。');
   }
 
-  Future<_PythonCommand> _resolvePython(Directory root, String configuredPython) async {
+  Future<_PythonCommand> _resolvePython(
+    Directory root,
+    String configuredPython,
+  ) async {
     final candidates = <_PythonCommand>[
       if (configuredPython.trim().isNotEmpty)
         _PythonCommand(configuredPython.trim()),
@@ -148,7 +147,7 @@ class DesktopBackendService implements BackendService {
     for (final candidate in candidates) {
       if (candidate.executable.contains(Platform.pathSeparator) &&
           !File(candidate.executable).existsSync()) {
-        failures.add('${candidate.label}: executable not found');
+        failures.add('${candidate.label}: 未找到可执行文件');
         continue;
       }
       final ok = await _verifyPython(candidate, root, failures);
@@ -160,7 +159,7 @@ class DesktopBackendService implements BackendService {
     throw StateError(
       'Could not find a Python environment that can import LLM-Studio and uvicorn.\n'
       '${failures.take(6).join('\n')}\n'
-      'Please run: python -m pip install -e . and python -m pip install -r requirements/web.txt',
+      '请运行：python -m pip install -e . 以及 python -m pip install -r requirements/web.txt',
     );
   }
 
@@ -176,11 +175,11 @@ class DesktopBackendService implements BackendService {
     ];
     for (final probe in probes) {
       try {
-        final result = await Process.run(
-          candidate.executable,
-          [...candidate.arguments, '-c', probe],
-          workingDirectory: root.path,
-        ).timeout(const Duration(seconds: 8));
+        final result = await Process.run(candidate.executable, [
+          ...candidate.arguments,
+          '-c',
+          probe,
+        ], workingDirectory: root.path).timeout(const Duration(seconds: 8));
         final output = [
           if ((result.stdout as String).trim().isNotEmpty)
             (result.stdout as String).trim(),

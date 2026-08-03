@@ -15,7 +15,7 @@ class AdapterEvalSessionList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (sessions.isEmpty) {
-      return const Center(child: Text('No adapter evaluation sessions yet.'));
+      return const Center(child: Text('暂无适配器评估会话。'));
     }
     return ListView.builder(
       itemCount: sessions.length,

@@ -9,13 +9,13 @@ void main() {
         home: AppEmptyState(
           title: 'Nothing here',
           message: 'Create something first.',
-          action: FilledButton(onPressed: () {}, child: const Text('Create')),
+          action: FilledButton(onPressed: () {}, child: const Text('创建')),
         ),
       ),
     );
 
     expect(find.text('Nothing here'), findsOneWidget);
     expect(find.text('Create something first.'), findsOneWidget);
-    expect(find.text('Create'), findsOneWidget);
+    expect(find.text('创建'), findsOneWidget);
   });
 }

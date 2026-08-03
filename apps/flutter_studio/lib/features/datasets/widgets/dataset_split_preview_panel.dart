@@ -13,7 +13,7 @@ class DatasetSplitPreviewPanel extends StatelessWidget {
       return const SizedBox.shrink();
     }
     return Text(
-      'Split preview: ${version!.trainSampleCount} train / ${version!.valSampleCount} val, duplicates excluded ${version!.rejectedDuplicateCount}.',
+      '拆分预览：训练 ${version!.trainSampleCount} / 验证 ${version!.valSampleCount}，已排除重复 ${version!.rejectedDuplicateCount}。',
     );
   }
 }

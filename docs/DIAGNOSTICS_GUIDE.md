@@ -1,22 +1,15 @@
-# Diagnostics Guide
+# 诊断指南
 
-## API
+## 内容
 
-- `GET /v1/diagnostics/health`
-- `GET /v1/diagnostics/system`
-- `GET /v1/diagnostics/capabilities`
-- `GET /v1/diagnostics/preview`
-- `POST /v1/diagnostics/export`
+诊断导出用于排查环境、后端健康、能力开关和近期日志。
 
-## Flutter
+## 命令
 
-Diagnostics 页面显示 runtime、health、system、capabilities，并可导出脱敏诊断包。
+```powershell
+.\scripts\windows\export_diagnostics.ps1
+```
 
-## 脱敏规则
+## 脱敏
 
-后端负责最终脱敏。诊断包只保存摘要：
-
-- 路径显示为 `<redacted-...>/name`；
-- secret 字段显示为 `<redacted>`；
-- 不包含模型权重、adapter 权重、checkpoint；
-- 不包含正文、RAG 文档正文或 API Key。
+导出包不得包含模型权重、API Key、Cookie、Authorization、密码或文档正文。

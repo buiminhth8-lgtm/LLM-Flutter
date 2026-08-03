@@ -16,10 +16,7 @@ class MemoryContextPreviewPanel extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Retrieved Memory Preview',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
+            const Text('检索记忆预览', style: TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
             SizedBox(
               height: 180,

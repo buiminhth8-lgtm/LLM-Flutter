@@ -36,7 +36,7 @@ class MemorySourceFilterBar extends StatelessWidget {
         key: const Key('memory-project-id'),
         controller: projectController,
         decoration: const InputDecoration(
-          labelText: 'Project ID',
+          labelText: '项目 ID',
           border: OutlineInputBorder(),
         ),
         onSubmitted: (_) =>
@@ -54,7 +54,7 @@ class MemorySourceFilterBar extends StatelessWidget {
         onChanged: (value) =>
             onApply(projectController.text.trim(), value, status),
         decoration: const InputDecoration(
-          labelText: 'Source Type',
+          labelText: '来源类型',
           border: OutlineInputBorder(),
         ),
       ),
@@ -72,7 +72,7 @@ class MemorySourceFilterBar extends StatelessWidget {
           value ?? 'active',
         ),
         decoration: const InputDecoration(
-          labelText: 'Status',
+          labelText: '状态',
           border: OutlineInputBorder(),
         ),
       ),

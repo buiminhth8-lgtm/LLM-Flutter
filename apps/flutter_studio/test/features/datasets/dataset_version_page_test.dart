@@ -51,7 +51,7 @@ void main() {
       ),
     );
 
-    expect(find.textContaining('DatasetVersion'), findsOneWidget);
+    expect(find.textContaining('数据集版本'), findsOneWidget);
     expect(find.textContaining('v1'), findsWidgets);
   });
 }

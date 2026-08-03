@@ -70,7 +70,7 @@ class WritingTargetLengthPanel extends StatelessWidget {
               initialValue: unit,
               items: const [
                 DropdownMenuItem(value: 'chars', child: Text('中文字符')),
-                DropdownMenuItem(value: 'tokens', child: Text('Tokens')),
+                DropdownMenuItem(value: 'tokens', child: Text('Token')),
               ],
               onChanged: (value) {
                 if (value != null) onUnitChanged(value);
@@ -87,8 +87,8 @@ class WritingTargetLengthPanel extends StatelessWidget {
             child: DropdownButtonFormField<String>(
               initialValue: strategy,
               items: const [
-                DropdownMenuItem(value: 'soft', child: Text('Soft')),
-                DropdownMenuItem(value: 'hard', child: Text('Hard')),
+                DropdownMenuItem(value: 'soft', child: Text('宽松')),
+                DropdownMenuItem(value: 'hard', child: Text('严格')),
               ],
               onChanged: (value) {
                 if (value != null) onStrategyChanged(value);

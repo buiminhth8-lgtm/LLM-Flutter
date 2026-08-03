@@ -151,12 +151,12 @@ void main() {
       ),
     );
 
-    expect(find.text('running'), findsOneWidget);
-    expect(find.text('train_loss: 2.9'), findsOneWidget);
-    await tester.ensureVisible(find.textContaining('last step 1'));
-    expect(find.textContaining('last step 1'), findsOneWidget);
-    expect(find.text('Evaluate Adapter'), findsNothing);
-    expect(find.text('Compare with Base Model'), findsNothing);
+    expect(find.text('运行中'), findsOneWidget);
+    expect(find.text('训练 loss：2.9'), findsOneWidget);
+    await tester.ensureVisible(find.textContaining('最近检查点 步数 1'));
+    expect(find.textContaining('最近检查点 步数 1'), findsOneWidget);
+    expect(find.text('创建评估会话'), findsNothing);
+    expect(find.text('与基础模型对比'), findsNothing);
 
     await tester.tap(find.byKey(const Key('finetune-cancel')));
     await tester.pump();
@@ -217,7 +217,7 @@ void main() {
     await tester.tap(find.byKey(const Key('finetune-open-adapter')));
     await tester.pump();
 
-    expect(find.textContaining('not auto activated'), findsOneWidget);
+    expect(find.textContaining('不会自动启用'), findsOneWidget);
     expect(evaluationRun?.runId, 'run-1');
     expect(opened, isTrue);
   });

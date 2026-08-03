@@ -4,7 +4,9 @@ import 'package:flutter_studio/features/finetune/widgets/finetune_metrics_chart.
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('Metrics chart table displays train and val loss', (tester) async {
+  testWidgets('Metrics chart table displays train and val loss', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
@@ -34,7 +36,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Metrics'), findsOneWidget);
+    expect(find.text('指标'), findsOneWidget);
     expect(find.text('train'), findsOneWidget);
     expect(find.text('eval'), findsOneWidget);
     expect(find.text('2.9'), findsOneWidget);

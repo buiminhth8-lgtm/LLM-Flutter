@@ -9,7 +9,7 @@ class BackendLifecycleController extends ChangeNotifier {
     : _backend = backend ?? createBackendService();
 
   final BackendService _backend;
-  String _backendStatus = 'Backend has not started yet.';
+  String _backendStatus = '后端尚未启动。';
 
   String get backendStatus => _backendStatus;
 
@@ -24,10 +24,10 @@ class BackendLifecycleController extends ChangeNotifier {
     String localBackendRoot = '',
   }) async {
     if (!localMode || !autoStart) {
-      _setBackendStatus('Using remote backend.');
+      _setBackendStatus('正在使用远程后端。');
       return;
     }
-    _setBackendStatus('Starting backend...');
+    _setBackendStatus('正在启动后端...');
     final result = await _backend.ensureStarted(
       apiBase: apiBase,
       localPythonPath: localPythonPath,
@@ -52,7 +52,7 @@ class BackendLifecycleController extends ChangeNotifier {
 
   Future<void> stop() async {
     await _backend.stop();
-    _setBackendStatus('Backend stopped by Flutter.');
+    _setBackendStatus('Flutter 已停止后端。');
   }
 
   Future<void> stopIfConfigured(bool closeOnExit) async {

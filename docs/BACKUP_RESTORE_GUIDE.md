@@ -1,29 +1,25 @@
-# Backup and Restore Guide
+# 备份与恢复
 
-## Backup
+## 备份范围
 
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/windows/backup_data.ps1
-```
+- `data/`
+- `config.yaml`
+- 必要的本地数据库文件
 
-或：
+模型权重通常体积较大，可按需单独备份。
 
-```powershell
-python scripts/backup_data.py --data-dir ./data
-```
-
-备份包含本地数据目录中的 SQLite、JSON、YAML、日志和生成的轻量元数据，默认排除：
-
-- `data/models`
-- `data/downloads`
-- `checkpoints`
-- `diagnostics`
-- `.bin`、`.safetensors`、`.gguf`、`.pt`、`.pth`、`.onnx`、`.ckpt`
-
-## Restore
+## 备份
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/windows/restore_data.ps1 -Backup path\to\backup.zip -Confirm
+.\scripts\windows\backup_data.ps1
 ```
 
-恢复会覆盖同名文件，因此必须显式传入 `-Confirm`。
+## 恢复
+
+```powershell
+.\scripts\windows\restore_data.ps1 -BackupPath <backup.zip>
+```
+
+## 注意
+
+恢复前建议停止后端与 Flutter，避免数据库正在写入。

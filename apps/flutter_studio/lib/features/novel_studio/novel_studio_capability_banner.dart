@@ -26,12 +26,10 @@ class NovelStudioCapabilityBanner extends StatelessWidget {
     return Card(
       child: ListTile(
         leading: const Icon(Icons.auto_stories_outlined),
-        title: const Text('Novel Studio product surface'),
-        subtitle: Text(
-          '$ready / 10 workflow capabilities are exposed by the backend.',
-        ),
+        title: const Text('Novel Studio 产品界面'),
+        subtitle: Text('后端已暴露 $ready / 10 项工作流能力。'),
         trailing: AppStatusBadge(
-          label: ready >= 10 ? 'Ready' : 'Partial',
+          label: ready >= 10 ? '就绪' : '部分可用',
           tone: tone,
         ),
       ),

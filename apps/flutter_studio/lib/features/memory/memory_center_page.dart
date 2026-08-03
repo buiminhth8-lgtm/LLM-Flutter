@@ -27,7 +27,7 @@ class MemoryCenterPage extends StatefulWidget {
 
 class _MemoryCenterPageState extends State<MemoryCenterPage> {
   final _project = TextEditingController();
-  final _manualTitle = TextEditingController(text: 'Manual Memory');
+  final _manualTitle = TextEditingController(text: '手动记忆');
   final _manualContent = TextEditingController();
   final _query = TextEditingController();
   final _topK = TextEditingController(text: '12');
@@ -70,14 +70,13 @@ class _MemoryCenterPageState extends State<MemoryCenterPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             AppSectionHeader(
-              title: 'Memory / RAG Center',
-              subtitle:
-                  'Stage 10：管理长篇小说 Memory、检索预览、章节摘要版本与 ContextAssembler 注入。',
+              title: '记忆 / RAG 中心',
+              subtitle: '阶段 10：管理长篇小说记忆、检索预览、章节摘要版本与 ContextAssembler 注入。',
               actions: [
                 IconButton.filledTonal(
                   onPressed: state.loading ? null : widget.controller.refresh,
                   icon: const Icon(Icons.refresh),
-                  tooltip: 'Refresh',
+                  tooltip: '刷新',
                 ),
               ],
             ),
@@ -142,7 +141,7 @@ class _MemoryCenterPageState extends State<MemoryCenterPage> {
               child: FilledButton(
                 key: const Key('memory-build-from-novel'),
                 onPressed: widget.controller.buildFromNovel,
-                child: const Text('Build from Novel Data'),
+                child: const Text('从小说资料构建'),
               ),
             ),
           ],
@@ -152,7 +151,7 @@ class _MemoryCenterPageState extends State<MemoryCenterPage> {
           key: const Key('memory-rebuild-index'),
           onPressed: widget.controller.rebuildIndex,
           icon: const Icon(Icons.refresh),
-          label: const Text('Rebuild Index'),
+          label: const Text('重建索引'),
         ),
         const SizedBox(height: 8),
         MemoryIndexStatusPanel(status: state.indexStatus),
@@ -161,7 +160,7 @@ class _MemoryCenterPageState extends State<MemoryCenterPage> {
           key: const Key('memory-create-manual-note'),
           onPressed: _showManualNoteDialog,
           icon: const Icon(Icons.note_add_outlined),
-          label: const Text('Create Manual Memory Note'),
+          label: const Text('创建手动记忆笔记'),
         ),
         const SizedBox(height: 8),
         Expanded(
@@ -183,8 +182,8 @@ class _MemoryCenterPageState extends State<MemoryCenterPage> {
         children: [
           const TabBar(
             tabs: [
-              Tab(text: 'Retrieval Preview'),
-              Tab(text: 'Chapter Summary'),
+              Tab(text: '检索预览'),
+              Tab(text: '章节摘要'),
             ],
           ),
           const SizedBox(height: 8),
@@ -233,7 +232,7 @@ class _MemoryCenterPageState extends State<MemoryCenterPage> {
                 ? null
                 : widget.controller.archiveCurrent,
             icon: const Icon(Icons.archive_outlined),
-            label: const Text('Archive current document'),
+            label: const Text('归档当前文档'),
           ),
         ],
       ),
@@ -245,7 +244,7 @@ class _MemoryCenterPageState extends State<MemoryCenterPage> {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Create manual memory note'),
+        title: const Text('创建手动记忆笔记'),
         content: SizedBox(
           width: 420,
           child: Column(
@@ -253,13 +252,13 @@ class _MemoryCenterPageState extends State<MemoryCenterPage> {
             children: [
               TextField(
                 controller: _manualTitle,
-                decoration: const InputDecoration(labelText: 'Title'),
+                decoration: const InputDecoration(labelText: '标题'),
               ),
               TextField(
                 controller: _manualContent,
                 minLines: 4,
                 maxLines: 8,
-                decoration: const InputDecoration(labelText: 'Content'),
+                decoration: const InputDecoration(labelText: '内容'),
               ),
             ],
           ),
@@ -267,7 +266,7 @@ class _MemoryCenterPageState extends State<MemoryCenterPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: const Text('取消'),
           ),
           FilledButton(
             onPressed: () {
@@ -280,7 +279,7 @@ class _MemoryCenterPageState extends State<MemoryCenterPage> {
                 ),
               );
             },
-            child: const Text('Create'),
+            child: const Text('创建'),
           ),
         ],
       ),

@@ -41,12 +41,12 @@ void main() {
     await tester.pumpWidget(const LlmStudioApp(autoRefresh: false));
 
     expect(find.text('LLM Studio'), findsOneWidget);
-    expect(find.text('Core'), findsOneWidget);
-    expect(find.text('Workflows'), findsOneWidget);
-    expect(find.text('Status'), findsOneWidget);
-    expect(find.text('Models'), findsWidgets);
-    expect(find.text('Chat'), findsOneWidget);
-    expect(find.text('Novel Studio'), findsNothing);
+    expect(find.text('核心'), findsOneWidget);
+    expect(find.text('工作流'), findsOneWidget);
+    expect(find.text('状态'), findsOneWidget);
+    expect(find.text('模型'), findsWidgets);
+    expect(find.text('聊天'), findsOneWidget);
+    expect(find.text('小说工作台'), findsNothing);
   });
 
   testWidgets('first run setup state shows initialization page', (
@@ -60,15 +60,15 @@ void main() {
     expect(find.text('管理员密码'), findsOneWidget);
     expect(find.text('确认管理员密码'), findsOneWidget);
     expect(find.text('初始化'), findsOneWidget);
-    expect(find.text('Settings'), findsNothing);
+    expect(find.text('设置'), findsNothing);
   });
 
   testWidgets('chat is disabled until a model is loaded', (tester) async {
     await tester.pumpWidget(const LlmStudioApp(autoRefresh: false));
-    await tester.tap(find.text('Chat'));
+    await tester.tap(find.text('聊天'));
     await tester.pumpAndSettle();
 
-    expect(find.text('请先在 Models 页面加载模型。'), findsOneWidget);
+    expect(find.text('请先在模型页面加载模型。'), findsOneWidget);
     final sendButton = tester.widget<FilledButton>(
       find.widgetWithText(FilledButton, '发送'),
     );
@@ -81,19 +81,19 @@ void main() {
     await tester.pumpWidget(const LlmStudioApp(autoRefresh: false));
     await tester.drag(find.byType(ListView).first, const Offset(0, -500));
     await tester.pumpAndSettle();
-    final settingsNav = find.widgetWithText(ListTile, 'Settings');
+    final settingsNav = find.widgetWithText(ListTile, '设置');
     await tester.ensureVisible(settingsNav);
     await tester.tap(settingsNav);
     await tester.pumpAndSettle();
 
-    expect(find.text('Clear auth'), findsOneWidget);
-    await tester.ensureVisible(find.text('Backend logs'));
+    expect(find.text('清除认证'), findsOneWidget);
+    await tester.ensureVisible(find.text('后端日志'));
 
-    expect(find.text('Backend logs'), findsOneWidget);
-    expect(find.text('Copy logs'), findsOneWidget);
-    await tester.ensureVisible(find.text('Novel Studio roadmap'));
-    expect(find.text('Novel Studio roadmap'), findsOneWidget);
-    expect(find.text('Status: planned / not implemented.'), findsOneWidget);
+    expect(find.text('后端日志'), findsOneWidget);
+    expect(find.text('复制日志'), findsOneWidget);
+    await tester.ensureVisible(find.text('小说工作台路线图'));
+    expect(find.text('小说工作台路线图'), findsOneWidget);
+    expect(find.text('状态：已规划 / 未实现。'), findsOneWidget);
   });
 
   testWidgets('401 responses return the user to the auth settings page', (
@@ -112,9 +112,9 @@ void main() {
     await tester.pumpWidget(LlmStudioApp(client: client));
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Connection settings'));
-    expect(find.text('Connection settings'), findsOneWidget);
-    expect(find.text('Clear auth'), findsOneWidget);
+    await tester.ensureVisible(find.text('连接设置'));
+    expect(find.text('连接设置'), findsOneWidget);
+    expect(find.text('清除认证'), findsOneWidget);
     expect(find.text('认证已失效，请重新登录或填写有效 API Key。'), findsOneWidget);
   });
 }

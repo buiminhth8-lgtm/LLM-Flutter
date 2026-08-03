@@ -14,9 +14,9 @@ class AdapterCompareOutputs extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(child: _panel(context, 'Base Model 输出', base)),
+        Expanded(child: _panel(context, '基础模型输出', base)),
         const SizedBox(width: 12),
-        Expanded(child: _panel(context, 'Adapter 输出', adapter)),
+        Expanded(child: _panel(context, '适配器输出', adapter)),
       ],
     );
   }
@@ -36,9 +36,9 @@ class AdapterCompareOutputs extends StatelessWidget {
     AdapterEvalResultDto? result,
   ) {
     final text = result == null
-        ? 'Not generated yet.'
+        ? '尚未生成。'
         : result.status == 'failed'
-        ? 'Failed: ${result.errorCode ?? ''} ${result.errorMessage ?? ''}'
+        ? '失败：${result.errorCode ?? ''} ${result.errorMessage ?? ''}'
         : result.outputText;
     return Card(
       child: Padding(
@@ -47,7 +47,7 @@ class AdapterCompareOutputs extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(title, style: Theme.of(context).textTheme.titleMedium),
-            Text('status: ${result?.status ?? '-'}'),
+            Text('状态：${result?.status ?? '-'}'),
             const Divider(),
             SizedBox(
               height: 300,

@@ -14,9 +14,17 @@ class RevisionStatusBadge extends StatelessWidget {
       'reviewing' => Colors.blue,
       _ => Colors.orange,
     };
+    final label = switch (status) {
+      'draft' => '草稿',
+      'reviewing' => '审核中',
+      'approved' => '已通过',
+      'rejected' => '已拒绝',
+      'archived' => '已归档',
+      _ => status,
+    };
     return Chip(
       avatar: Icon(Icons.circle, color: color, size: 12),
-      label: Text(status),
+      label: Text(label),
       visualDensity: VisualDensity.compact,
     );
   }

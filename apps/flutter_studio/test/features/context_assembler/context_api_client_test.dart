@@ -64,7 +64,7 @@ class ContextHttpClient extends http.BaseClient {
         'estimated_tokens': 120,
         'estimated_chars': 300,
         'context_hash': 'hash',
-        'rendered_prompt': 'Rendered prompt',
+        'rendered_prompt': '已渲染提示词',
         'missing_variables': <Object?>[],
         'render_warnings': <Object?>[],
         'prompt_hash': 'prompt-hash',
@@ -122,7 +122,7 @@ void main() {
       ),
     );
 
-    expect(result.renderedPrompt, 'Rendered prompt');
+    expect(result.renderedPrompt, '已渲染提示词');
     expect(result.promptHash, 'prompt-hash');
   });
 

@@ -14,11 +14,8 @@ class FinetuneMetricsChart extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Metrics',
-            style: TextStyle(fontWeight: FontWeight.w700),
-          ),
-          const Text('Chart TODO: table view is used in Stage 8 minimum UI.'),
+          const Text('指标', style: TextStyle(fontWeight: FontWeight.w700)),
+          const Text('图表待办：阶段 8 最小 UI 使用表格视图。'),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: DataTable(

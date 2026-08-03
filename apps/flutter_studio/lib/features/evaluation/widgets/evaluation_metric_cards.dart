@@ -13,7 +13,7 @@ class EvaluationMetricCards extends StatelessWidget {
       return const Card(
         child: Padding(
           padding: EdgeInsets.all(16),
-          child: Text('No metrics yet. Start or create an evaluation run.'),
+          child: Text('暂无指标。请启动或创建一个评估运行。'),
         ),
       );
     }

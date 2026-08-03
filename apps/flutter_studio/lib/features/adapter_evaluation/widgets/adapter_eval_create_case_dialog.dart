@@ -19,11 +19,11 @@ class AdapterEvalCreateCaseDialog extends StatefulWidget {
 
 class _AdapterEvalCreateCaseDialogState
     extends State<AdapterEvalCreateCaseDialog> {
-  final _title = TextEditingController(text: 'Base vs Adapter case');
+  final _title = TextEditingController(text: '基础模型 vs 适配器用例');
   final _project = TextEditingController();
   final _chapter = TextEditingController();
   final _template = TextEditingController();
-  final _goal = TextEditingController(text: 'Compare continuation quality.');
+  final _goal = TextEditingController(text: '对比续写质量。');
   final _style = TextEditingController(text: '紧张、细节丰富');
   final _pov = TextEditingController(text: '第三人称');
   final _maxTokens = TextEditingController(text: '512');
@@ -50,7 +50,7 @@ class _AdapterEvalCreateCaseDialogState
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Create Evaluation Case'),
+      title: const Text('创建评估用例'),
       content: SizedBox(
         width: 560,
         child: SingleChildScrollView(
@@ -100,7 +100,7 @@ class _AdapterEvalCreateCaseDialogState
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: const Text('取消'),
         ),
         FilledButton(
           key: const Key('adapter-eval-create-case-submit'),
@@ -132,7 +132,7 @@ class _AdapterEvalCreateCaseDialogState
             );
             Navigator.pop(context);
           },
-          child: const Text('Create Case'),
+          child: const Text('创建用例'),
         ),
       ],
     );

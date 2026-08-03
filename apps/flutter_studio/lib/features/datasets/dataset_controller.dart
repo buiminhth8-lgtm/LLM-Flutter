@@ -68,7 +68,7 @@ class DatasetController extends ChangeNotifier {
         versions: const [],
         versionSamples: const [],
         recipes: const [],
-        notice: 'Dataset created.',
+        notice: '数据集已创建。',
       );
       await _loadDataset(dataset.datasetId);
     });
@@ -93,7 +93,7 @@ class DatasetController extends ChangeNotifier {
         sampleType: sampleType,
       );
       await _loadDataset(datasetId, selectedSample: sample);
-      state = state.copyWith(notice: 'Sample created from revision.');
+      state = state.copyWith(notice: '已从修订创建样本。');
     });
     return sample;
   }
@@ -115,8 +115,7 @@ class DatasetController extends ChangeNotifier {
       );
       await _loadDataset(datasetId);
       state = state.copyWith(
-        notice:
-            'Bulk created ${result.createdCount} samples, ${result.errorCount} errors.',
+        notice: '批量创建 ${result.createdCount} 个样本，${result.errorCount} 个错误。',
       );
     });
   }
@@ -134,7 +133,7 @@ class DatasetController extends ChangeNotifier {
     await _run(() async {
       final updated = await _api.updateSample(sample.sampleId, request);
       await _loadDataset(updated.datasetId, selectedSample: updated);
-      state = state.copyWith(notice: 'Sample saved.');
+      state = state.copyWith(notice: '样本已保存。');
     });
   }
 
@@ -176,7 +175,7 @@ class DatasetController extends ChangeNotifier {
         approvedOnly: approvedOnly,
       );
       await _loadDataset(dataset.datasetId);
-      state = state.copyWith(notice: 'Dataset exported: ${export!.exportPath}');
+      state = state.copyWith(notice: '数据集已导出：${export!.exportPath}');
     });
     return export;
   }
@@ -189,7 +188,7 @@ class DatasetController extends ChangeNotifier {
     await _run(() async {
       await _api.markReady(dataset.datasetId);
       await _loadDataset(dataset.datasetId);
-      state = state.copyWith(notice: 'Dataset marked ready for freeze.');
+      state = state.copyWith(notice: '数据集已标记为可冻结。');
     });
   }
 
@@ -208,7 +207,7 @@ class DatasetController extends ChangeNotifier {
       );
       await _loadDataset(dataset.datasetId, selectedVersion: version);
       await selectVersion(version!.datasetVersionId);
-      state = state.copyWith(notice: 'Dataset frozen as v${version!.version}.');
+      state = state.copyWith(notice: '数据集已冻结为 v${version!.version}。');
     });
     return version;
   }
@@ -247,7 +246,7 @@ class DatasetController extends ChangeNotifier {
       state = state.copyWith(
         recipes: recipes,
         currentRecipe: recipe,
-        notice: 'Recipe recommendation created.',
+        notice: '训练配方推荐已创建。',
       );
     });
     return recipe;
@@ -273,7 +272,7 @@ class DatasetController extends ChangeNotifier {
       final confirmed = await _api.confirmRecipe(recipe.recipeId);
       state = state.copyWith(
         currentRecipe: confirmed,
-        notice: 'Recipe confirmed. Training is still Stage 8.',
+        notice: '配方已确认。训练仍属于阶段 8。',
       );
     });
   }

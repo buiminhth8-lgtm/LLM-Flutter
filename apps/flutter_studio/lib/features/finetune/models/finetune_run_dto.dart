@@ -72,15 +72,15 @@ class FinetuneRunDto {
     finishedAt: _string(map['finished_at']),
     createdAt: '${map['created_at'] ?? ''}',
     updatedAt: '${map['updated_at'] ?? ''}',
-    metrics: _mapList(map['metrics'])
-        .map(FinetuneMetricDto.fromMap)
-        .toList(growable: false),
-    logs: _mapList(map['logs'])
-        .map(FinetuneLogDto.fromMap)
-        .toList(growable: false),
-    checkpoints: _mapList(map['checkpoints'])
-        .map(FinetuneCheckpointDto.fromMap)
-        .toList(growable: false),
+    metrics: _mapList(
+      map['metrics'],
+    ).map(FinetuneMetricDto.fromMap).toList(growable: false),
+    logs: _mapList(
+      map['logs'],
+    ).map(FinetuneLogDto.fromMap).toList(growable: false),
+    checkpoints: _mapList(
+      map['checkpoints'],
+    ).map(FinetuneCheckpointDto.fromMap).toList(growable: false),
   );
 
   final String runId;
