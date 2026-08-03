@@ -27,6 +27,9 @@ import '../features/diagnostics/diagnostics_controller.dart';
 import '../features/diagnostics/diagnostics_page.dart';
 import '../features/downloads/download_controller.dart';
 import '../features/downloads/downloads_page.dart';
+import '../features/evaluation/evaluation_api_client.dart';
+import '../features/evaluation/evaluation_center_page.dart';
+import '../features/evaluation/evaluation_controller.dart';
 import '../features/finetune/finetune_api_client.dart';
 import '../features/finetune/finetune_center_page.dart';
 import '../features/finetune/finetune_controller.dart';
@@ -133,6 +136,9 @@ class _StudioShellState extends State<StudioShell> {
   );
   late final MemoryApiClient _memoryApi = MemoryApiClient(_client);
   late final MemoryController _memory = MemoryController(_memoryApi);
+  late final EvaluationController _evaluation = EvaluationController(
+    EvaluationApiClient(_client),
+  );
   late final WritingController _writing = WritingController(
     WritingApiClient(_client),
     revisionApi: _revisionApi,
@@ -200,6 +206,7 @@ class _StudioShellState extends State<StudioShell> {
     _finetune,
     _adapterEval,
     _memory,
+    _evaluation,
   ];
 
   void _onNotifierChanged() {
@@ -304,6 +311,8 @@ class _StudioShellState extends State<StudioShell> {
         if (_adapterEvaluationAvailable())
           _adapterEval.refresh().catchError((_) {}),
         if (_memoryCenterAvailable()) _memory.refresh().catchError((_) {}),
+        if (_evaluationCenterAvailable())
+          _evaluation.refresh().catchError((_) {}),
       ]);
       await _savePreferences();
     });
@@ -507,6 +516,58 @@ class _StudioShellState extends State<StudioShell> {
     _navigation.select(adapterEvaluationPageIndex);
   });
 
+  Future<void> _createEvaluationForGeneration(String generationId) async =>
+      _guarded(() async {
+        final runId = await _evaluation.createRunForTarget(
+          targetType: 'generation',
+          targetId: generationId,
+          name: 'Evaluation for generation $generationId',
+        );
+        if (runId != null) {
+          await _evaluation.selectRun(runId);
+        }
+        _navigation.select(evaluationCenterPageIndex);
+      });
+
+  Future<void> _createEvaluationForRevision(String revisionId) async =>
+      _guarded(() async {
+        final runId = await _evaluation.createRunForTarget(
+          targetType: 'revision',
+          targetId: revisionId,
+          name: 'Evaluation for revision $revisionId',
+        );
+        if (runId != null) {
+          await _evaluation.selectRun(runId);
+        }
+        _navigation.select(evaluationCenterPageIndex);
+      });
+
+  Future<void> _createEvaluationForMemoryRetrieval(String retrievalId) async =>
+      _guarded(() async {
+        final runId = await _evaluation.createRunForTarget(
+          targetType: 'memory_retrieval',
+          targetId: retrievalId,
+          name: 'Evaluation for memory retrieval $retrievalId',
+        );
+        if (runId != null) {
+          await _evaluation.selectRun(runId);
+        }
+        _navigation.select(evaluationCenterPageIndex);
+      });
+
+  Future<void> _createEvaluationForAdapterSession(String sessionId) async =>
+      _guarded(() async {
+        final runId = await _evaluation.createRunForTarget(
+          targetType: 'adapter_eval_session',
+          targetId: sessionId,
+          name: 'Evaluation for adapter session $sessionId',
+        );
+        if (runId != null) {
+          await _evaluation.selectRun(runId);
+        }
+        _navigation.select(evaluationCenterPageIndex);
+      });
+
   Future<void> _clearAuth() async {
     _settings.clearApiKey();
     _models.restoreSelectedModel(null);
@@ -697,6 +758,17 @@ class _StudioShellState extends State<StudioShell> {
     });
   }
 
+  bool _evaluationCenterAvailable() {
+    return _status.state.capabilities.any((item) {
+      if (item is! Map) {
+        return false;
+      }
+      return item['name'] == 'full_evaluation_center' &&
+          item['status'] == 'available' &&
+          item['frontend_exposed'] == true;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_shell.initialSetupCheckDone && widget.autoRefresh) {
@@ -843,6 +915,7 @@ class _StudioShellState extends State<StudioShell> {
           unawaited(_revisions.openRevision(revisionId));
           _navigation.select(revisionReviewPageIndex);
         },
+        onEvaluateGeneration: _createEvaluationForGeneration,
       ),
       RevisionReviewPage(
         controller: _revisions,
@@ -850,6 +923,7 @@ class _StudioShellState extends State<StudioShell> {
         onOpenDatasetSample: (sampleId) {
           _navigation.select(datasetBuilderPageIndex);
         },
+        onEvaluateRevision: _createEvaluationForRevision,
       ),
       DatasetBuilderPage(controller: _datasets),
       FinetuneCenterPage(
@@ -859,8 +933,15 @@ class _StudioShellState extends State<StudioShell> {
         },
         onCreateEvaluationSession: _createAdapterEvaluationFromRun,
       ),
-      AdapterEvalSessionsPage(controller: _adapterEval),
-      MemoryCenterPage(controller: _memory),
+      AdapterEvalSessionsPage(
+        controller: _adapterEval,
+        onOpenFullEvaluation: _createEvaluationForAdapterSession,
+      ),
+      MemoryCenterPage(
+        controller: _memory,
+        onEvaluateRetrieval: _createEvaluationForMemoryRetrieval,
+      ),
+      EvaluationCenterPage(controller: _evaluation),
       SettingsPage(
         apiBaseController: _settings.apiBaseController,
         userIdController: _settings.userIdController,
@@ -916,6 +997,7 @@ class _StudioShellState extends State<StudioShell> {
               showFinetuneCenter: _finetuneCenterAvailable(),
               showAdapterEvaluation: _adapterEvaluationAvailable(),
               showMemoryCenter: _memoryCenterAvailable(),
+              showEvaluationCenter: _evaluationCenterAvailable(),
             ),
           ),
           const VerticalDivider(width: 1),

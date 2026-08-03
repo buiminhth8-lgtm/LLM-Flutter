@@ -31,6 +31,7 @@ class JobQueue:
             JobType.LORA_MERGE.value: ThreadPoolExecutor(max_workers=1, thread_name_prefix="lora-merge"),
             JobType.RAG_REBUILD.value: ThreadPoolExecutor(max_workers=1, thread_name_prefix="rag-rebuild"),
             JobType.CACHE_CLEANUP.value: ThreadPoolExecutor(max_workers=1, thread_name_prefix="cache-cleanup"),
+            JobType.EVALUATION.value: ThreadPoolExecutor(max_workers=1, thread_name_prefix="evaluation"),
         }
         self._cancel_flags: dict[str, threading.Event] = {}
 

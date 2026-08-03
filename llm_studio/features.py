@@ -142,3 +142,20 @@ def is_memory_retrieval_enabled(config: Any) -> bool:
         return bool(retrieval.get("enabled", True))
     except Exception:
         return False
+
+
+def is_evaluation_center_enabled(config: Any) -> bool:
+    """Return whether Stage 11 Evaluation Center APIs should be exposed."""
+
+    if not is_novel_memory_enabled(config):
+        return False
+    try:
+        features = config.get("features", {}) if config is not None else {}
+        if not isinstance(features, dict) or "evaluation_center" not in features:
+            return False
+        evaluation = features.get("evaluation_center", {})
+        if not isinstance(evaluation, dict):
+            return False
+        return bool(evaluation.get("enabled", True))
+    except Exception:
+        return False

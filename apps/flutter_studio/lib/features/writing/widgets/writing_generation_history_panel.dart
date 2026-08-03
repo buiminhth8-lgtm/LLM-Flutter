@@ -10,6 +10,7 @@ class WritingGenerationHistoryPanel extends StatelessWidget {
     this.revisionIdsByGeneration = const {},
     this.onCreateRevision,
     this.onViewRevision,
+    this.onEvaluateGeneration,
   });
 
   final List<WritingGenerationRecordDto> records;
@@ -17,6 +18,7 @@ class WritingGenerationHistoryPanel extends StatelessWidget {
   final Map<String, String> revisionIdsByGeneration;
   final ValueChanged<String>? onCreateRevision;
   final ValueChanged<String>? onViewRevision;
+  final ValueChanged<String>? onEvaluateGeneration;
 
   @override
   Widget build(BuildContext context) => ExpansionTile(
@@ -34,6 +36,7 @@ class WritingGenerationHistoryPanel extends StatelessWidget {
             onSelected: onSelected,
             onCreateRevision: onCreateRevision,
             onViewRevision: onViewRevision,
+            onEvaluateGeneration: onEvaluateGeneration,
           ),
     ],
   );
@@ -46,6 +49,7 @@ class _HistoryTile extends StatelessWidget {
     required this.onSelected,
     required this.onCreateRevision,
     required this.onViewRevision,
+    required this.onEvaluateGeneration,
   });
 
   final WritingGenerationRecordDto record;
@@ -53,6 +57,7 @@ class _HistoryTile extends StatelessWidget {
   final ValueChanged<String> onSelected;
   final ValueChanged<String>? onCreateRevision;
   final ValueChanged<String>? onViewRevision;
+  final ValueChanged<String>? onEvaluateGeneration;
 
   @override
   Widget build(BuildContext context) => ListTile(
@@ -71,14 +76,26 @@ class _HistoryTile extends StatelessWidget {
       overflow: TextOverflow.ellipsis,
     ),
     trailing: record.status == 'succeeded'
-        ? TextButton(
-            key: Key('writing-revision-${record.generationId}'),
-            onPressed: revisionId == null
-                ? () => onCreateRevision?.call(record.generationId)
-                : () => onViewRevision?.call(revisionId!),
-            child: Text(
-              revisionId == null ? 'Create Revision' : 'View Revision',
-            ),
+        ? Wrap(
+            spacing: 6,
+            children: [
+              TextButton(
+                key: Key('writing-revision-${record.generationId}'),
+                onPressed: revisionId == null
+                    ? () => onCreateRevision?.call(record.generationId)
+                    : () => onViewRevision?.call(revisionId!),
+                child: Text(
+                  revisionId == null ? 'Create Revision' : 'View Revision',
+                ),
+              ),
+              TextButton(
+                key: Key('writing-evaluate-${record.generationId}'),
+                onPressed: onEvaluateGeneration == null
+                    ? null
+                    : () => onEvaluateGeneration?.call(record.generationId),
+                child: const Text('Evaluate'),
+              ),
+            ],
           )
         : null,
     onTap: () => onSelected(record.generationId),

@@ -116,6 +116,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "memory_retrieval": {
             "enabled": True,
         },
+        "evaluation_center": {
+            "enabled": True,
+        },
     },
     "novels": {
         "db_path": "./data/novels/novels.sqlite",
@@ -165,6 +168,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "db_path": "./data/novels/novels.sqlite",
         "chunk_chars": 1200,
         "chunk_overlap_chars": 120,
+    },
+    "evaluation": {
+        "db_path": "./data/novels/novels.sqlite",
     },
     "model_registry": [],
     "vision_model_registry": [],

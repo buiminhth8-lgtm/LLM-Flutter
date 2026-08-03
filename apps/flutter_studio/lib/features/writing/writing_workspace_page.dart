@@ -34,10 +34,12 @@ class WritingWorkspacePage extends StatefulWidget {
     super.key,
     required this.controller,
     this.onOpenRevision,
+    this.onEvaluateGeneration,
   });
 
   final WritingController controller;
   final ValueChanged<String>? onOpenRevision;
+  final ValueChanged<String>? onEvaluateGeneration;
 
   @override
   State<WritingWorkspacePage> createState() => _WritingWorkspacePageState();
@@ -209,6 +211,7 @@ class _WritingWorkspacePageState extends State<WritingWorkspacePage> {
                           onAppend: () =>
                               widget.controller.saveToChapter(append: true),
                           onEditAsRevision: _createRevisionFromActiveOutput,
+                          onEvaluateGeneration: _evaluateActiveGeneration,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -235,6 +238,8 @@ class _WritingWorkspacePageState extends State<WritingWorkspacePage> {
                                     state.revisionIdsByGeneration,
                                 onCreateRevision: _createRevisionFromGeneration,
                                 onViewRevision: widget.onOpenRevision,
+                                onEvaluateGeneration:
+                                    widget.onEvaluateGeneration,
                               ),
                             ],
                           ),
@@ -480,5 +485,13 @@ class _WritingWorkspacePageState extends State<WritingWorkspacePage> {
     if (revisionId != null) {
       widget.onOpenRevision?.call(revisionId);
     }
+  }
+
+  void _evaluateActiveGeneration() {
+    final generationId = widget.controller.state.activeGenerationId;
+    if (generationId == null) {
+      return;
+    }
+    widget.onEvaluateGeneration?.call(generationId);
   }
 }

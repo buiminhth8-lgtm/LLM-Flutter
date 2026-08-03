@@ -51,4 +51,4 @@ def test_finetune_feature_flag_and_capabilities(monkeypatch, tmp_path):
     assert caps["adapter_training"].status == CapabilityStatus.PARTIAL
     assert caps["adapter_registration_after_training"].status == CapabilityStatus.AVAILABLE
     assert caps["adapter_evaluation"].status == CapabilityStatus.AVAILABLE
-    assert caps["novel_evaluation"].status == CapabilityStatus.NOT_IMPLEMENTED
+    assert caps["novel_evaluation"].status == CapabilityStatus.AVAILABLE
