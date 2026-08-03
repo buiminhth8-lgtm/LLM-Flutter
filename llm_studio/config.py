@@ -107,6 +107,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "finetune_center": {
             "enabled": True,
         },
+        "adapter_evaluation": {
+            "enabled": True,
+        },
     },
     "novels": {
         "db_path": "./data/novels/novels.sqlite",
@@ -148,6 +151,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "precision": "auto",
         "save_steps": 100,
         "logging_steps": 5,
+    },
+    "adapter_evaluation": {
+        "db_path": "./data/novels/novels.sqlite",
     },
     "model_registry": [],
     "vision_model_registry": [],

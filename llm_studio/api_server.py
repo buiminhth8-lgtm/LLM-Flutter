@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
 
+from .adapter_evaluation import AdapterEvaluationService
 from .adapters import AdapterRepository
 from .adapters.exceptions import AdapterCompatibilityError, AdapterError, AdapterNotFoundError
 from .admin import AdminManager
@@ -52,6 +53,7 @@ from .api.errors import (
     api_error,
     error_payload,
 )
+from .api.routers.adapter_evaluation import router as adapter_evaluation_router
 from .api.routers.capabilities import router as capabilities_router
 from .api.routers.context import router as context_router
 from .api.routers.datasets import router as datasets_router
@@ -130,6 +132,7 @@ _writing_service: WritingService | None = None
 _revision_service: RevisionService | None = None
 _dataset_service: DatasetService | None = None
 _finetune_service: FineTuneService | None = None
+_adapter_evaluation_service: AdapterEvaluationService | None = None
 _current_model_id: str | None = None
 _runner_model_ids: dict[str, str] = {}
 
@@ -145,7 +148,7 @@ def get_app(config: Config):
     global _config, _rag_pipeline, _admin, _concurrency
     global _model_repository, _job_repository, _job_queue, _download_manager, _adapter_repository, _gpu_scheduler
     global _novel_service, _prompt_service, _context_service, _writing_service
-    global _revision_service, _dataset_service, _finetune_service
+    global _revision_service, _dataset_service, _finetune_service, _adapter_evaluation_service
     _config = config
     layout = layout_from_config(config)
     layout.ensure()
@@ -243,6 +246,7 @@ def get_app(config: Config):
     app.include_router(revisions_router)
     app.include_router(datasets_router)
     app.include_router(finetune_router)
+    app.include_router(adapter_evaluation_router)
 
     @app.middleware("http")
     async def request_id_middleware(request: Request, call_next):
@@ -650,11 +654,25 @@ def get_app(config: Config):
         job_queue=_job_queue,
         gpu_scheduler=_gpu_scheduler,
     )
+    _adapter_evaluation_service = AdapterEvaluationService.from_config(
+        config,
+        novel_service=_novel_service,
+        prompt_service=_prompt_service,
+        context_service=_context_service,
+        writing_service=_writing_service,
+        revision_service=_revision_service,
+        dataset_service=_dataset_service,
+        finetune_service=_finetune_service,
+        model_repository=_model_repository,
+        adapter_repository=_adapter_repository,
+        runtime_bridge=_writing_service.runtime_bridge,
+    )
     configure_api_state(
         writing_service=_writing_service,
         revision_service=_revision_service,
         dataset_service=_dataset_service,
         finetune_service=_finetune_service,
+        adapter_evaluation_service=_adapter_evaluation_service,
     )
 
     async def _load_text_model(model_id: str, request_id: str) -> dict:

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'finetune_controller.dart';
 import 'finetune_run_detail_page.dart';
+import 'models/finetune_run_dto.dart';
 import 'widgets/finetune_create_run_dialog.dart';
 import 'widgets/finetune_preflight_panel.dart';
 import 'widgets/finetune_run_list.dart';
@@ -11,10 +12,12 @@ class FinetuneCenterPage extends StatelessWidget {
     super.key,
     required this.controller,
     required this.onOpenAdapter,
+    this.onCreateEvaluationSession,
   });
 
   final FinetuneController controller;
   final VoidCallback onOpenAdapter;
+  final ValueChanged<FinetuneRunDto>? onCreateEvaluationSession;
 
   @override
   Widget build(BuildContext context) {
@@ -89,6 +92,7 @@ class FinetuneCenterPage extends StatelessWidget {
                   child: FinetuneRunDetailPage(
                     controller: controller,
                     onOpenAdapter: onOpenAdapter,
+                    onCreateEvaluationSession: onCreateEvaluationSession,
                   ),
                 ),
               ],

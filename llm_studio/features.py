@@ -97,3 +97,18 @@ def is_finetune_center_enabled(config: Any) -> bool:
         return bool(finetune.get("enabled", True))
     except Exception:
         return False
+
+
+def is_adapter_evaluation_enabled(config: Any) -> bool:
+    """Return whether Stage 9 Adapter Evaluation APIs should be exposed."""
+
+    if not is_finetune_center_enabled(config):
+        return False
+    try:
+        features = config.get("features", {}) if config is not None else {}
+        adapter_eval = features.get("adapter_evaluation", {})
+        if not isinstance(adapter_eval, dict):
+            return True
+        return bool(adapter_eval.get("enabled", True))
+    except Exception:
+        return False

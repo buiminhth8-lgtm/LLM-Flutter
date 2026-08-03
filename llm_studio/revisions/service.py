@@ -22,7 +22,9 @@ from .scoring import dataset_candidate_warnings, validate_user_score
 from .tags import validate_edit_tags
 
 REVISION_STATUSES = frozenset({"draft", "reviewing", "approved", "rejected", "archived"})
-REVISION_SOURCES = frozenset({"generation", "chapter_draft", "manual"})
+REVISION_SOURCES = frozenset(
+    {"generation", "chapter_draft", "manual", "adapter_evaluation"}
+)
 
 
 def _model_dump(value: Any) -> dict[str, Any]:
@@ -137,6 +139,17 @@ class RevisionService:
         data["original_text"] = _require_text(data.get("original_text"), original=True)
         data["edited_text"] = _require_text(data.get("edited_text"), original=False)
         return self._create({**data, "source": "manual"})
+
+    def create_from_adapter_evaluation(self, request: Any) -> dict[str, Any]:
+        data = _model_dump(request)
+        project_id = data["project_id"]
+        self._project(project_id)
+        chapter = self._chapter(data.get("chapter_id"), project_id)
+        self._scene(data.get("scene_id"), chapter)
+        data["original_text"] = _require_text(data.get("original_text"), original=True)
+        data["edited_text"] = _require_text(data.get("edited_text"), original=False)
+        data["accepted_for_dataset"] = False
+        return self._create({**data, "source": "adapter_evaluation"})
 
     def update_revision(self, revision_id: str, request: Any) -> dict[str, Any]:
         data = _model_dump(request)

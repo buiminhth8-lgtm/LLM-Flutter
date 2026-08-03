@@ -10,17 +10,22 @@ Stage 5 Revisions details: [NOVEL_STAGE5_REVISIONS.md](NOVEL_STAGE5_REVISIONS.md
 Stage 6 Dataset Builder details: [NOVEL_STAGE6_DATASET_BUILDER.md](NOVEL_STAGE6_DATASET_BUILDER.md).
 Stage 7 Dataset Versioning details: [NOVEL_STAGE7_DATASET_VERSIONING.md](NOVEL_STAGE7_DATASET_VERSIONING.md).
 Stage 8 Fine-tune Center details: [NOVEL_STAGE8_FINETUNE_CENTER.md](NOVEL_STAGE8_FINETUNE_CENTER.md).
+Stage 9 Adapter Evaluation details: [NOVEL_STAGE9_ADAPTER_EVALUATION.md](NOVEL_STAGE9_ADAPTER_EVALUATION.md).
 
-Stage 6 is implemented: approved revision candidates can be converted into
-reviewable SFT samples, sample review state is persisted, and approved samples
-can be exported as draft JSONL files.
+Current implemented scope reaches Stage 9: completed Stage 8 Adapters can be
+compared against their base model with the same Novel Studio prompt/context,
+manual scores can be stored, lightweight reports can be generated, and selected
+results can be explicitly handed to Stage 5 Revision.
 
-Stage 6 boundaries:
+Stage 9 boundaries:
 
 - `revision_records` saves `original_text`, `edited_text`, `diff_json`, tags, score, status, hashes, and `accepted_for_dataset`.
 - `revision_autosaves` saves editing drafts separately and never changes formal revision text.
 - `training_datasets`, `training_samples`, and `dataset_exports` are mutable draft builder records.
-- Adapter evaluation, base-vs-adapter comparison, RAG/Memory, and Evaluation remain later stages.
+- `dataset_versions` and `training_recipes` are frozen/configuration inputs for Stage 8 training.
+- `finetune_runs` records LoRA/QLoRA training lifecycle and registered adapters.
+- `adapter_evaluation_*` records compare base vs adapter outputs and manual evaluation data.
+- Full automatic Evaluation Center, RAG/Memory, DPO/RLHF, and automatic adapter activation remain later stages.
 
 ## 阶段 0：工程基线整理与开发入口
 
@@ -78,6 +83,13 @@ Stage 6 boundaries:
 - 不包含 Adapter 评估、基础模型 vs Adapter 对比、RAG/Memory 或 Evaluation Center。
 
 ## 阶段 9：Adapter 评估与生成对比
+
+- 已完成 Stage 8 Adapter 与基础模型的同 Prompt / 同上下文生成对比。
+- `adapter_evaluation_*` 表持久化 session、case、result、manual score 和 report。
+- 评估用例复用 ContextAssembler、PromptRenderer 与 WritingRuntimeBridge。
+- 支持人工 winner / 1～5 score / dimension notes，以及轻量报告。
+- 支持显式从评估结果创建 Stage 5 Revision，但不创建训练样本。
+- 不包含自动风格/人物/剧情评分、RAG/Memory、DPO/RLHF、训练或 Adapter 自动激活。
 
 ## 阶段 10：长篇小说 RAG / Memory 增强
 

@@ -9,6 +9,7 @@ Novel Studio Stage 5 Revisions: [docs/NOVEL_STAGE5_REVISIONS.md](docs/NOVEL_STAG
 Novel Studio Stage 6 Dataset Builder: [docs/NOVEL_STAGE6_DATASET_BUILDER.md](docs/NOVEL_STAGE6_DATASET_BUILDER.md).
 Novel Studio Stage 7 Dataset Versioning: [docs/NOVEL_STAGE7_DATASET_VERSIONING.md](docs/NOVEL_STAGE7_DATASET_VERSIONING.md).
 Novel Studio Stage 8 Fine-tune Center: [docs/NOVEL_STAGE8_FINETUNE_CENTER.md](docs/NOVEL_STAGE8_FINETUNE_CENTER.md).
+Novel Studio Stage 9 Adapter Evaluation: [docs/NOVEL_STAGE9_ADAPTER_EVALUATION.md](docs/NOVEL_STAGE9_ADAPTER_EVALUATION.md).
 
 认证恢复、API Key 重新生成和本机 admin 恢复流程见 [docs/AUTH_RECOVERY.md](docs/AUTH_RECOVERY.md)。
 
@@ -57,6 +58,7 @@ LLM-Studio/
 │   ├── writing/                  # Novel Stage 4 本地生成与生成记录
 │   ├── revisions/                # Novel Stage 5 人工修订、Diff 与 autosave
 │   ├── datasets/                 # Novel Stage 6/7 Dataset Builder、Version 与 Recipe Preview
+│   ├── adapter_evaluation/        # Novel Stage 9 Adapter 对比、人工评分与报告
 │   ├── auth/                     # RBAC 角色和权限
 │   └── security/                 # 上传安全等
 ├── apps/flutter_studio/          # Flutter Windows 桌面客户端
@@ -679,7 +681,11 @@ C:\Users\zkjr\...
 | `finetune_checkpoints` | available* | yes | 分离 last / best checkpoint，支持 resume |
 | `adapter_training` | partial* | yes | LoRA/QLoRA 真实 trainer 接口可用，fake trainer 仅用于测试/验收 |
 | `adapter_registration_after_training` | available* | yes | 训练完成后注册 Adapter，默认不自动激活 |
-| `adapter_evaluation` | not_implemented | no | Stage 9 规划 |
+| `adapter_evaluation` | available* | yes | 基础模型 vs Adapter 同 Prompt / 同上下文生成对比 |
+| `adapter_base_compare` | available* | yes | 通过 WritingRuntimeBridge 分别运行 base 与 adapter variant |
+| `adapter_manual_scoring` | available* | yes | 人工 winner、1～5 评分和维度 notes |
+| `adapter_evaluation_report` | available* | yes | 汇总人工评分、胜负计数和推荐结论 |
+| `full_evaluation_center` | not_implemented | no | 自动风格/人物/剧情评估属于后续阶段 |
 
 \* 需要 `features.novel_studio.enabled=true`。
 

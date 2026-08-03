@@ -123,6 +123,11 @@ def required_permission_for_request(method: str, path: str) -> Permission | None
             return Permission.VIEW_FINETUNE
         return Permission.MANAGE_FINETUNE
 
+    if path.startswith("/v1/adapter-evaluations"):
+        if method == "GET":
+            return Permission.VIEW_ADAPTER_EVALUATION
+        return Permission.MANAGE_ADAPTER_EVALUATION
+
     if path.startswith("/v1/vision"):
         return Permission.CHAT
 
