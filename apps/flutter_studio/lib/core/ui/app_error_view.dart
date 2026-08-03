@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 
 class AppErrorView extends StatelessWidget {
-  const AppErrorView({
-    super.key,
-    required this.message,
-    this.onRetry,
-  });
+  const AppErrorView({super.key, required this.message, this.onRetry});
 
   final String message;
   final VoidCallback? onRetry;
@@ -25,9 +21,15 @@ class AppErrorView extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.error_outline, color: Theme.of(context).colorScheme.onErrorContainer),
+                    Icon(
+                      Icons.error_outline,
+                      color: Theme.of(context).colorScheme.onErrorContainer,
+                    ),
                     const SizedBox(width: 8),
-                    Text('操作失败', style: Theme.of(context).textTheme.titleMedium),
+                    Text(
+                      '操作失败',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 8),

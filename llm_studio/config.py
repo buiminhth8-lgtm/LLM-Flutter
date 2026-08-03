@@ -119,6 +119,15 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "evaluation_center": {
             "enabled": True,
         },
+        "ui_productization": {
+            "enabled": True,
+        },
+        "windows_release": {
+            "enabled": True,
+        },
+        "backup_restore": {
+            "enabled": True,
+        },
     },
     "novels": {
         "db_path": "./data/novels/novels.sqlite",
@@ -197,6 +206,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "benchmarks_dir": "./data/benchmarks",
         "jobs_dir": "./data/jobs",
         "diagnostics_dir": "./data/diagnostics",
+        "backups_dir": "./data/backups",
         "cleanup": {
             "enabled": True,
             "incomplete_download_days": 7,
@@ -351,7 +361,7 @@ class Config:
             "models": ("root_dir", "temp_dir", "metadata_cache", "adapters_dir"),
             "downloads.providers.modelscope": ("cache_dir",),
             "auth": ("users_file", "audit_log"),
-            "storage": ("trash_dir", "benchmarks_dir", "jobs_dir", "diagnostics_dir"),
+            "storage": ("trash_dir", "benchmarks_dir", "jobs_dir", "diagnostics_dir", "backups_dir"),
             "uploads": ("temp_dir",),
             "novels": ("db_path",),
             "prompts": ("db_path",),

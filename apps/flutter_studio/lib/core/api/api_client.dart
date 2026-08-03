@@ -21,6 +21,15 @@ class LlmStudioClient {
   Future<Map<String, dynamic>> health() async =>
       _getMap('/health', authenticated: false);
 
+  Future<Map<String, dynamic>> healthV1() async =>
+      _getMap('/v1/health', authenticated: false);
+
+  Future<Map<String, dynamic>> healthFull() async =>
+      _getMap('/v1/health/full', authenticated: false);
+
+  Future<Map<String, dynamic>> version() async =>
+      _getMap('/v1/version', authenticated: false);
+
   Future<Map<String, dynamic>> setupStatus() async =>
       _getMap('/v1/setup/status', authenticated: false);
 
@@ -214,6 +223,20 @@ class LlmStudioClient {
 
   Future<Map<String, dynamic>> exportDiagnostics() async =>
       _postMap('/v1/diagnostics/export');
+
+  Future<Map<String, dynamic>> diagnosticsHealth() async =>
+      _getMap('/v1/diagnostics/health');
+
+  Future<Map<String, dynamic>> diagnosticsSystem() async =>
+      _getMap('/v1/diagnostics/system');
+
+  Future<List<dynamic>> diagnosticsCapabilities() async {
+    final body = await _getMap('/v1/diagnostics/capabilities');
+    return (body['capabilities'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> diagnosticsPreview() async =>
+      _getMap('/v1/diagnostics/preview');
 
   Future<List<dynamic>> novelProjects() async {
     final body = await _getMap('/v1/novels/projects');

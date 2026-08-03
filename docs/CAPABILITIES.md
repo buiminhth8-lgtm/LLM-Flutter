@@ -6,6 +6,16 @@
 curl http://127.0.0.1:8000/v1/capabilities
 ```
 
+## Stage 12 productization capabilities
+
+- `version_api`: available; `/v1/version` exposes local app/build/stage metadata without secrets.
+- `health_checks`: available; `/v1/health` and `/v1/health/full` run read-only local checks.
+- `diagnostics_export`: available; diagnostics packages are backend-redacted and exclude model weights, checkpoints, document bodies, API keys, cookies, and Authorization headers.
+- `backup_restore`: available; scripts back up local data while excluding model/download/checkpoint weight files.
+- `windows_packaging`: available; Windows launch, diagnostics, backup, restore, and release packaging scripts exist.
+- `windows_desktop_release`: available; Flutter Windows is the supported release target.
+- `novel_studio_product_ui`: available when `features.novel_studio.enabled=true`.
+
 下载生命周期说明见 [docs/DOWNLOADS.md](DOWNLOADS.md)。
 
 ## 当前摘要

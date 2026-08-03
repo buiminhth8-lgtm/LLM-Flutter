@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 
 class AppProgressBar extends StatelessWidget {
-  const AppProgressBar({
-    super.key,
-    this.value,
-    this.label,
-  });
+  const AppProgressBar({super.key, this.value, this.label});
 
   final double? value;
   final String? label;

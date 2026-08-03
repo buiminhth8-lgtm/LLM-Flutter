@@ -61,14 +61,19 @@ _CAPABILITIES: tuple[CapabilityInfo, ...] = (
     CapabilityInfo("benchmark", CapabilityStatus.EXPERIMENTAL, "Backend benchmark jobs record TTFT and token/s for local development reference only.", False),
     CapabilityInfo("benchmark_with_adapter", CapabilityStatus.NOT_IMPLEMENTED, "Benchmark adapter_id is rejected unless a runner explicitly supports adapter loading; Flutter hides adapter selection.", False),
     CapabilityInfo("storage_cleanup", CapabilityStatus.PARTIAL, "Cleanup preview and execution are exposed in Flutter; only temporary categories are removable.", True),
-    CapabilityInfo("diagnostics_export", CapabilityStatus.PARTIAL, "Diagnostics export is exposed in Flutter and excludes model weights, document content, and secrets.", True),
-    CapabilityInfo("windows_packaging", CapabilityStatus.EXPERIMENTAL, "Launcher scripts exist; full installer validation is not claimed.", False),
+    CapabilityInfo("version_api", CapabilityStatus.AVAILABLE, "Version metadata is available through /v1/version and diagnostics.", True),
+    CapabilityInfo("health_checks", CapabilityStatus.AVAILABLE, "Quick and full local health checks are available through /v1/health.", True),
+    CapabilityInfo("diagnostics_export", CapabilityStatus.AVAILABLE, "Diagnostics export is exposed in Flutter and excludes model weights, document content, and secrets.", True),
+    CapabilityInfo("backup_restore", CapabilityStatus.AVAILABLE, "Local data backup and restore scripts are available without packaging model weights.", False),
+    CapabilityInfo("windows_packaging", CapabilityStatus.AVAILABLE, "Windows launch, environment check, diagnostics, backup, restore, and packaging scripts are available.", False),
+    CapabilityInfo("windows_desktop_release", CapabilityStatus.AVAILABLE, "Flutter Windows desktop release packaging is documented and scripted for local validation.", True),
     CapabilityInfo("flutter_windows", CapabilityStatus.AVAILABLE, "Flutter Windows desktop is the supported client.", True),
     CapabilityInfo("flutter_android", CapabilityStatus.NOT_IMPLEMENTED, "No Android build target is supported yet.", False),
     CapabilityInfo("flutter_linux", CapabilityStatus.NOT_IMPLEMENTED, "No Linux desktop build target is supported yet.", False),
     CapabilityInfo("flutter_macos", CapabilityStatus.NOT_IMPLEMENTED, "No macOS desktop build target is supported yet.", False),
     CapabilityInfo("flutter_web", CapabilityStatus.NOT_IMPLEMENTED, "The legacy web UI has been replaced by Flutter Windows desktop.", False),
     CapabilityInfo("novel_studio", CapabilityStatus.NOT_IMPLEMENTED, "Novel Studio is a staged roadmap item; Stage 0 only prepares feature flags, documentation, and placeholders.", False),
+    CapabilityInfo("novel_studio_product_ui", CapabilityStatus.NOT_IMPLEMENTED, "Novel Studio productized dashboard and journey navigation require novel_studio to be enabled.", False),
     CapabilityInfo("novel_projects", CapabilityStatus.NOT_IMPLEMENTED, "Novel project CRUD is not implemented in Stage 0.", False),
     CapabilityInfo("prompt_studio", CapabilityStatus.NOT_IMPLEMENTED, "Prompt Studio templates are planned for a later stage.", False),
     CapabilityInfo("context_assembler", CapabilityStatus.NOT_IMPLEMENTED, "Context Assembler is disabled until Novel Studio is enabled.", False),
@@ -129,7 +134,8 @@ def get_capabilities_for_config(config) -> tuple[CapabilityInfo, ...]:
     if not is_novel_studio_enabled(config):
         return _CAPABILITIES
     overrides = {
-        "novel_studio": (CapabilityStatus.PARTIAL, "Novel Studio foundations, Prompt Studio, Context Assembler, local Writing Workspace, Revision Review, and Dataset Builder are available.", True),
+        "novel_studio": (CapabilityStatus.PARTIAL, "Novel Studio foundations through Stage 12 productized UI are available.", True),
+        "novel_studio_product_ui": (CapabilityStatus.AVAILABLE, "Novel Studio Dashboard, unified navigation, capability gates, and release-oriented UX states are available.", True),
         "novel_projects": (CapabilityStatus.AVAILABLE, "Novel project CRUD is available.", True),
         "novel_world_bible": (CapabilityStatus.AVAILABLE, "Novel world bible entries are available.", True),
         "novel_characters": (CapabilityStatus.AVAILABLE, "Novel character records are available.", True),
@@ -237,7 +243,8 @@ def get_capabilities_for_config(config) -> tuple[CapabilityInfo, ...]:
                 "evaluation_memory_usage": (CapabilityStatus.AVAILABLE, "Memory/RAG retrieval relevance and usage are evaluated from persisted retrieval records.", True),
                 "evaluation_foreshadowing": (CapabilityStatus.AVAILABLE, "Foreshadowing heuristics inspect registered clues from world, plot, timeline, and memory sources.", True),
                 "evaluation_local_model_judge": (CapabilityStatus.PARTIAL, "Optional local-model assisted judging reuses loaded Runtime and is advisory only.", True),
-                "windows_packaging": (CapabilityStatus.NOT_IMPLEMENTED, "Windows installer packaging remains out of Stage 11 scope.", False),
+                "windows_packaging": (CapabilityStatus.AVAILABLE, "Windows launch, environment check, diagnostics, backup, restore, and packaging scripts are available.", False),
+                "windows_desktop_release": (CapabilityStatus.AVAILABLE, "Windows desktop release packaging is available for local validation.", True),
             }
         )
     existing = {cap.name for cap in _CAPABILITIES}

@@ -14,7 +14,10 @@ Future<bool> showAppConfirmDialog(
       title: Text(title),
       content: Text(message),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(cancelLabel)),
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: Text(cancelLabel),
+        ),
         FilledButton(
           style: destructive
               ? FilledButton.styleFrom(

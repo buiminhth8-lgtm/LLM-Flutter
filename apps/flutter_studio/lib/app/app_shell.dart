@@ -43,6 +43,7 @@ import '../features/models/models_page.dart';
 import '../features/novels/novel_api_client.dart';
 import '../features/novels/novel_controller.dart';
 import '../features/novels/novel_projects_page.dart';
+import '../features/novel_studio/novel_studio_dashboard_page.dart';
 import '../features/prompt_studio/prompt_api_client.dart';
 import '../features/prompt_studio/prompt_controller.dart';
 import '../features/prompt_studio/prompt_studio_page.dart';
@@ -313,6 +314,7 @@ class _StudioShellState extends State<StudioShell> {
         if (_memoryCenterAvailable()) _memory.refresh().catchError((_) {}),
         if (_evaluationCenterAvailable())
           _evaluation.refresh().catchError((_) {}),
+        _diagnostics.refresh().catchError((_) {}),
       ]);
       await _savePreferences();
     });
@@ -491,6 +493,16 @@ class _StudioShellState extends State<StudioShell> {
 
   Future<void> _exportDiagnostics() async => _guarded(() async {
     await _diagnostics.export();
+  });
+
+  Future<void> _refreshDiagnostics() async => _guarded(() async {
+    await _diagnostics.refresh();
+  });
+
+  Future<void> _testBackendConnection() async => _guarded(() async {
+    await Future.wait([_client.healthV1(), _client.version()]);
+    await _diagnostics.refresh();
+    _navigation.select(8);
   });
 
   Future<void> _createAdapterEvaluationFromRun(
@@ -904,7 +916,41 @@ class _StudioShellState extends State<StudioShell> {
         runtime: _status.state.runtime,
         capabilities: _status.state.capabilities,
         exportResult: _diagnostics.state.exportResult,
+        health: _diagnostics.state.health,
+        system: _diagnostics.state.system,
+        preview: _diagnostics.state.preview,
+        loading: _diagnostics.state.loading,
+        error: _diagnostics.state.error,
         onExport: _exportDiagnostics,
+        onRefresh: _refreshDiagnostics,
+      ),
+      NovelStudioDashboardPage(
+        capabilities: _status.state.capabilities,
+        projectCount: _novels.state.projects.length,
+        chapterCount: _novels.state.chapters.length,
+        generationCount: _writing.state.history.length,
+        revisionCount: _revisions.state.revisions.length,
+        datasetCount: _datasets.state.datasets.length,
+        finetuneRunCount: _finetune.state.runs.length,
+        evaluationRunCount: _evaluation.state.runs.length,
+        backendStatus: _backend.backendStatus,
+        modelLabel: _topModelLabel(),
+        adapterLabel: _topAdapterLabel(),
+        runningJobs: _runningJobCount(),
+        health: _diagnostics.state.health,
+        onRefresh: _refreshAll,
+        onOpenProjects: () => _navigation.select(novelProjectsPageIndex),
+        onOpenPrompts: () => _navigation.select(promptStudioPageIndex),
+        onOpenContext: () => _navigation.select(contextAssemblerPageIndex),
+        onOpenWriting: () => _navigation.select(writingWorkspacePageIndex),
+        onOpenRevisions: () => _navigation.select(revisionReviewPageIndex),
+        onOpenDataset: () => _navigation.select(datasetBuilderPageIndex),
+        onOpenFinetune: () => _navigation.select(finetuneCenterPageIndex),
+        onOpenAdapterEvaluation: () =>
+            _navigation.select(adapterEvaluationPageIndex),
+        onOpenMemory: () => _navigation.select(memoryCenterPageIndex),
+        onOpenEvaluation: () => _navigation.select(evaluationCenterPageIndex),
+        onOpenDiagnostics: () => _navigation.select(8),
       ),
       NovelProjectsPage(controller: _novels),
       PromptStudioPage(controller: _prompts),
@@ -977,6 +1023,11 @@ class _StudioShellState extends State<StudioShell> {
           _settings.setCloseBackendOnExit(value);
           await _savePreferences();
         },
+        onTestBackend: _testBackendConnection,
+        onOpenDiagnostics: () => _navigation.select(8),
+        onOpenReleaseNotes: () => _shell.setError(
+          'Release notes are packaged in docs/RELEASE_NOTES.md.',
+        ),
       ),
     ];
 

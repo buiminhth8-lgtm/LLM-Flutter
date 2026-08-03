@@ -84,53 +84,114 @@ void main() {
     });
   });
 
-  test('auth user endpoints parse current user and regenerate API key', () async {
-    final httpClient = CapturingHttpClient(
-      responseBody: {
-        'status': 'ok',
-        'user_id': 'operator',
-        'api_key': 'sk-new-key',
-        'api_key_masked': 'sk-llmstudio...abcd',
-      },
-    );
-    final client = LlmStudioClient('http://127.0.0.1:8000', httpClient: httpClient)
-      ..apiKey = 'sk-admin';
+  test(
+    'auth user endpoints parse current user and regenerate API key',
+    () async {
+      final httpClient = CapturingHttpClient(
+        responseBody: {
+          'status': 'ok',
+          'user_id': 'operator',
+          'api_key': 'sk-new-key',
+          'api_key_masked': 'sk-llmstudio...abcd',
+        },
+      );
+      final client = LlmStudioClient(
+        'http://127.0.0.1:8000',
+        httpClient: httpClient,
+      )..apiKey = 'sk-admin';
 
-    final result = await client.regenerateApiKey('operator');
+      final result = await client.regenerateApiKey('operator');
 
-    expect(result.userId, 'operator');
-    expect(result.apiKey, 'sk-new-key');
-    final request = httpClient.requests.single;
-    expect(request.method, 'POST');
-    expect(request.url.path, '/v1/auth/users/operator/regenerate');
-    expect(request.headers['Authorization'], 'Bearer sk-admin');
-  });
+      expect(result.userId, 'operator');
+      expect(result.apiKey, 'sk-new-key');
+      final request = httpClient.requests.single;
+      expect(request.method, 'POST');
+      expect(request.url.path, '/v1/auth/users/operator/regenerate');
+      expect(request.headers['Authorization'], 'Bearer sk-admin');
+    },
+  );
 
-  test('non-streaming chat uses selected model and does not log API key in body', () async {
-    final httpClient = CapturingHttpClient(
-      responseBody: {
-        'choices': [
-          {
-            'message': {'content': 'ok'},
-          },
-        ],
-      },
-    );
-    final client = LlmStudioClient('http://127.0.0.1:8000', httpClient: httpClient)
-      ..userId = 'admin'
-      ..apiKey = 'sk-test-key';
+  test('version and health APIs are read without auth headers', () async {
+    final httpClient = CapturingHttpClient(responseBody: {'status': 'ok'});
+    final client = LlmStudioClient(
+      'http://127.0.0.1:8000',
+      httpClient: httpClient,
+    )..apiKey = 'sk-test-key';
 
-    await client.chat('model-selected', [
-      {'role': 'user', 'content': 'hello'},
+    await client.version();
+    await client.healthV1();
+    await client.healthFull();
+
+    expect(httpClient.requests.map((request) => request.url.path), [
+      '/v1/version',
+      '/v1/health',
+      '/v1/health/full',
     ]);
-
-    final request = httpClient.requests.single;
-    final body = jsonDecode(request.body) as Map<String, dynamic>;
-    expect(body['model'], 'model-selected');
-    expect(body['model'], isNot('auto'));
-    expect(request.body.contains('sk-test-key'), isFalse);
-    expect(request.headers['Authorization'], 'Bearer sk-test-key');
+    expect(
+      httpClient.requests.every(
+        (request) => !request.headers.containsKey('Authorization'),
+      ),
+      isTrue,
+    );
   });
+
+  test('diagnostics APIs use authenticated headers', () async {
+    final httpClient = CapturingHttpClient(
+      responseBody: {'status': 'ok', 'capabilities': []},
+    );
+    final client = LlmStudioClient(
+      'http://127.0.0.1:8000',
+      httpClient: httpClient,
+    )..apiKey = 'sk-test-key';
+
+    await client.diagnosticsHealth();
+    await client.diagnosticsSystem();
+    await client.diagnosticsCapabilities();
+    await client.diagnosticsPreview();
+
+    expect(httpClient.requests.map((request) => request.url.path), [
+      '/v1/diagnostics/health',
+      '/v1/diagnostics/system',
+      '/v1/diagnostics/capabilities',
+      '/v1/diagnostics/preview',
+    ]);
+    expect(
+      httpClient.requests.every(
+        (request) => request.headers['Authorization'] == 'Bearer sk-test-key',
+      ),
+      isTrue,
+    );
+  });
+
+  test(
+    'non-streaming chat uses selected model and does not log API key in body',
+    () async {
+      final httpClient = CapturingHttpClient(
+        responseBody: {
+          'choices': [
+            {
+              'message': {'content': 'ok'},
+            },
+          ],
+        },
+      );
+      final client =
+          LlmStudioClient('http://127.0.0.1:8000', httpClient: httpClient)
+            ..userId = 'admin'
+            ..apiKey = 'sk-test-key';
+
+      await client.chat('model-selected', [
+        {'role': 'user', 'content': 'hello'},
+      ]);
+
+      final request = httpClient.requests.single;
+      final body = jsonDecode(request.body) as Map<String, dynamic>;
+      expect(body['model'], 'model-selected');
+      expect(body['model'], isNot('auto'));
+      expect(request.body.contains('sk-test-key'), isFalse);
+      expect(request.headers['Authorization'], 'Bearer sk-test-key');
+    },
+  );
 
   test('streaming chat uses selected model', () async {
     final sseHttpClient = CapturingSseHttpClient();
@@ -153,7 +214,10 @@ void main() {
 
   test('RAG query uses question payload and default top_k', () async {
     final httpClient = CapturingHttpClient();
-    final client = LlmStudioClient('http://127.0.0.1:8000', httpClient: httpClient);
+    final client = LlmStudioClient(
+      'http://127.0.0.1:8000',
+      httpClient: httpClient,
+    );
 
     await client.ragQuery('hello');
 
@@ -165,41 +229,56 @@ void main() {
     expect(body.containsKey('query'), isFalse);
   });
 
-  test('Adapter actions include model body when model context is available', () async {
-    final httpClient = CapturingHttpClient();
-    final client = LlmStudioClient('http://127.0.0.1:8000', httpClient: httpClient);
+  test(
+    'Adapter actions include model body when model context is available',
+    () async {
+      final httpClient = CapturingHttpClient();
+      final client = LlmStudioClient(
+        'http://127.0.0.1:8000',
+        httpClient: httpClient,
+      );
 
-    await client.loadAdapter('adapter-1', 'model-1');
-    await client.activateAdapter('adapter-1', 'model-1');
-    await client.deactivateAdapter('adapter-1', modelId: 'model-1');
-    await client.unloadAdapter('adapter-1', modelId: 'model-1');
+      await client.loadAdapter('adapter-1', 'model-1');
+      await client.activateAdapter('adapter-1', 'model-1');
+      await client.deactivateAdapter('adapter-1', modelId: 'model-1');
+      await client.unloadAdapter('adapter-1', modelId: 'model-1');
 
-    for (final request in httpClient.requests) {
-      final body = jsonDecode(request.body) as Map<String, dynamic>;
-      expect(body['model'], 'model-1');
-    }
-    expect(httpClient.requests.map((request) => request.url.path), [
-      '/v1/adapters/adapter-1/load',
-      '/v1/adapters/adapter-1/activate',
-      '/v1/adapters/adapter-1/deactivate',
-      '/v1/adapters/adapter-1/unload',
-    ]);
-  });
+      for (final request in httpClient.requests) {
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        expect(body['model'], 'model-1');
+      }
+      expect(httpClient.requests.map((request) => request.url.path), [
+        '/v1/adapters/adapter-1/load',
+        '/v1/adapters/adapter-1/activate',
+        '/v1/adapters/adapter-1/deactivate',
+        '/v1/adapters/adapter-1/unload',
+      ]);
+    },
+  );
 
-  test('Adapter deactivate and unload send empty JSON object without model context', () async {
-    final httpClient = CapturingHttpClient();
-    final client = LlmStudioClient('http://127.0.0.1:8000', httpClient: httpClient);
+  test(
+    'Adapter deactivate and unload send empty JSON object without model context',
+    () async {
+      final httpClient = CapturingHttpClient();
+      final client = LlmStudioClient(
+        'http://127.0.0.1:8000',
+        httpClient: httpClient,
+      );
 
-    await client.deactivateAdapter('adapter-1');
-    await client.unloadAdapter('adapter-1');
+      await client.deactivateAdapter('adapter-1');
+      await client.unloadAdapter('adapter-1');
 
-    expect(jsonDecode(httpClient.requests[0].body), <String, dynamic>{});
-    expect(jsonDecode(httpClient.requests[1].body), <String, dynamic>{});
-  });
+      expect(jsonDecode(httpClient.requests[0].body), <String, dynamic>{});
+      expect(jsonDecode(httpClient.requests[1].body), <String, dynamic>{});
+    },
+  );
 
   test('deleteModel sends explicit confirm query parameter', () async {
     final httpClient = CapturingHttpClient();
-    final client = LlmStudioClient('http://127.0.0.1:8000', httpClient: httpClient);
+    final client = LlmStudioClient(
+      'http://127.0.0.1:8000',
+      httpClient: httpClient,
+    );
 
     await client.deleteModel('model-1', confirm: true);
     await client.deleteModel('model-2', confirm: false);
@@ -210,10 +289,22 @@ void main() {
   });
 
   test('known backend error codes map to AppError messages', () {
-    expect(mapApiErrorMessage('ADAPTER_MODEL_REQUIRED', 'fallback'), contains('基础模型'));
-    expect(mapApiErrorMessage('MODEL_DELETE_CONFIRM_REQUIRED', 'fallback'), contains('确认'));
-    expect(mapApiErrorMessage('RAG_PATH_NOT_ALLOWED', 'fallback'), contains('路径'));
-    expect(mapApiErrorMessage('VISION_PATH_NOT_ALLOWED', 'fallback'), contains('图片'));
+    expect(
+      mapApiErrorMessage('ADAPTER_MODEL_REQUIRED', 'fallback'),
+      contains('基础模型'),
+    );
+    expect(
+      mapApiErrorMessage('MODEL_DELETE_CONFIRM_REQUIRED', 'fallback'),
+      contains('确认'),
+    );
+    expect(
+      mapApiErrorMessage('RAG_PATH_NOT_ALLOWED', 'fallback'),
+      contains('路径'),
+    );
+    expect(
+      mapApiErrorMessage('VISION_PATH_NOT_ALLOWED', 'fallback'),
+      contains('图片'),
+    );
     expect(mapApiErrorMessage('GPU_BUSY', 'fallback'), contains('GPU'));
   });
 
@@ -221,36 +312,47 @@ void main() {
     final httpClient = CapturingHttpClient(
       statusCode: 403,
       responseBody: {
-        'error': {
-          'code': 'PERMISSION_DENIED',
-          'message': 'denied',
-        },
+        'error': {'code': 'PERMISSION_DENIED', 'message': 'denied'},
       },
     );
-    final client = LlmStudioClient('http://127.0.0.1:8000', httpClient: httpClient);
+    final client = LlmStudioClient(
+      'http://127.0.0.1:8000',
+      httpClient: httpClient,
+    );
 
     expect(client.runtime, throwsA(isA<PermissionDeniedException>()));
   });
 
-  test('GPU_BUSY and path errors are converted to StudioApiException', () async {
-    for (final code in ['GPU_BUSY', 'RAG_PATH_NOT_ALLOWED', 'VISION_PATH_NOT_ALLOWED']) {
-      final httpClient = CapturingHttpClient(
-        statusCode: 409,
-        responseBody: {
-          'error': {
-            'code': code,
-            'message': 'backend message',
+  test(
+    'GPU_BUSY and path errors are converted to StudioApiException',
+    () async {
+      for (final code in [
+        'GPU_BUSY',
+        'RAG_PATH_NOT_ALLOWED',
+        'VISION_PATH_NOT_ALLOWED',
+      ]) {
+        final httpClient = CapturingHttpClient(
+          statusCode: 409,
+          responseBody: {
+            'error': {'code': code, 'message': 'backend message'},
           },
-        },
-      );
-      final client = LlmStudioClient('http://127.0.0.1:8000', httpClient: httpClient);
+        );
+        final client = LlmStudioClient(
+          'http://127.0.0.1:8000',
+          httpClient: httpClient,
+        );
 
-      await expectLater(
-        client.runtime(),
-        throwsA(
-          isA<StudioApiException>().having((error) => error.code, 'code', code),
-        ),
-      );
-    }
-  });
+        await expectLater(
+          client.runtime(),
+          throwsA(
+            isA<StudioApiException>().having(
+              (error) => error.code,
+              'code',
+              code,
+            ),
+          ),
+        );
+      }
+    },
+  );
 }

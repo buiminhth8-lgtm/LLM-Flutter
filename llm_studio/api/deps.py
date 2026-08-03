@@ -10,6 +10,9 @@ from typing import Any
 class ApiState:
     config: Any | None = None
     download_manager: Any | None = None
+    model_repository: Any | None = None
+    adapter_repository: Any | None = None
+    gpu_scheduler: Any | None = None
     job_repository: Any | None = None
     job_queue: Any | None = None
     diagnostics_exporter: Any | None = None

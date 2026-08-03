@@ -48,7 +48,6 @@ def test_evaluation_capabilities_and_permissions_enabled():
     assert caps["full_evaluation_center"].status == CapabilityStatus.AVAILABLE
     assert caps["novel_evaluation"].status == CapabilityStatus.AVAILABLE
     assert caps["evaluation_local_model_judge"].status == CapabilityStatus.PARTIAL
-    assert caps["windows_packaging"].status == CapabilityStatus.NOT_IMPLEMENTED
+    assert caps["windows_packaging"].status == CapabilityStatus.AVAILABLE
     assert required_permission_for_request("GET", "/v1/evaluation/runs") == Permission.VIEW_EVALUATION
     assert required_permission_for_request("POST", "/v1/evaluation/run-sync") == Permission.MANAGE_EVALUATION
-
