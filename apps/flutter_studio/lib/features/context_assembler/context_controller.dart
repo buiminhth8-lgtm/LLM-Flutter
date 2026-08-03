@@ -14,8 +14,14 @@ class ContextController extends ChangeNotifier {
 
   Future<void> refresh() async {
     await _run(() async {
-      final projects = await _api.listProjects();
-      final templates = await _api.listTemplates();
+      final projects = _dedupeById(
+        await _api.listProjects(),
+        (project) => project.id,
+      );
+      final templates = _dedupeById(
+        await _api.listTemplates(),
+        (template) => template.id,
+      );
       state = state.copyWith(
         projects: projects,
         templates: templates,
@@ -26,6 +32,7 @@ class ContextController extends ChangeNotifier {
             state.selectedTemplateId ??
             (templates.isEmpty ? null : templates.first.id),
       );
+      normalizeSelections();
       if (state.selectedProjectId != null) {
         await _loadChapters(state.selectedProjectId!);
       }
@@ -38,9 +45,12 @@ class ContextController extends ChangeNotifier {
       clearChapter: true,
       clearScene: true,
       clearResult: true,
+      chapters: const [],
+      scenes: const [],
     );
+    normalizeSelections();
     notifyListeners();
-    if (projectId != null) {
+    if (projectId != null && projectId.isNotEmpty) {
       await _run(() => _loadChapters(projectId));
     }
   }
@@ -50,16 +60,19 @@ class ContextController extends ChangeNotifier {
       selectedChapterId: chapterId,
       clearScene: true,
       clearResult: true,
+      scenes: const [],
     );
+    normalizeSelections();
     notifyListeners();
-    if (chapterId != null) {
+    if (chapterId != null && chapterId.isNotEmpty) {
       await _run(() async {
-        final scenes = await _api.listScenes(chapterId);
+        final scenes = _dedupeById(
+          await _api.listScenes(chapterId),
+          (scene) => scene.id,
+        );
         state = state.copyWith(scenes: scenes);
+        normalizeSelections();
       });
-    } else {
-      state = state.copyWith(scenes: const []);
-      notifyListeners();
     }
   }
 
@@ -73,6 +86,33 @@ class ContextController extends ChangeNotifier {
         ? state.copyWith(clearTemplate: true, clearResult: true)
         : state.copyWith(selectedTemplateId: templateId, clearResult: true);
     notifyListeners();
+  }
+
+  /// Validates all selected ids against the current lists and clears any
+  /// stale selection, including selections that depend on a cleared parent.
+  void normalizeSelections() {
+    final projectIds = state.projects.map((project) => project.id).toSet();
+    final chapterIds = state.chapters.map((chapter) => chapter.id).toSet();
+    final sceneIds = state.scenes.map((scene) => scene.id).toSet();
+    final templateIds = state.templates
+        .map((template) => template.id)
+        .toSet();
+
+    final clearProject = !projectIds.contains(state.selectedProjectId);
+    final keepChapter =
+        !clearProject && chapterIds.contains(state.selectedChapterId);
+    final keepScene = keepChapter && sceneIds.contains(state.selectedSceneId);
+    final keepTemplate = templateIds.contains(state.selectedTemplateId);
+
+    state = state.copyWith(
+      clearProject: clearProject,
+      selectedChapterId: keepChapter ? state.selectedChapterId : null,
+      clearChapter: !keepChapter,
+      selectedSceneId: keepScene ? state.selectedSceneId : null,
+      clearScene: !keepScene,
+      selectedTemplateId: keepTemplate ? state.selectedTemplateId : null,
+      clearTemplate: !keepTemplate,
+    );
   }
 
   Future<void> assemble({
@@ -123,7 +163,10 @@ class ContextController extends ChangeNotifier {
   }
 
   Future<void> _loadChapters(String projectId) async {
-    final chapters = await _api.listChapters(projectId);
+    final chapters = _dedupeById(
+      await _api.listChapters(projectId),
+      (chapter) => chapter.id,
+    );
     state = state.copyWith(
       chapters: chapters,
       scenes: const [],
@@ -132,9 +175,13 @@ class ContextController extends ChangeNotifier {
       clearScene: true,
     );
     if (chapters.isNotEmpty) {
-      final scenes = await _api.listScenes(chapters.first.id);
+      final scenes = _dedupeById(
+        await _api.listScenes(chapters.first.id),
+        (scene) => scene.id,
+      );
       state = state.copyWith(scenes: scenes);
     }
+    normalizeSelections();
   }
 
   Future<void> _run(Future<void> Function() action) async {
@@ -149,4 +196,19 @@ class ContextController extends ChangeNotifier {
     }
     notifyListeners();
   }
+}
+
+List<T> _dedupeById<T>(List<T> items, String Function(T item) idOf) {
+  final seen = <String>{};
+  final result = <T>[];
+  for (final item in items) {
+    final id = idOf(item);
+    if (id.isEmpty) {
+      continue;
+    }
+    if (seen.add(id)) {
+      result.add(item);
+    }
+  }
+  return result;
 }

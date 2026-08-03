@@ -47,6 +47,26 @@ class _ContextAssemblerPageState extends State<ContextAssemblerPage> {
 
   Widget _buildContent(BuildContext context) {
     final state = widget.controller.state;
+    final projects = _dedupeById(state.projects, (project) => project.id);
+    final chapters = _dedupeById(state.chapters, (chapter) => chapter.id);
+    final scenes = _dedupeById(state.scenes, (scene) => scene.id);
+    final templates = _dedupeById(state.templates, (template) => template.id);
+    final selectedProjectId = _safeSelectedId(
+      state.selectedProjectId,
+      projects.map((project) => project.id),
+    );
+    final selectedChapterId = _safeSelectedId(
+      state.selectedChapterId,
+      chapters.map((chapter) => chapter.id),
+    );
+    final selectedSceneId = _safeSelectedId(
+      state.selectedSceneId,
+      scenes.map((scene) => scene.id),
+    );
+    final selectedTemplateId = _safeSelectedId(
+      state.selectedTemplateId,
+      templates.map((template) => template.id),
+    );
     final budgetPanel = ContextBudgetPanel(
       maxTokens: _maxTokens,
       reservedOutputTokens: _reservedOutput,
@@ -91,69 +111,92 @@ class _ContextAssemblerPageState extends State<ContextAssemblerPage> {
                   width: 380,
                   child: ListView(
                     children: [
-                      DropdownButtonFormField<String>(
-                        initialValue: state.selectedProjectId,
-                        items: [
-                          for (final project in state.projects)
-                            DropdownMenuItem(
-                              value: project.id,
-                              child: Text(project.title),
-                            ),
-                        ],
-                        onChanged: widget.controller.selectProject,
-                        decoration: const InputDecoration(
-                          labelText: '小说项目',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      DropdownButtonFormField<String>(
-                        initialValue: state.selectedChapterId,
-                        items: [
-                          for (final chapter in state.chapters)
-                            DropdownMenuItem(
-                              value: chapter.id,
-                              child: Text(
-                                '${chapter.chapterIndex}. ${chapter.title}',
+                      KeyedSubtree(
+                        key: ValueKey('context-project-$selectedProjectId'),
+                        child: DropdownButtonFormField<String>(
+                          key: const Key('context-project-dropdown'),
+                          initialValue: selectedProjectId,
+                          items: [
+                            for (final project in projects)
+                              DropdownMenuItem(
+                                value: project.id,
+                                child: Text(project.title),
                               ),
-                            ),
-                        ],
-                        onChanged: widget.controller.selectChapter,
-                        decoration: const InputDecoration(
-                          labelText: '章节（可选）',
-                          border: OutlineInputBorder(),
+                          ],
+                          onChanged: widget.controller.selectProject,
+                          decoration: const InputDecoration(
+                            labelText: '小说项目',
+                            border: OutlineInputBorder(),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 8),
-                      DropdownButtonFormField<String>(
-                        initialValue: state.selectedSceneId,
-                        items: [
-                          for (final scene in state.scenes)
-                            DropdownMenuItem(
-                              value: scene.id,
-                              child: Text(scene.title),
-                            ),
-                        ],
-                        onChanged: widget.controller.selectScene,
-                        decoration: const InputDecoration(
-                          labelText: '场景（可选）',
-                          border: OutlineInputBorder(),
+                      KeyedSubtree(
+                        key: ValueKey('context-chapter-$selectedChapterId'),
+                        child: DropdownButtonFormField<String>(
+                          key: const Key('context-chapter-dropdown'),
+                          initialValue: selectedChapterId,
+                          hint: chapters.isEmpty ? const Text('暂无章节') : null,
+                          items: [
+                            for (final chapter in chapters)
+                              DropdownMenuItem(
+                                value: chapter.id,
+                                child: Text(
+                                  '${chapter.chapterIndex}. ${chapter.title}',
+                                ),
+                              ),
+                          ],
+                          onChanged: selectedProjectId == null
+                              ? null
+                              : widget.controller.selectChapter,
+                          decoration: const InputDecoration(
+                            labelText: '章节（可选）',
+                            border: OutlineInputBorder(),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 8),
-                      DropdownButtonFormField<String>(
-                        initialValue: state.selectedTemplateId,
-                        items: [
-                          for (final template in state.templates)
-                            DropdownMenuItem(
-                              value: template.id,
-                              child: Text(template.name),
-                            ),
-                        ],
-                        onChanged: widget.controller.selectTemplate,
-                        decoration: const InputDecoration(
-                          labelText: 'Prompt 模板（预览时需要）',
-                          border: OutlineInputBorder(),
+                      KeyedSubtree(
+                        key: ValueKey('context-scene-$selectedSceneId'),
+                        child: DropdownButtonFormField<String>(
+                          key: const Key('context-scene-dropdown'),
+                          initialValue: selectedSceneId,
+                          hint: scenes.isEmpty ? const Text('暂无场景') : null,
+                          items: [
+                            for (final scene in scenes)
+                              DropdownMenuItem(
+                                value: scene.id,
+                                child: Text(scene.title),
+                              ),
+                          ],
+                          onChanged: selectedChapterId == null
+                              ? null
+                              : widget.controller.selectScene,
+                          decoration: const InputDecoration(
+                            labelText: '场景（可选）',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      KeyedSubtree(
+                        key: ValueKey('context-template-$selectedTemplateId'),
+                        child: DropdownButtonFormField<String>(
+                          key: const Key('context-template-dropdown'),
+                          initialValue: selectedTemplateId,
+                          hint: templates.isEmpty ? const Text('暂无模板') : null,
+                          items: [
+                            for (final template in templates)
+                              DropdownMenuItem(
+                                value: template.id,
+                                child: Text(template.name),
+                              ),
+                          ],
+                          onChanged: widget.controller.selectTemplate,
+                          decoration: const InputDecoration(
+                            labelText: 'Prompt 模板（预览时需要）',
+                            border: OutlineInputBorder(),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -183,7 +226,7 @@ class _ContextAssemblerPageState extends State<ContextAssemblerPage> {
                             child: FilledButton.icon(
                               onPressed:
                                   state.loading ||
-                                      state.selectedProjectId == null
+                                      selectedProjectId == null
                                   ? null
                                   : () => widget.controller.assemble(
                                       budget: budgetPanel.value(),
@@ -199,8 +242,8 @@ class _ContextAssemblerPageState extends State<ContextAssemblerPage> {
                             child: OutlinedButton.icon(
                               onPressed:
                                   state.loading ||
-                                      state.selectedProjectId == null ||
-                                      state.selectedTemplateId == null
+                                      selectedProjectId == null ||
+                                      selectedTemplateId == null
                                   ? null
                                   : () => widget.controller.assemble(
                                       budget: budgetPanel.value(),
@@ -254,4 +297,35 @@ class _ContextAssemblerPageState extends State<ContextAssemblerPage> {
       ),
     );
   }
+}
+
+List<T> _dedupeById<T>(List<T> items, String Function(T item) idOf) {
+  final seen = <String>{};
+  final result = <T>[];
+  for (final item in items) {
+    final id = idOf(item);
+    if (id.isEmpty) {
+      continue;
+    }
+    if (seen.add(id)) {
+      result.add(item);
+    }
+  }
+  return result;
+}
+
+String? _safeSelectedId(String? selectedId, Iterable<String> validIds) {
+  if (selectedId == null || selectedId.isEmpty) {
+    return null;
+  }
+  var count = 0;
+  for (final id in validIds) {
+    if (id == selectedId) {
+      count++;
+      if (count > 1) {
+        return null;
+      }
+    }
+  }
+  return count == 1 ? selectedId : null;
 }

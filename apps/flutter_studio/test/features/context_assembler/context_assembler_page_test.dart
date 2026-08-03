@@ -7,6 +7,9 @@ import 'package:flutter_studio/core/api/api_client.dart';
 import 'package:flutter_studio/features/context_assembler/context_api_client.dart';
 import 'package:flutter_studio/features/context_assembler/context_assembler_page.dart';
 import 'package:flutter_studio/features/context_assembler/context_controller.dart';
+import 'package:flutter_studio/features/novels/models/novel_chapter_dto.dart';
+import 'package:flutter_studio/features/novels/models/novel_project_dto.dart';
+import 'package:flutter_studio/features/prompt_studio/models/prompt_template_dto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 
@@ -77,6 +80,19 @@ class ContextPageHttpClient extends http.BaseClient {
 }
 
 void main() {
+  ContextController createController() {
+    final controller = ContextController(
+      ContextApiClient(
+        LlmStudioClient(
+          'http://127.0.0.1:8000',
+          httpClient: ContextPageHttpClient(),
+        ),
+      ),
+    );
+    addTearDown(controller.dispose);
+    return controller;
+  }
+
   testWidgets('Context page selects project and renders assembled variables', (
     tester,
   ) async {
@@ -140,5 +156,167 @@ void main() {
       ),
     );
     expect(find.text('上下文预览'), findsOneWidget);
+  });
+
+  testWidgets(
+    'Context page does not crash when selected project id is stale',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1400, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final controller = createController();
+      controller.state = controller.state.copyWith(
+        projects: const [
+          NovelProjectDto(id: 'p1', title: '项目一', slug: 'p1', status: 'active'),
+          NovelProjectDto(
+            id: 'p2',
+            title: '项目二',
+            slug: 'p2',
+            status: 'active',
+          ),
+        ],
+        selectedProjectId: 'missing-id',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: ContextAssemblerPage(controller: controller)),
+        ),
+      );
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      final projectDropdown = tester.widget<DropdownButtonFormField<String>>(
+        find.byKey(const Key('context-project-dropdown')),
+      );
+      expect(projectDropdown.initialValue, isNull);
+    },
+  );
+
+  testWidgets('Context page dedupes duplicate project items', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1400, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final controller = createController();
+    controller.state = controller.state.copyWith(
+      projects: const [
+        NovelProjectDto(id: 'p1', title: '项目一', slug: 'p1', status: 'active'),
+        NovelProjectDto(
+          id: 'p1',
+          title: '重复项目一',
+          slug: 'p1',
+          status: 'active',
+        ),
+        NovelProjectDto(id: 'p2', title: '项目二', slug: 'p2', status: 'active'),
+      ],
+      selectedProjectId: 'p1',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: ContextAssemblerPage(controller: controller)),
+      ),
+    );
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    final projectDropdown = tester.widget<DropdownButtonFormField<String>>(
+      find.byKey(const Key('context-project-dropdown')),
+    );
+    expect(projectDropdown.initialValue, 'p1');
+
+    await tester.tap(find.byKey(const Key('context-project-dropdown')));
+    await tester.pumpAndSettle();
+    expect(find.text('项目一'), findsWidgets);
+    expect(find.text('重复项目一'), findsNothing);
+    expect(find.text('项目二'), findsWidgets);
+  });
+
+  testWidgets(
+    'Context page does not crash when selected chapter id is stale',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1400, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final controller = createController();
+      controller.state = controller.state.copyWith(
+        projects: const [
+          NovelProjectDto(id: 'p1', title: '项目一', slug: 'p1', status: 'active'),
+        ],
+        selectedProjectId: 'p1',
+        chapters: const [
+          NovelChapterDto(
+            id: 'c1',
+            projectId: 'p1',
+            title: '章节一',
+            chapterIndex: 1,
+            wordCount: 0,
+            status: 'outline',
+          ),
+        ],
+        selectedChapterId: 'missing-chapter',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: ContextAssemblerPage(controller: controller)),
+        ),
+      );
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      final chapterDropdown = tester.widget<DropdownButtonFormField<String>>(
+        find.byKey(const Key('context-chapter-dropdown')),
+      );
+      expect(chapterDropdown.initialValue, isNull);
+    },
+  );
+
+  testWidgets(
+    'Context page does not crash when selected template id is stale',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1400, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final controller = createController();
+      controller.state = controller.state.copyWith(
+        templates: const [
+          PromptTemplateDto(
+            id: 't1',
+            name: '模板一',
+            type: 'chapter_generate',
+            scope: 'global',
+            status: 'active',
+          ),
+        ],
+        selectedTemplateId: 'missing-template',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: ContextAssemblerPage(controller: controller)),
+        ),
+      );
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      final templateDropdown = tester.widget<DropdownButtonFormField<String>>(
+        find.byKey(const Key('context-template-dropdown')),
+      );
+      expect(templateDropdown.initialValue, isNull);
+    },
+  );
+
+  testWidgets('Context page renders without crash when lists are empty', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1400, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final controller = createController();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: ContextAssemblerPage(controller: controller)),
+      ),
+    );
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
   });
 }

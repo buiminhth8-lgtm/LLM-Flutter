@@ -47,6 +47,7 @@ class ContextState {
     ContextRenderPreviewDto? preview,
     bool? loading,
     String? error,
+    bool clearProject = false,
     bool clearChapter = false,
     bool clearScene = false,
     bool clearTemplate = false,
@@ -58,7 +59,9 @@ class ContextState {
     chapters: chapters ?? this.chapters,
     scenes: scenes ?? this.scenes,
     templates: templates ?? this.templates,
-    selectedProjectId: selectedProjectId ?? this.selectedProjectId,
+    selectedProjectId: clearProject
+        ? null
+        : selectedProjectId ?? this.selectedProjectId,
     selectedChapterId: clearChapter
         ? null
         : selectedChapterId ?? this.selectedChapterId,
