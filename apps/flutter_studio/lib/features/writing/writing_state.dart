@@ -3,6 +3,7 @@ import '../novels/models/novel_chapter_dto.dart';
 import '../novels/models/novel_project_dto.dart';
 import '../novels/models/novel_scene_dto.dart';
 import '../prompt_studio/models/prompt_template_dto.dart';
+import '../memory/models/memory_retrieval_result_dto.dart';
 import 'models/writing_generation_record_dto.dart';
 
 class WritingState {
@@ -26,6 +27,11 @@ class WritingState {
     this.output = '',
     this.activeGenerationId,
     this.contextPreview,
+    this.memoryEnabled = false,
+    this.memoryTopK = 12,
+    this.memoryMaxTokens = 1200,
+    this.memorySourceTypes = const [],
+    this.memoryPreview,
     this.warnings = const [],
     this.loading = false,
     this.generating = false,
@@ -53,6 +59,11 @@ class WritingState {
   final String output;
   final String? activeGenerationId;
   final ContextRenderPreviewDto? contextPreview;
+  final bool memoryEnabled;
+  final int memoryTopK;
+  final int memoryMaxTokens;
+  final List<String> memorySourceTypes;
+  final MemoryRetrieveResultDto? memoryPreview;
   final List<Map<String, dynamic>> warnings;
   final bool loading;
   final bool generating;
@@ -80,6 +91,11 @@ class WritingState {
     String? output,
     String? activeGenerationId,
     ContextRenderPreviewDto? contextPreview,
+    bool? memoryEnabled,
+    int? memoryTopK,
+    int? memoryMaxTokens,
+    List<String>? memorySourceTypes,
+    MemoryRetrieveResultDto? memoryPreview,
     List<Map<String, dynamic>>? warnings,
     bool? loading,
     bool? generating,
@@ -94,6 +110,7 @@ class WritingState {
     bool clearAdapter = false,
     bool clearGeneration = false,
     bool clearPreview = false,
+    bool clearMemoryPreview = false,
     bool clearError = false,
     bool clearNotice = false,
   }) => WritingState(
@@ -131,6 +148,13 @@ class WritingState {
         ? null
         : activeGenerationId ?? this.activeGenerationId,
     contextPreview: clearPreview ? null : contextPreview ?? this.contextPreview,
+    memoryEnabled: memoryEnabled ?? this.memoryEnabled,
+    memoryTopK: memoryTopK ?? this.memoryTopK,
+    memoryMaxTokens: memoryMaxTokens ?? this.memoryMaxTokens,
+    memorySourceTypes: memorySourceTypes ?? this.memorySourceTypes,
+    memoryPreview: clearMemoryPreview
+        ? null
+        : memoryPreview ?? this.memoryPreview,
     warnings: warnings ?? this.warnings,
     loading: loading ?? this.loading,
     generating: generating ?? this.generating,

@@ -11,13 +11,14 @@ Stage 6 Dataset Builder details: [NOVEL_STAGE6_DATASET_BUILDER.md](NOVEL_STAGE6_
 Stage 7 Dataset Versioning details: [NOVEL_STAGE7_DATASET_VERSIONING.md](NOVEL_STAGE7_DATASET_VERSIONING.md).
 Stage 8 Fine-tune Center details: [NOVEL_STAGE8_FINETUNE_CENTER.md](NOVEL_STAGE8_FINETUNE_CENTER.md).
 Stage 9 Adapter Evaluation details: [NOVEL_STAGE9_ADAPTER_EVALUATION.md](NOVEL_STAGE9_ADAPTER_EVALUATION.md).
+Stage 10 RAG / Memory details: [NOVEL_STAGE10_RAG_MEMORY.md](NOVEL_STAGE10_RAG_MEMORY.md).
 
-Current implemented scope reaches Stage 9: completed Stage 8 Adapters can be
-compared against their base model with the same Novel Studio prompt/context,
-manual scores can be stored, lightweight reports can be generated, and selected
-results can be explicitly handed to Stage 5 Revision.
+Current implemented scope reaches Stage 10: completed Stage 8 Adapters can be
+compared in Stage 9, and Stage 10 can build long-form novel Memory from existing
+novel data, retrieve relevant chunks, persist retrieval traces, maintain chapter
+summary versions, and inject budgeted memory into ContextAssembler.
 
-Stage 9 boundaries:
+Stage 10 boundaries:
 
 - `revision_records` saves `original_text`, `edited_text`, `diff_json`, tags, score, status, hashes, and `accepted_for_dataset`.
 - `revision_autosaves` saves editing drafts separately and never changes formal revision text.
@@ -25,7 +26,9 @@ Stage 9 boundaries:
 - `dataset_versions` and `training_recipes` are frozen/configuration inputs for Stage 8 training.
 - `finetune_runs` records LoRA/QLoRA training lifecycle and registered adapters.
 - `adapter_evaluation_*` records compare base vs adapter outputs and manual evaluation data.
-- Full automatic Evaluation Center, RAG/Memory, DPO/RLHF, and automatic adapter activation remain later stages.
+- `memory_*` records persist novel memory documents, chunks, index entries, and retrieval traces.
+- `chapter_summary_versions` stores manual or model-generated summary versions.
+- Full automatic Evaluation Center, automatic literary scoring, DPO/RLHF, and external vector database dependency remain later stages / out of scope.
 
 ## 阶段 0：工程基线整理与开发入口
 
@@ -92,6 +95,15 @@ Stage 9 boundaries:
 - 不包含自动风格/人物/剧情评分、RAG/Memory、DPO/RLHF、训练或 Adapter 自动激活。
 
 ## 阶段 10：长篇小说 RAG / Memory 增强
+
+- `memory_documents` 保存章节摘要/正文、人物卡、世界观、剧情线、时间线、修订稿和手动记忆。
+- `memory_chunks` 按中文友好的段落/字符规则切块。
+- `memory_index_entries` 默认 keyword，SQLite FTS5 可用时额外建立 FTS，失败时回退 keyword。
+- `memory_retrieval_records` 保存 query、top_k、预算、召回/选中 chunks 和 warnings。
+- `chapter_summary_versions` 支持手动摘要和复用 WritingRuntimeBridge 的模型摘要。
+- ContextAssembler 在 `memory.enabled=true` 时注入 `retrieved_memory`，关闭时保持 Stage 3 原行为。
+- Flutter 新增 Memory Center、检索预览、章节摘要控件，并在 Writing Workspace 加 Memory 开关。
+- 不包含完整 Evaluation Center、自动文学评分、训练、DPO/RLHF 或外部向量库强依赖。
 
 ## 阶段 11：Evaluation Center 完整评估中心
 

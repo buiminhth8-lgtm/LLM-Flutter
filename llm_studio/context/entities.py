@@ -58,6 +58,7 @@ class ContextAssemblyResult:
     estimated_chars: int
     context_hash: str
     context_id: str | None = None
+    retrieval_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -75,4 +76,5 @@ class ContextAssemblyResult:
             "estimated_tokens": self.estimated_tokens,
             "estimated_chars": self.estimated_chars,
             "context_hash": self.context_hash,
+            "retrieval_id": self.retrieval_id,
         }

@@ -110,6 +110,12 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "adapter_evaluation": {
             "enabled": True,
         },
+        "novel_memory": {
+            "enabled": True,
+        },
+        "memory_retrieval": {
+            "enabled": True,
+        },
     },
     "novels": {
         "db_path": "./data/novels/novels.sqlite",
@@ -154,6 +160,11 @@ DEFAULT_CONFIG: dict[str, Any] = {
     },
     "adapter_evaluation": {
         "db_path": "./data/novels/novels.sqlite",
+    },
+    "memory": {
+        "db_path": "./data/novels/novels.sqlite",
+        "chunk_chars": 1200,
+        "chunk_overlap_chars": 120,
     },
     "model_registry": [],
     "vision_model_registry": [],

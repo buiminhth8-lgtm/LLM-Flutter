@@ -3,7 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../core/ui/app_section_header.dart';
+import '../memory/widgets/memory_context_preview_panel.dart';
+import '../memory/widgets/memory_source_filter_bar.dart';
 import 'writing_controller.dart';
+import 'writing_state.dart';
 import 'widgets/writing_chapter_selector.dart';
 import 'widgets/writing_context_preview_panel.dart';
 import 'widgets/writing_generation_history_panel.dart';
@@ -48,6 +51,8 @@ class _WritingWorkspacePageState extends State<WritingWorkspacePage> {
   final _repetitionPenalty = TextEditingController(text: '1.1');
   final _minimum = TextEditingController(text: '1200');
   final _maximum = TextEditingController(text: '1800');
+  final _memoryTopK = TextEditingController(text: '12');
+  final _memoryMaxTokens = TextEditingController(text: '1200');
   String _unit = 'chars';
   String _strategy = 'soft';
 
@@ -68,6 +73,8 @@ class _WritingWorkspacePageState extends State<WritingWorkspacePage> {
     _repetitionPenalty.dispose();
     _minimum.dispose();
     _maximum.dispose();
+    _memoryTopK.dispose();
+    _memoryMaxTokens.dispose();
     super.dispose();
   }
 
@@ -350,8 +357,12 @@ class _WritingWorkspacePageState extends State<WritingWorkspacePage> {
                         icon: const Icon(Icons.auto_awesome),
                         label: const Text('Generate'),
                       ),
+                      const SizedBox(height: 14),
+                      _buildMemoryPanel(state),
                       const SizedBox(height: 8),
                       WritingContextPreviewPanel(preview: state.contextPreview),
+                      const SizedBox(height: 8),
+                      MemoryContextPreviewPanel(result: state.memoryPreview),
                     ],
                   ),
                 ),
@@ -368,6 +379,85 @@ class _WritingWorkspacePageState extends State<WritingWorkspacePage> {
 
   static double _double(TextEditingController controller, double fallback) =>
       double.tryParse(controller.text.trim()) ?? fallback;
+
+  Widget _buildMemoryPanel(WritingState state) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SwitchListTile(
+            key: const Key('writing-memory-enabled'),
+            contentPadding: EdgeInsets.zero,
+            value: state.memoryEnabled,
+            title: const Text('Memory / RAG'),
+            subtitle: const Text('开启后由后端 ContextAssembler 注入 retrieved_memory'),
+            onChanged: widget.controller.setMemoryEnabled,
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  key: const Key('writing-memory-top-k'),
+                  controller: _memoryTopK,
+                  enabled: state.memoryEnabled,
+                  decoration: const InputDecoration(
+                    labelText: 'Memory top_k',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) => widget.controller.setMemoryTopK(
+                    int.tryParse(value.trim()) ?? 12,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  key: const Key('writing-memory-max-tokens'),
+                  controller: _memoryMaxTokens,
+                  enabled: state.memoryEnabled,
+                  decoration: const InputDecoration(
+                    labelText: 'Max tokens',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) => widget.controller.setMemoryMaxTokens(
+                    int.tryParse(value.trim()) ?? 1200,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              for (final entry in memorySourceTypeLabels.entries.take(6))
+                FilterChip(
+                  label: Text(entry.value),
+                  selected: state.memorySourceTypes.contains(entry.key),
+                  onSelected: state.memoryEnabled
+                      ? (value) => widget.controller.toggleMemorySourceType(
+                          entry.key,
+                          value,
+                        )
+                      : null,
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            key: const Key('writing-show-retrieved-memory'),
+            onPressed: state.memoryEnabled
+                ? () => widget.controller.retrieveMemoryPreview(_goal.text)
+                : null,
+            icon: const Icon(Icons.search),
+            label: const Text('Show Retrieved Memory'),
+          ),
+        ],
+      ),
+    ),
+  );
 
   Future<void> _createRevisionFromGeneration(String generationId) async {
     final revisionId = await widget.controller.createRevisionFromGeneration(

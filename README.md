@@ -10,6 +10,7 @@ Novel Studio Stage 6 Dataset Builder: [docs/NOVEL_STAGE6_DATASET_BUILDER.md](doc
 Novel Studio Stage 7 Dataset Versioning: [docs/NOVEL_STAGE7_DATASET_VERSIONING.md](docs/NOVEL_STAGE7_DATASET_VERSIONING.md).
 Novel Studio Stage 8 Fine-tune Center: [docs/NOVEL_STAGE8_FINETUNE_CENTER.md](docs/NOVEL_STAGE8_FINETUNE_CENTER.md).
 Novel Studio Stage 9 Adapter Evaluation: [docs/NOVEL_STAGE9_ADAPTER_EVALUATION.md](docs/NOVEL_STAGE9_ADAPTER_EVALUATION.md).
+Novel Studio Stage 10 RAG / Memory: [docs/NOVEL_STAGE10_RAG_MEMORY.md](docs/NOVEL_STAGE10_RAG_MEMORY.md).
 
 认证恢复、API Key 重新生成和本机 admin 恢复流程见 [docs/AUTH_RECOVERY.md](docs/AUTH_RECOVERY.md)。
 
@@ -59,6 +60,7 @@ LLM-Studio/
 │   ├── revisions/                # Novel Stage 5 人工修订、Diff 与 autosave
 │   ├── datasets/                 # Novel Stage 6/7 Dataset Builder、Version 与 Recipe Preview
 │   ├── adapter_evaluation/        # Novel Stage 9 Adapter 对比、人工评分与报告
+│   ├── memory/                    # Novel Stage 10 长篇小说 Memory / RAG 与章节摘要
 │   ├── auth/                     # RBAC 角色和权限
 │   └── security/                 # 上传安全等
 ├── apps/flutter_studio/          # Flutter Windows 桌面客户端
@@ -685,6 +687,13 @@ C:\Users\zkjr\...
 | `adapter_base_compare` | available* | yes | 通过 WritingRuntimeBridge 分别运行 base 与 adapter variant |
 | `adapter_manual_scoring` | available* | yes | 人工 winner、1～5 评分和维度 notes |
 | `adapter_evaluation_report` | available* | yes | 汇总人工评分、胜负计数和推荐结论 |
+| `novel_rag_memory` | available* | yes | 长篇小说 Memory/RAG、检索 trace 与 ContextAssembler 注入 |
+| `memory_documents` | available* | yes | 从小说资料构建 memory documents，也支持手动 memory note |
+| `memory_keyword_retrieval` | available* | yes | 后端 keyword retrieval，无需外部向量库 |
+| `memory_sqlite_fts` | partial* | yes | SQLite FTS5 可用时启用，不可用时回退 keyword |
+| `memory_embedding_retrieval` | not_implemented | no | Stage 10 只预留接口，不强制 embedding |
+| `chapter_summary_versions` | available* | yes | 手动/模型章节摘要版本，激活后可同步 chapter.summary |
+| `context_memory_bridge` | available* | yes | `memory.enabled=true` 时注入 retrieved_memory |
 | `full_evaluation_center` | not_implemented | no | 自动风格/人物/剧情评估属于后续阶段 |
 
 \* 需要 `features.novel_studio.enabled=true`。

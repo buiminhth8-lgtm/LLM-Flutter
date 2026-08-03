@@ -39,3 +39,9 @@ def initialize_context_database(db_path: str | Path) -> None:
             ON context_assembly_records(project_id, chapter_id, created_at)
             """
         )
+        columns = {
+            row[1]
+            for row in conn.execute("PRAGMA table_info(context_assembly_records)").fetchall()
+        }
+        if "retrieval_id" not in columns:
+            conn.execute("ALTER TABLE context_assembly_records ADD COLUMN retrieval_id TEXT")

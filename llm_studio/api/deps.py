@@ -21,6 +21,7 @@ class ApiState:
     dataset_service: Any | None = None
     finetune_service: Any | None = None
     adapter_evaluation_service: Any | None = None
+    memory_service: Any | None = None
 
 
 _state = ApiState()

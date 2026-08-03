@@ -128,6 +128,16 @@ def required_permission_for_request(method: str, path: str) -> Permission | None
             return Permission.VIEW_ADAPTER_EVALUATION
         return Permission.MANAGE_ADAPTER_EVALUATION
 
+    if path.startswith("/v1/memory"):
+        if method == "GET":
+            return Permission.VIEW_MEMORY
+        if method == "POST" and (
+            path == "/v1/memory/retrieve"
+            or path.startswith("/v1/memory/retrieval-records")
+        ):
+            return Permission.VIEW_MEMORY
+        return Permission.MANAGE_MEMORY
+
     if path.startswith("/v1/vision"):
         return Permission.CHAT
 

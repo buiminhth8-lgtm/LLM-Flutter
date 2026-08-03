@@ -25,6 +25,17 @@ class ContextIncludeRequest(BaseModel):
     scene_outline: bool = True
 
 
+class ContextMemoryRequest(BaseModel):
+    enabled: bool = False
+    query_text: str | None = None
+    top_k: int = 12
+    max_memory_tokens: int = 1200
+    max_chunks: int = 8
+    source_types: list[str] = Field(default_factory=list)
+    status: str = "active"
+    save_retrieval_record: bool = True
+
+
 class ContextAssemblyRequest(BaseModel):
     project_id: str
     chapter_id: str | None = None
@@ -35,6 +46,7 @@ class ContextAssemblyRequest(BaseModel):
     target_budget: ContextBudgetRequest = Field(default_factory=ContextBudgetRequest)
     user_variables: dict[str, Any] = Field(default_factory=dict)
     include: ContextIncludeRequest = Field(default_factory=ContextIncludeRequest)
+    memory: ContextMemoryRequest = Field(default_factory=ContextMemoryRequest)
     save_record: bool = True
 
 
