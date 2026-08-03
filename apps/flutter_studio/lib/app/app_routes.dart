@@ -3,16 +3,17 @@ import 'package:flutter/material.dart';
 import 'app_shell_widgets.dart';
 
 const novelStudioPageIndex = 9;
-const promptStudioPageIndex = 10;
-const contextAssemblerPageIndex = 11;
-const writingWorkspacePageIndex = 12;
-const revisionReviewPageIndex = 13;
-const datasetBuilderPageIndex = 14;
-const finetuneCenterPageIndex = 15;
-const adapterEvaluationPageIndex = 16;
-const memoryCenterPageIndex = 17;
-const evaluationCenterPageIndex = 18;
-const settingsPageIndex = 19;
+const novelProjectsPageIndex = 10;
+const promptStudioPageIndex = 11;
+const contextAssemblerPageIndex = 12;
+const writingWorkspacePageIndex = 13;
+const revisionReviewPageIndex = 14;
+const datasetBuilderPageIndex = 15;
+const finetuneCenterPageIndex = 16;
+const adapterEvaluationPageIndex = 17;
+const memoryCenterPageIndex = 18;
+const evaluationCenterPageIndex = 19;
+const settingsPageIndex = 20;
 
 class ShellDestination {
   const ShellDestination({
@@ -126,6 +127,13 @@ Widget buildShellNavigation({
           selectedIndex: selectedIndex,
           icon: Icons.auto_stories_outlined,
           label: 'Novel Studio',
+          onSelected: onSelected,
+        ),
+        SideNavItem(
+          index: novelProjectsPageIndex,
+          selectedIndex: selectedIndex,
+          icon: Icons.library_books_outlined,
+          label: 'Projects',
           onSelected: onSelected,
         ),
         if (showPromptStudio)

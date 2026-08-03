@@ -2,33 +2,23 @@
 
 from __future__ import annotations
 
-import json
 import os
-import subprocess
-import sys
 import zipfile
 from pathlib import Path
 
-from llm_studio.capabilities import get_capabilities
-from llm_studio.config_io import redact_config
-from llm_studio.models.repository import LocalModelRepository
 from llm_studio.models.storage import layout_from_config
-from llm_studio.runtime.capabilities import detect_runtime_capabilities
-from llm_studio.storage import collect_disk_usage
-from llm_studio.version import get_version_info
 
-
-def redact_path(path: str) -> str:
-    home = str(Path.home())
-    return path.replace(home, "%USERPROFILE%")
+from .collector import collect_diagnostics, diagnostics_as_json
+from .redaction import redact_path as redact_path
 
 
 def diagnostic_manifest() -> list[str]:
     return [
         "runtime.json",
         "version.json",
+        "system.json",
         "pip-freeze.txt",
-        "config-redacted.yaml",
+        "config-redacted.json",
         "models-summary.json",
         "disk-usage.json",
         "capabilities.json",
@@ -39,42 +29,40 @@ def export_diagnostics(config, output_path: str | Path | None = None) -> Path:
     layout = layout_from_config(config)
     layout.ensure()
     output = Path(output_path) if output_path else layout.diagnostics_dir / "diagnostics.zip"
-    caps = detect_runtime_capabilities(run_bnb_probe=False)
-    runtime = caps.__dict__.copy()
-    version = get_version_info()
-    try:
-        pip_freeze = subprocess.check_output([sys.executable, "-m", "pip", "freeze"], text=True, stderr=subprocess.STDOUT, timeout=20)
-    except Exception as exc:
-        pip_freeze = f"pip freeze failed: {exc}\n"
-    models = [
-        {**model.to_dict(), "path": redact_path(str(model.path))}
-        for model in LocalModelRepository(config).list_models(refresh=False)
-    ]
-    disk = [
-        {**item.to_dict(), "path": redact_path(str(item.path))}
-        for item in collect_disk_usage(config)
-    ]
-    capabilities = [capability.to_dict() for capability in get_capabilities()]
-
-    import yaml
+    payload = collect_diagnostics(config)
 
     output.parent.mkdir(parents=True, exist_ok=True)
     tmp_output = output.with_suffix(output.suffix + ".tmp")
     try:
         with zipfile.ZipFile(tmp_output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-            archive.writestr("runtime.json", json.dumps(runtime, ensure_ascii=False, indent=2, default=str))
-            archive.writestr("version.json", json.dumps(version, ensure_ascii=False, indent=2, default=str))
-            archive.writestr("pip-freeze.txt", pip_freeze)
-            archive.writestr(
-                "config-redacted.yaml",
-                yaml.safe_dump(redact_config(config._data), allow_unicode=True, sort_keys=False),
-            )
-            archive.writestr("models-summary.json", json.dumps(models, ensure_ascii=False, indent=2))
-            archive.writestr("disk-usage.json", json.dumps(disk, ensure_ascii=False, indent=2))
-            archive.writestr("capabilities.json", json.dumps(capabilities, ensure_ascii=False, indent=2))
+            archive.writestr("runtime.json", diagnostics_as_json(payload["runtime"]))
+            archive.writestr("version.json", diagnostics_as_json(payload["version"]))
+            archive.writestr("system.json", diagnostics_as_json(payload["system"]))
+            archive.writestr("pip-freeze.txt", payload["pip_freeze"])
+            archive.writestr("config-redacted.json", diagnostics_as_json(payload["config_redacted"]))
+            archive.writestr("models-summary.json", diagnostics_as_json(payload["models_summary"]))
+            archive.writestr("disk-usage.json", diagnostics_as_json(payload["disk_usage"]))
+            archive.writestr("capabilities.json", diagnostics_as_json(payload["capabilities"]))
         os.replace(tmp_output, output)
     except Exception:
         if tmp_output.exists():
             tmp_output.unlink()
         raise
     return output
+
+
+def main() -> None:
+    import argparse
+
+    from llm_studio.config import Config
+
+    parser = argparse.ArgumentParser(description="Export a redacted LLM Studio diagnostics package.")
+    parser.add_argument("--config", default=None)
+    parser.add_argument("--output", default=None)
+    args = parser.parse_args()
+    config = Config(args.config) if args.config else Config()
+    print(export_diagnostics(config, args.output))
+
+
+if __name__ == "__main__":
+    main()

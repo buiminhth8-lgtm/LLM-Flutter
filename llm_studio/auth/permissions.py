@@ -31,6 +31,9 @@ def required_permission_for_request(method: str, path: str) -> Permission | None
         "/v1/runtime",
         "/v1/gpu/scheduler",
         "/v1/capabilities",
+        "/v1/version",
+        "/v1/health",
+        "/v1/health/full",
         "/v1/storage",
     }:
         return Permission.VIEW_RUNTIME
@@ -74,8 +77,10 @@ def required_permission_for_request(method: str, path: str) -> Permission | None
         return Permission.RUN_BENCHMARK
     if method == "POST" and path in {"/v1/storage/cleanup", "/v1/storage/cleanup/preview"}:
         return Permission.MANAGE_STORAGE
-    if method == "POST" and path == "/v1/diagnostics/export":
-        return Permission.EXPORT_DIAGNOSTICS
+    if path.startswith("/v1/diagnostics"):
+        if method == "POST" and path == "/v1/diagnostics/export":
+            return Permission.EXPORT_DIAGNOSTICS
+        return Permission.VIEW_RUNTIME
     if method == "POST" and path.startswith("/v1/jobs/") and path.endswith("/cancel"):
         return Permission.MANAGE_STORAGE
 

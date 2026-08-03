@@ -61,12 +61,14 @@ from .api.routers.diagnostics import router as diagnostics_router
 from .api.routers.downloads import router as downloads_router
 from .api.routers.evaluation import router as evaluation_router
 from .api.routers.finetune import router as finetune_router
+from .api.routers.health import router as health_router
 from .api.routers.jobs import router as jobs_router
 from .api.routers.memory import router as memory_router
 from .api.routers.novels import router as novels_router
 from .api.routers.prompts import router as prompts_router
 from .api.routers.revisions import router as revisions_router
 from .api.routers.storage import router as storage_router
+from .api.routers.version import router as version_router
 from .api.routers.writing import router as writing_router
 from .auth import has_permission, normalize_role, required_permission_for_request
 from .auth.roles import Role
@@ -194,6 +196,7 @@ def get_app(config: Config):
     configure_api_state(
         config=config,
         download_manager=_download_manager,
+        model_repository=_model_repository,
         job_repository=_job_repository,
         job_queue=_job_queue,
         diagnostics_exporter=lambda cfg: export_diagnostics(cfg),
@@ -212,6 +215,10 @@ def get_app(config: Config):
         enabled=bool(scheduler_cfg.get("enabled", True)),
         max_heavy_tasks=int(scheduler_cfg.get("max_heavy_tasks", 1)),
         queue_timeout_seconds=float(scheduler_cfg.get("queue_timeout_seconds", 30)),
+    )
+    configure_api_state(
+        adapter_repository=_adapter_repository,
+        gpu_scheduler=_gpu_scheduler,
     )
 
     @asynccontextmanager
@@ -242,6 +249,8 @@ def get_app(config: Config):
         lifespan=lifespan,
     )
     app.include_router(capabilities_router)
+    app.include_router(version_router)
+    app.include_router(health_router)
     app.include_router(downloads_router)
     app.include_router(jobs_router)
     app.include_router(storage_router)
@@ -298,6 +307,9 @@ def get_app(config: Config):
     _public_paths = {
         "/health",
         "/ready",
+        "/v1/health",
+        "/v1/health/full",
+        "/v1/version",
         "/docs",
         "/openapi.json",
         "/redoc",

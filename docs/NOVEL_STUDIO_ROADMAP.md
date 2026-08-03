@@ -118,4 +118,14 @@ Stage 11 boundaries:
 - Writing, Revision, Adapter Evaluation, and Memory pages expose evaluation entry points.
 - No training, DatasetVersion mutation, adapter activation, cloud judge, automatic content rewrite, or Windows packaging is included.
 
+## Stage 12: UI productization and Windows release acceptance
+
+Stage 12 details: [NOVEL_STAGE12_PRODUCTIZATION.md](NOVEL_STAGE12_PRODUCTIZATION.md).
+
+- Novel Studio Dashboard unifies Stage 1-11 entry points in Flutter Windows.
+- UI now has reusable empty, error, loading, capability-gate, retry, copyable-error, and diagnostics hint states.
+- Backend exposes `/v1/version`, `/v1/health`, `/v1/health/full`, and expanded `/v1/diagnostics/*`.
+- Windows scripts cover environment checks, backend launch, Flutter launch, diagnostics export, backup, restore, and release packaging.
+- This stage does not add core novel business capabilities, start training, mutate frozen DatasetVersions, create training samples automatically, modify `final_content`, auto-activate adapters, restore Hugging Face Provider, or require cloud services.
+
 ## 阶段 12：UI 产品化与 Windows 发布验收

@@ -12,6 +12,13 @@ Novel Studio Stage 8 Fine-tune Center: [docs/NOVEL_STAGE8_FINETUNE_CENTER.md](do
 Novel Studio Stage 9 Adapter Evaluation: [docs/NOVEL_STAGE9_ADAPTER_EVALUATION.md](docs/NOVEL_STAGE9_ADAPTER_EVALUATION.md).
 Novel Studio Stage 10 RAG / Memory: [docs/NOVEL_STAGE10_RAG_MEMORY.md](docs/NOVEL_STAGE10_RAG_MEMORY.md).
 Novel Studio Stage 11 Evaluation Center: [docs/NOVEL_STAGE11_EVALUATION_CENTER.md](docs/NOVEL_STAGE11_EVALUATION_CENTER.md).
+Novel Studio Stage 12 UI productization / Windows release: [docs/NOVEL_STAGE12_PRODUCTIZATION.md](docs/NOVEL_STAGE12_PRODUCTIZATION.md).
+
+Stage 12 productizes the Flutter Windows Novel Studio surface with a Dashboard,
+unified navigation, reusable UI states, Settings diagnostics shortcuts, backend
+`/v1/version` and `/v1/health` APIs, redacted diagnostics export, backup/restore,
+and Windows release scripts. It does not add new core generation, training,
+Dataset, RAG, memory, adapter, or evaluation business capabilities.
 
 认证恢复、API Key 重新生成和本机 admin 恢复流程见 [docs/AUTH_RECOVERY.md](docs/AUTH_RECOVERY.md)。
 
@@ -658,7 +665,10 @@ C:\Users\zkjr\...
 | `benchmark` | experimental | partial | 仅供本机开发参考，Flutter 仅启动当前模型测试 |
 | `benchmark_with_adapter` | not_implemented | no | 当前不展示 Adapter 选择，避免误导 |
 | `storage_cleanup` | partial | yes | preview 优先，只删允许目录 |
-| `diagnostics_export` | partial | yes | 脱敏导出，不包含权重、正文或密钥 |
+| `version_api` | available | yes | `/v1/version` 返回本地版本、Stage 和 build 信息 |
+| `health_checks` | available | yes | `/v1/health` 与 `/v1/health/full` 只读健康检查 |
+| `diagnostics_export` | available | yes | Stage 12 脱敏导出，不包含权重、正文、checkpoint 或密钥 |
+| `backup_restore` | available | no | 本地数据备份/恢复脚本，默认排除模型权重 |
 | `flutter_windows` | available | yes | 当前第一平台 |
 | `flutter_android` | not_implemented | no | Planned |
 | `flutter_linux` | not_implemented | no | Planned |
@@ -707,7 +717,9 @@ C:\Users\zkjr\...
 | `evaluation_memory_usage` | available* | yes | Memory/RAG 使用质量启发式评估 |
 | `evaluation_foreshadowing` | available* | yes | 伏笔设置/回收启发式评估 |
 | `evaluation_local_model_judge` | partial* | yes | 可选本地模型 judge，仅复用本地 Runtime |
-| `windows_packaging` | not_implemented | no | Stage 11 不做 Windows 打包 |
+| `novel_studio_product_ui` | available* | yes | Stage 12 Dashboard、统一导航和发布验收 UI |
+| `windows_packaging` | available | no | Stage 12 提供 Windows 启动、诊断、备份、恢复与发布打包脚本 |
+| `windows_desktop_release` | available | yes | Flutter Windows 发布目标和验收指南 |
 
 \* 需要 `features.novel_studio.enabled=true`。
 

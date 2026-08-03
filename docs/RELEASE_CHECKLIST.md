@@ -1,0 +1,24 @@
+# Release Checklist
+
+- [ ] `python -m compileall llm_studio`
+- [ ] `python -m pytest`
+- [ ] `python -m llm_studio.server --help`
+- [ ] `python -m ruff check llm_studio tests`（如安装 ruff）
+- [ ] `flutter analyze`
+- [ ] `flutter test`
+- [ ] `flutter build windows`
+- [ ] `scripts/windows/check_environment.ps1`
+- [ ] `/v1/version` 返回 Stage 12 信息
+- [ ] `/v1/health` 返回 ok 或明确 warning
+- [ ] `/v1/capabilities` 不夸大未实现能力
+- [ ] Diagnostics zip 不含 API Key、Cookie、Authorization header
+- [ ] Diagnostics zip 不含 `.bin`、`.safetensors`、`.gguf`、checkpoint
+- [ ] Backup zip 不含模型权重和下载缓存
+- [ ] Restore 需要显式 confirm
+- [ ] Novel Studio Dashboard 可打开所有 Stage 1–11 页面
+- [ ] 没有启动训练
+- [ ] 没有自动创建训练样本
+- [ ] 没有自动修改 `final_content`
+- [ ] 没有自动激活 Adapter
+- [ ] 没有恢复 Hugging Face Provider
+- [ ] 没有云端强依赖

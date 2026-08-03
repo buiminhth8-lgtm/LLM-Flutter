@@ -27,6 +27,9 @@ class SettingsPage extends StatelessWidget {
     required this.onBackendModeChanged,
     required this.onAutoStartChanged,
     required this.onCloseOnExitChanged,
+    this.onTestBackend,
+    this.onOpenDiagnostics,
+    this.onOpenReleaseNotes,
   });
 
   final TextEditingController apiBaseController;
@@ -50,6 +53,9 @@ class SettingsPage extends StatelessWidget {
   final ValueChanged<String> onBackendModeChanged;
   final ValueChanged<bool> onAutoStartChanged;
   final ValueChanged<bool> onCloseOnExitChanged;
+  final VoidCallback? onTestBackend;
+  final VoidCallback? onOpenDiagnostics;
+  final VoidCallback? onOpenReleaseNotes;
 
   @override
   Widget build(BuildContext context) {
@@ -92,6 +98,21 @@ class SettingsPage extends StatelessWidget {
                 onPressed: onStopBackend,
                 icon: const Icon(Icons.stop_circle_outlined),
                 label: const Text('Stop backend'),
+              ),
+              OutlinedButton.icon(
+                onPressed: onTestBackend,
+                icon: const Icon(Icons.health_and_safety_outlined),
+                label: const Text('Test backend'),
+              ),
+              OutlinedButton.icon(
+                onPressed: onOpenDiagnostics,
+                icon: const Icon(Icons.bug_report_outlined),
+                label: const Text('Diagnostics'),
+              ),
+              OutlinedButton.icon(
+                onPressed: onOpenReleaseNotes,
+                icon: const Icon(Icons.new_releases_outlined),
+                label: const Text('Release notes'),
               ),
             ],
           ),
@@ -279,9 +300,7 @@ class _AuthRecoverySection extends StatelessWidget {
               : 'Current user: ${currentUser!.userId} (${currentUser!.role})',
         ),
         const SizedBox(height: 8),
-        const Text(
-          'API Key 不能找回，只能由已认证 admin 重新生成。新 Key 只显示一次。',
-        ),
+        const Text('API Key 不能找回，只能由已认证 admin 重新生成。新 Key 只显示一次。'),
         const SizedBox(height: 12),
         if (isAdmin) ...[
           Row(
@@ -309,7 +328,8 @@ class _AuthRecoverySection extends StatelessWidget {
                 ),
                 trailing: OutlinedButton.icon(
                   onPressed: () async {
-                    final confirmed = await showDialog<bool>(
+                    final confirmed =
+                        await showDialog<bool>(
                           context: context,
                           builder: (dialogContext) => AlertDialog(
                             title: const Text('Regenerate API Key'),
@@ -378,13 +398,13 @@ class _AuthRecoverySection extends StatelessWidget {
         ] else
           const Text('User Management 仅 admin 可见。'),
         const SizedBox(height: 12),
-        const Text(
-          'Admin 密码丢失时不能通过远程 UI 重置。请在后端所在机器运行：',
-        ),
+        const Text('Admin 密码丢失时不能通过远程 UI 重置。请在后端所在机器运行：'),
         const SizedBox(height: 4),
         const SelectableText('python tools/reset_auth.py --reset-admin'),
         const SizedBox(height: 8),
-        const Text('如果 admin 密码和 API Key 都丢失，请停止后端，备份并重命名 api_users.json，然后重新初始化。'),
+        const Text(
+          '如果 admin 密码和 API Key 都丢失，请停止后端，备份并重命名 api_users.json，然后重新初始化。',
+        ),
       ],
     );
   }
