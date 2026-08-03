@@ -74,7 +74,7 @@ def test_dataset_stage7_api_freeze_manifest_and_recipe(monkeypatch, tmp_path):
                 "SELECT name FROM sqlite_master WHERE type = 'table'"
             ).fetchall()
         }
-    assert "finetune_runs" not in tables
+    assert "finetune_runs" in tables
 
 
 def test_stage7_api_freeze_not_ready_returns_stable_error(monkeypatch, tmp_path):

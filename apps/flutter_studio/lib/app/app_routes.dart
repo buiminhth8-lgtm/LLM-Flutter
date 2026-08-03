@@ -8,7 +8,8 @@ const contextAssemblerPageIndex = 11;
 const writingWorkspacePageIndex = 12;
 const revisionReviewPageIndex = 13;
 const datasetBuilderPageIndex = 14;
-const settingsPageIndex = 15;
+const finetuneCenterPageIndex = 15;
+const settingsPageIndex = 16;
 
 class ShellDestination {
   const ShellDestination({
@@ -96,6 +97,7 @@ Widget buildShellNavigation({
   bool showWritingWorkspace = false,
   bool showRevisionReview = false,
   bool showDatasetBuilder = false,
+  bool showFinetuneCenter = false,
 }) {
   return ListView(
     padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
@@ -158,6 +160,14 @@ Widget buildShellNavigation({
             selectedIndex: selectedIndex,
             icon: Icons.dataset_outlined,
             label: 'Dataset',
+            onSelected: onSelected,
+          ),
+        if (showFinetuneCenter)
+          SideNavItem(
+            index: finetuneCenterPageIndex,
+            selectedIndex: selectedIndex,
+            icon: Icons.memory_outlined,
+            label: 'Fine-tune',
             onSelected: onSelected,
           ),
       ],

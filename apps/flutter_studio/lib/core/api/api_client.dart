@@ -876,6 +876,98 @@ class LlmStudioClient {
     return _deleteMap('/v1/datasets/recipes/${Uri.encodeComponent(recipeId)}');
   }
 
+  Future<Map<String, dynamic>> preflightFinetune(
+    Map<String, Object?> body,
+  ) {
+    return _postMap('/v1/finetune/preflight', body: body);
+  }
+
+  Future<Map<String, dynamic>> createFinetuneRun(
+    Map<String, Object?> body,
+  ) {
+    return _postMap(
+      '/v1/finetune/runs',
+      body: body,
+      timeout: const Duration(minutes: 2),
+    );
+  }
+
+  Future<List<dynamic>> finetuneRuns({
+    String? status,
+    String? datasetVersionId,
+    String? baseModelId,
+    String? method,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final query = <String, String>{
+      if (status != null && status.isNotEmpty) 'status': status,
+      if (datasetVersionId != null && datasetVersionId.isNotEmpty)
+        'dataset_version_id': datasetVersionId,
+      if (baseModelId != null && baseModelId.isNotEmpty)
+        'base_model_id': baseModelId,
+      if (method != null && method.isNotEmpty) 'method': method,
+      'limit': '$limit',
+      'offset': '$offset',
+    };
+    final body = await _getMap(
+      Uri(path: '/v1/finetune/runs', queryParameters: query).toString(),
+    );
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> finetuneRun(String runId) {
+    return _getMap('/v1/finetune/runs/${Uri.encodeComponent(runId)}');
+  }
+
+  Future<Map<String, dynamic>> startFinetuneRun(String runId) {
+    return _postMap(
+      '/v1/finetune/runs/${Uri.encodeComponent(runId)}/start',
+      body: const {},
+    );
+  }
+
+  Future<Map<String, dynamic>> cancelFinetuneRun(String runId) {
+    return _postMap(
+      '/v1/finetune/runs/${Uri.encodeComponent(runId)}/cancel',
+      body: const {},
+    );
+  }
+
+  Future<Map<String, dynamic>> resumeFinetuneRun(
+    String runId, {
+    String? checkpointId,
+  }) {
+    return _postMap(
+      '/v1/finetune/runs/${Uri.encodeComponent(runId)}/resume',
+      body: {
+        if (checkpointId != null && checkpointId.isNotEmpty)
+          'checkpoint_id': checkpointId,
+      },
+    );
+  }
+
+  Future<List<dynamic>> finetuneMetrics(String runId) async {
+    final body = await _getMap(
+      '/v1/finetune/runs/${Uri.encodeComponent(runId)}/metrics',
+    );
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<List<dynamic>> finetuneLogs(String runId) async {
+    final body = await _getMap(
+      '/v1/finetune/runs/${Uri.encodeComponent(runId)}/logs',
+    );
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<List<dynamic>> finetuneCheckpoints(String runId) async {
+    final body = await _getMap(
+      '/v1/finetune/runs/${Uri.encodeComponent(runId)}/checkpoints',
+    );
+    return (body['data'] as List?) ?? const [];
+  }
+
   Future<String> ragQuery(String query, {int topK = 5}) async {
     final body = await _postMap(
       '/v1/rag/query',

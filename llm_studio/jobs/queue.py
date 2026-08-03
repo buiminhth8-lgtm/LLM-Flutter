@@ -27,6 +27,7 @@ class JobQueue:
             JobType.MODEL_DELETE.value: ThreadPoolExecutor(max_workers=1, thread_name_prefix="model-delete"),
             JobType.MODEL_VERIFY.value: ThreadPoolExecutor(max_workers=1, thread_name_prefix="model-verify"),
             JobType.BENCHMARK.value: ThreadPoolExecutor(max_workers=1, thread_name_prefix="benchmark"),
+            JobType.FINETUNE.value: ThreadPoolExecutor(max_workers=1, thread_name_prefix="finetune"),
             JobType.LORA_MERGE.value: ThreadPoolExecutor(max_workers=1, thread_name_prefix="lora-merge"),
             JobType.RAG_REBUILD.value: ThreadPoolExecutor(max_workers=1, thread_name_prefix="rag-rebuild"),
             JobType.CACHE_CLEANUP.value: ThreadPoolExecutor(max_workers=1, thread_name_prefix="cache-cleanup"),

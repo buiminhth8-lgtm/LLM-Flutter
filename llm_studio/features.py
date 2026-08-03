@@ -82,3 +82,18 @@ def is_training_recipe_recommender_enabled(config: Any) -> bool:
         return bool(recipe.get("enabled", True))
     except Exception:
         return False
+
+
+def is_finetune_center_enabled(config: Any) -> bool:
+    """Return whether Stage 8 Fine-tune Center APIs should be exposed."""
+
+    if not is_training_recipe_recommender_enabled(config):
+        return False
+    try:
+        features = config.get("features", {}) if config is not None else {}
+        finetune = features.get("finetune_center", {})
+        if not isinstance(finetune, dict):
+            return True
+        return bool(finetune.get("enabled", True))
+    except Exception:
+        return False
