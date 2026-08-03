@@ -43,8 +43,8 @@ void main() {
 
       expect(request?.method, 'qlora');
       expect(confirmed, isTrue);
-      expect(find.textContaining('does not start training'), findsOneWidget);
-      expect(find.text('Start Training'), findsNothing);
+      expect(find.textContaining('不会启动训练'), findsOneWidget);
+      expect(find.text('开始训练'), findsNothing);
     },
   );
 }

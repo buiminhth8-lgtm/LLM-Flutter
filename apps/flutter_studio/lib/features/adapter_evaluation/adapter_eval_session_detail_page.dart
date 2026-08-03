@@ -18,7 +18,7 @@ class AdapterEvalSessionDetailPage extends StatelessWidget {
     final state = controller.state;
     final session = state.currentSession;
     if (session == null) {
-      return const Center(child: Text('Select an adapter evaluation session.'));
+      return const Center(child: Text('请选择适配器评估会话。'));
     }
     return ListView(
       key: const Key('adapter-eval-session-detail'),
@@ -40,11 +40,11 @@ class AdapterEvalSessionDetailPage extends StatelessWidget {
                     Chip(label: Text(session.status)),
                   ],
                 ),
-                Text('session_id: ${session.sessionId}'),
-                Text('base_model_id: ${session.baseModelId}'),
-                Text('adapter_id: ${session.adapterId}'),
-                Text('dataset_version_id: ${session.datasetVersionId ?? '-'}'),
-                Text('finetune_run_id: ${session.finetuneRunId ?? '-'}'),
+                Text('会话 ID：${session.sessionId}'),
+                Text('基础模型 ID：${session.baseModelId}'),
+                Text('适配器 ID：${session.adapterId}'),
+                Text('数据集版本 ID：${session.datasetVersionId ?? '-'}'),
+                Text('微调任务 ID：${session.finetuneRunId ?? '-'}'),
                 if (session.description != null) Text(session.description!),
                 const SizedBox(height: 8),
                 Wrap(
@@ -57,7 +57,7 @@ class AdapterEvalSessionDetailPage extends StatelessWidget {
                           ? null
                           : () => _showCreateCase(context),
                       icon: const Icon(Icons.note_add_outlined),
-                      label: const Text('Add Case'),
+                      label: const Text('添加用例'),
                     ),
                     FilledButton.icon(
                       key: const Key('adapter-eval-run-session'),
@@ -65,7 +65,7 @@ class AdapterEvalSessionDetailPage extends StatelessWidget {
                           ? null
                           : controller.runCurrentSession,
                       icon: const Icon(Icons.compare_arrows_outlined),
-                      label: const Text('Run Session'),
+                      label: const Text('运行会话'),
                     ),
                     OutlinedButton.icon(
                       key: const Key('adapter-eval-generate-report'),
@@ -73,7 +73,7 @@ class AdapterEvalSessionDetailPage extends StatelessWidget {
                           ? null
                           : controller.generateReport,
                       icon: const Icon(Icons.summarize_outlined),
-                      label: const Text('Generate Report'),
+                      label: const Text('生成报告'),
                     ),
                   ],
                 ),
@@ -82,7 +82,7 @@ class AdapterEvalSessionDetailPage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        Text('Cases', style: Theme.of(context).textTheme.titleMedium),
+        Text('用例', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 6),
         AdapterEvalCaseList(
           cases: session.cases,

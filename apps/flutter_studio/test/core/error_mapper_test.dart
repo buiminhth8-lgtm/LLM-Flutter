@@ -12,7 +12,10 @@ void main() {
   test('error mapper covers path and diagnostics errors', () {
     expect(mapApiErrorMessage('RAG_PATH_NOT_ALLOWED', ''), contains('路径'));
     expect(mapApiErrorMessage('VISION_PATH_NOT_ALLOWED', ''), contains('图片'));
-    expect(mapApiErrorMessage('DIAGNOSTICS_EXPORT_FAILED', ''), contains('诊断包'));
+    expect(
+      mapApiErrorMessage('DIAGNOSTICS_EXPORT_FAILED', ''),
+      contains('诊断包'),
+    );
   });
 
   test('error mapper avoids empty unknown fallback', () {

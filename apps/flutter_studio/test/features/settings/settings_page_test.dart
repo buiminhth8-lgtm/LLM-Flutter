@@ -46,9 +46,9 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('Test backend'));
-      await tester.tap(find.text('Diagnostics'));
-      await tester.tap(find.text('Release notes'));
+      await tester.tap(find.text('测试后端'));
+      await tester.tap(find.text('诊断'));
+      await tester.tap(find.text('发布说明'));
 
       expect(tested, isTrue);
       expect(diagnostics, isTrue);

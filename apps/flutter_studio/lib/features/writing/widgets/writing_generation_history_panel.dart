@@ -71,7 +71,7 @@ class _HistoryTile extends StatelessWidget {
     ),
     title: Text('${record.mode} · ${record.status}'),
     subtitle: Text(
-      '${record.outputCharCount} chars · ${record.createdAt}',
+      '${record.outputCharCount} 字符 · ${record.createdAt}',
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
     ),
@@ -84,16 +84,14 @@ class _HistoryTile extends StatelessWidget {
                 onPressed: revisionId == null
                     ? () => onCreateRevision?.call(record.generationId)
                     : () => onViewRevision?.call(revisionId!),
-                child: Text(
-                  revisionId == null ? 'Create Revision' : 'View Revision',
-                ),
+                child: Text(revisionId == null ? '创建修订' : '查看修订'),
               ),
               TextButton(
                 key: Key('writing-evaluate-${record.generationId}'),
                 onPressed: onEvaluateGeneration == null
                     ? null
                     : () => onEvaluateGeneration?.call(record.generationId),
-                child: const Text('Evaluate'),
+                child: const Text('评估'),
               ),
             ],
           )

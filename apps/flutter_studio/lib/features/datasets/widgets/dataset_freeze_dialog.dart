@@ -39,7 +39,7 @@ class _DatasetFreezeDialogState extends State<DatasetFreezeDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Freeze DatasetVersion'),
+    title: const Text('冻结数据集版本'),
     content: SizedBox(
       width: 420,
       child: SingleChildScrollView(
@@ -57,24 +57,21 @@ class _DatasetFreezeDialogState extends State<DatasetFreezeDialog> {
             ),
             DropdownButtonFormField<String>(
               initialValue: _strategy,
-              decoration: const InputDecoration(labelText: 'split.strategy'),
+              decoration: const InputDecoration(labelText: '拆分策略'),
               items: const [
                 DropdownMenuItem(
                   value: 'group_by_chapter',
-                  child: Text('Group by chapter'),
+                  child: Text('按章节分组'),
                 ),
                 DropdownMenuItem(
                   value: 'group_by_project',
-                  child: Text('Group by project'),
+                  child: Text('按项目分组'),
                 ),
                 DropdownMenuItem(
                   value: 'random_by_sample',
-                  child: Text('Random by sample'),
+                  child: Text('按样本随机'),
                 ),
-                DropdownMenuItem(
-                  value: 'no_validation',
-                  child: Text('No validation'),
-                ),
+                DropdownMenuItem(value: 'no_validation', child: Text('不使用验证集')),
               ],
               onChanged: (value) =>
                   setState(() => _strategy = value ?? _strategy),
@@ -89,19 +86,17 @@ class _DatasetFreezeDialogState extends State<DatasetFreezeDialog> {
             ),
             SwitchListTile(
               value: _exactHash,
-              title: const Text('Exact hash dedupe'),
+              title: const Text('精确哈希去重'),
               onChanged: (value) => setState(() => _exactHash = value),
             ),
             SwitchListTile(
               value: _nearDuplicate,
-              title: const Text('Near duplicate warning'),
+              title: const Text('近似重复警告'),
               onChanged: (value) => setState(() => _nearDuplicate = value),
             ),
             TextField(
               controller: _threshold,
-              decoration: const InputDecoration(
-                labelText: 'near duplicate threshold',
-              ),
+              decoration: const InputDecoration(labelText: '近似重复阈值'),
             ),
           ],
         ),
@@ -110,12 +105,12 @@ class _DatasetFreezeDialogState extends State<DatasetFreezeDialog> {
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancel'),
+        child: const Text('取消'),
       ),
       FilledButton(
         key: const Key('dataset-freeze-submit'),
         onPressed: _submit,
-        child: const Text('Freeze'),
+        child: const Text('冻结'),
       ),
     ],
   );

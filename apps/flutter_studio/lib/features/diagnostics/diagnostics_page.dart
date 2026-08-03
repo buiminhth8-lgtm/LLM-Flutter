@@ -42,25 +42,22 @@ class DiagnosticsPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AppSectionHeader(
-            title: 'Diagnostics',
+            title: '诊断',
             subtitle:
-                '导出脱敏诊断包；不包含模型权重、训练检查点、API Key、Cookie、Authorization header 或 RAG/小说正文。诊断包不会包含模型权重或敏感凭证。',
+                '导出脱敏诊断包；不包含模型权重、训练检查点、API Key、Cookie、Authorization 请求头或 RAG/小说正文。诊断包不会包含模型权重或敏感凭证。',
             actions: [
-              const AppStatusBadge(
-                label: 'Redacted',
-                tone: AppStatusTone.success,
-              ),
+              const AppStatusBadge(label: '已脱敏', tone: AppStatusTone.success),
               const SizedBox(width: 8),
               OutlinedButton.icon(
                 onPressed: loading ? null : onRefresh,
                 icon: const Icon(Icons.refresh),
-                label: const Text('Refresh checks'),
+                label: const Text('刷新检查'),
               ),
               const SizedBox(width: 8),
               FilledButton.icon(
                 onPressed: loading ? null : onExport,
                 icon: const Icon(Icons.archive_outlined),
-                label: const Text('Export diagnostics'),
+                label: const Text('导出诊断'),
               ),
             ],
           ),
@@ -71,7 +68,7 @@ class DiagnosticsPage extends StatelessWidget {
               color: Theme.of(context).colorScheme.errorContainer,
               child: ListTile(
                 leading: const Icon(Icons.error_outline),
-                title: const Text('Diagnostics failed'),
+                title: const Text('诊断失败'),
                 subtitle: SelectableText(error!),
               ),
             ),
@@ -81,13 +78,13 @@ class DiagnosticsPage extends StatelessWidget {
             Card(
               child: ListTile(
                 leading: const Icon(Icons.folder_zip_outlined),
-                title: const Text('Diagnostics package exported'),
+                title: const Text('诊断包已导出'),
                 subtitle: SelectableText(exportResult!),
                 trailing: IconButton(
                   onPressed: () =>
                       Clipboard.setData(ClipboardData(text: exportResult!)),
                   icon: const Icon(Icons.copy),
-                  tooltip: 'Copy export result',
+                  tooltip: '复制导出结果',
                 ),
               ),
             ),
@@ -98,21 +95,20 @@ class DiagnosticsPage extends StatelessWidget {
               children: [
                 Expanded(
                   child: _DiagnosticsCard(
-                    title: 'Health and system',
+                    title: '健康与系统',
                     child: SelectableText(
-                      'Runtime\n${runtime ?? {}}\n\nHealth\n${health ?? {}}\n\nSystem\n${system ?? {}}\n\nPreview\n${preview ?? {}}',
+                      '运行时\n${runtime ?? {}}\n\n健康状态\n${health ?? {}}\n\n系统\n${system ?? {}}\n\n预览\n${preview ?? {}}',
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: _DiagnosticsCard(
-                    title: 'Capabilities',
+                    title: '能力',
                     child: visibleCapabilities.isEmpty
                         ? const AppEmptyState(
-                            title: 'No capability snapshot',
-                            message:
-                                'Click Refresh checks to load diagnostics capabilities.',
+                            title: '暂无能力快照',
+                            message: '点击“刷新检查”加载诊断能力。',
                             icon: Icons.rule_outlined,
                           )
                         : ListView.separated(

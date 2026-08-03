@@ -42,7 +42,9 @@ class ChatController extends ChangeNotifier {
       }
     } catch (error) {
       lastError = error.toString();
-      if (turns.isNotEmpty && turns.last.role == 'assistant' && turns.last.content.isEmpty) {
+      if (turns.isNotEmpty &&
+          turns.last.role == 'assistant' &&
+          turns.last.content.isEmpty) {
         turns.removeLast();
       }
       rethrow;
@@ -52,44 +54,59 @@ class ChatController extends ChangeNotifier {
     }
   }
 
-  Future<void> regenerate({required String modelId, required String systemPrompt}) async {
+  Future<void> regenerate({
+    required String modelId,
+    required String systemPrompt,
+  }) async {
     if (turns.isEmpty || isGenerating) {
       return;
     }
     while (turns.isNotEmpty && turns.last.role == 'assistant') {
       turns.removeLast();
     }
-    final lastUser = turns.lastWhere((turn) => turn.role == 'user', orElse: () => const ChatTurn(role: 'user', content: ''));
+    final lastUser = turns.lastWhere(
+      (turn) => turn.role == 'user',
+      orElse: () => const ChatTurn(role: 'user', content: ''),
+    );
     if (lastUser.content.isNotEmpty) {
       final prompt = lastUser.content;
       turns.removeLast();
-      await send(modelId: modelId, systemPrompt: systemPrompt, userText: prompt);
+      await send(
+        modelId: modelId,
+        systemPrompt: systemPrompt,
+        userText: prompt,
+      );
     }
   }
 
-  Future<void> _stream(String modelId, List<Map<String, String>> messages) async {
+  Future<void> _stream(
+    String modelId,
+    List<Map<String, String>> messages,
+  ) async {
     final completer = Completer<void>();
-    _subscription = client.chatStream(modelId, messages).listen(
-      (token) {
-        if (turns.isEmpty || turns.last.role != 'assistant') {
-          return;
-        }
-        final current = turns.last.content;
-        turns[turns.length - 1] = ChatTurn.assistant('$current$token');
-        notifyListeners();
-      },
-      onError: (Object error, StackTrace stackTrace) {
-        if (!completer.isCompleted) {
-          completer.completeError(error, stackTrace);
-        }
-      },
-      onDone: () {
-        if (!completer.isCompleted) {
-          completer.complete();
-        }
-      },
-      cancelOnError: true,
-    );
+    _subscription = client
+        .chatStream(modelId, messages)
+        .listen(
+          (token) {
+            if (turns.isEmpty || turns.last.role != 'assistant') {
+              return;
+            }
+            final current = turns.last.content;
+            turns[turns.length - 1] = ChatTurn.assistant('$current$token');
+            notifyListeners();
+          },
+          onError: (Object error, StackTrace stackTrace) {
+            if (!completer.isCompleted) {
+              completer.completeError(error, stackTrace);
+            }
+          },
+          onDone: () {
+            if (!completer.isCompleted) {
+              completer.complete();
+            }
+          },
+          cancelOnError: true,
+        );
     await completer.future;
   }
 
@@ -106,7 +123,10 @@ class ChatController extends ChangeNotifier {
     notifyListeners();
   }
 
-  List<Map<String, String>> _buildMessages(String systemPrompt, List<ChatTurn> sourceTurns) {
+  List<Map<String, String>> _buildMessages(
+    String systemPrompt,
+    List<ChatTurn> sourceTurns,
+  ) {
     final messages = <Map<String, String>>[];
     final system = systemPrompt.trim();
     if (system.isNotEmpty) {

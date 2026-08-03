@@ -5,7 +5,12 @@ import '../../core/ui/app_section_header.dart';
 import '../../core/ui/app_status_badge.dart';
 
 class RagPage extends StatelessWidget {
-  const RagPage({super.key, required this.queryController, required this.result, required this.onQuery});
+  const RagPage({
+    super.key,
+    required this.queryController,
+    required this.result,
+    required this.onQuery,
+  });
 
   final TextEditingController queryController;
   final String? result;
@@ -20,26 +25,33 @@ class RagPage extends StatelessWidget {
         children: [
           const AppSectionHeader(
             title: 'RAG',
-            subtitle: '当前 Flutter 页面提供最小查询测试面。文档上传和索引重建由后台 Job 处理；本地 file_path / directory_path 入口默认隐藏。',
+            subtitle:
+                '当前 Flutter 页面提供最小查询测试面。文档上传和索引重建由后台 Job 处理；本地 file_path / directory_path 入口默认隐藏。',
             actions: [
-              AppStatusBadge(label: 'Local paths restricted', tone: AppStatusTone.warning),
+              AppStatusBadge(label: '本地路径受限', tone: AppStatusTone.warning),
             ],
           ),
           const SizedBox(height: 12),
-          Row(children: [
-            Expanded(
-              child: TextField(
-                controller: queryController,
-                decoration: const InputDecoration(
-                  labelText: 'RAG question',
-                  helperText: '请求体字段使用 question，默认 top_k=5。',
-                  border: OutlineInputBorder(),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: queryController,
+                  decoration: const InputDecoration(
+                    labelText: 'RAG 问题',
+                    helperText: '请求体字段使用 question，默认 top_k=5。',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            FilledButton.icon(onPressed: onQuery, icon: const Icon(Icons.search), label: const Text('查询')),
-          ]),
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                onPressed: onQuery,
+                icon: const Icon(Icons.search),
+                label: const Text('查询'),
+              ),
+            ],
+          ),
           const SizedBox(height: 12),
           Expanded(
             child: Card(

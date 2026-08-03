@@ -19,20 +19,17 @@ class FinetuneAdapterResultPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Adapter Result',
-            style: TextStyle(fontWeight: FontWeight.w700),
-          ),
+          const Text('适配器结果', style: TextStyle(fontWeight: FontWeight.w700)),
           if (run?.adapterId == null)
-            const Text('No registered adapter yet.')
+            const Text('暂无已注册适配器。')
           else ...[
-            Text('adapter_id: ${run!.adapterId}'),
-            Text('path: ${run!.outputAdapterPath ?? '-'}'),
-            const Text('Adapter is registered but not auto activated.'),
+            Text('适配器 ID：${run!.adapterId}'),
+            Text('路径：${run!.outputAdapterPath ?? '-'}'),
+            const Text('适配器已注册，但不会自动启用。'),
             OutlinedButton(
               key: const Key('finetune-open-adapter'),
               onPressed: onOpenAdapter,
-              child: const Text('Open Adapter'),
+              child: const Text('打开适配器'),
             ),
           ],
         ],

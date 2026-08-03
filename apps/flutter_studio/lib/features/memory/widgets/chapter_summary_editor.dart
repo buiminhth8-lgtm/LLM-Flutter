@@ -32,7 +32,7 @@ class ChapterSummaryEditor extends StatelessWidget {
         key: const Key('memory-summary-chapter-id'),
         controller: chapterController,
         decoration: const InputDecoration(
-          labelText: 'Chapter ID',
+          labelText: '章节 ID',
           border: OutlineInputBorder(),
         ),
         onSubmitted: (_) => onLoad(),
@@ -44,7 +44,7 @@ class ChapterSummaryEditor extends StatelessWidget {
         minLines: 3,
         maxLines: 6,
         decoration: const InputDecoration(
-          labelText: 'Manual Summary',
+          labelText: '手动摘要',
           border: OutlineInputBorder(),
         ),
       ),
@@ -56,7 +56,7 @@ class ChapterSummaryEditor extends StatelessWidget {
               key: const Key('memory-create-summary'),
               onPressed: onCreate,
               icon: const Icon(Icons.add),
-              label: const Text('Create Summary'),
+              label: const Text('创建摘要'),
             ),
           ),
           const SizedBox(width: 8),
@@ -65,7 +65,7 @@ class ChapterSummaryEditor extends StatelessWidget {
               key: const Key('memory-summary-model-id'),
               controller: modelController,
               decoration: const InputDecoration(
-                labelText: 'Model ID',
+                labelText: '模型 ID',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -77,7 +77,7 @@ class ChapterSummaryEditor extends StatelessWidget {
         key: const Key('memory-generate-summary'),
         onPressed: onGenerate,
         icon: const Icon(Icons.auto_awesome),
-        label: const Text('Generate Summary'),
+        label: const Text('生成摘要'),
       ),
       const Divider(),
       Expanded(
@@ -92,7 +92,7 @@ class ChapterSummaryEditor extends StatelessWidget {
                   subtitle: Text(summary.summaryText),
                   trailing: TextButton(
                     onPressed: () => onActivate(summary.summaryId),
-                    child: const Text('Activate'),
+                    child: const Text('启用'),
                   ),
                 ),
           ],

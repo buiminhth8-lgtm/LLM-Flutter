@@ -13,11 +13,11 @@ class WritingContextPreviewPanel extends StatelessWidget {
     return ExpansionTile(
       key: const Key('writing-context-preview'),
       initiallyExpanded: value != null,
-      title: const Text('Context / Prompt Preview'),
+      title: const Text('上下文 / 提示词预览'),
       subtitle: Text(
         value == null
             ? '生成前可先装配并检查上下文'
-            : '${value.assembly.estimatedTokens} tokens · ${value.assembly.estimatedChars} chars',
+            : 'Token ${value.assembly.estimatedTokens} · 字符 ${value.assembly.estimatedChars}',
       ),
       children: [
         if (value == null)

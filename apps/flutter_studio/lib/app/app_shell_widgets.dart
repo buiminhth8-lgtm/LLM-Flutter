@@ -96,17 +96,17 @@ class TopBar extends StatelessWidget {
               children: [
                 _TopPill(
                   icon: Icons.dns_outlined,
-                  label: 'Backend',
+                  label: '后端',
                   value: backendStatus,
                 ),
                 _TopPill(
                   icon: Icons.memory_outlined,
-                  label: 'Model',
+                  label: '模型',
                   value: modelLabel,
                 ),
                 _TopPill(
                   icon: Icons.extension_outlined,
-                  label: 'Adapter',
+                  label: '适配器',
                   value: adapterLabel,
                 ),
                 _TopPill(
@@ -116,8 +116,8 @@ class TopBar extends StatelessWidget {
                 ),
                 _TopPill(
                   icon: Icons.task_alt_outlined,
-                  label: 'Jobs',
-                  value: '$runningJobs running',
+                  label: '任务',
+                  value: '$runningJobs 个运行中',
                 ),
               ],
             ),
@@ -132,7 +132,7 @@ class TopBar extends StatelessWidget {
           IconButton.filledTonal(
             onPressed: loading ? null : onRefresh,
             icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
+            tooltip: '刷新',
           ),
         ],
       ),

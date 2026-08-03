@@ -6,24 +6,24 @@ import 'models/evaluation_run_dto.dart';
 import 'models/manual_evaluation_score_dto.dart';
 
 const evaluationTargetTypeLabels = <String, String>{
-  'project': 'Project',
-  'chapter': 'Chapter',
-  'generation': 'Writing Generation',
-  'revision': 'Revision',
-  'memory_retrieval': 'Memory Retrieval',
-  'adapter_eval_session': 'Adapter Eval Session',
+  'project': '项目',
+  'chapter': '章节',
+  'generation': '写作生成',
+  'revision': '修订',
+  'memory_retrieval': '记忆检索',
+  'adapter_eval_session': '适配器评估会话',
 };
 
 const evaluationEvaluatorLabels = <String, String>{
-  'repetition': 'Repetition',
-  'style_consistency': 'Style Consistency',
-  'character_consistency': 'Character Consistency',
-  'world_consistency': 'World Consistency',
-  'plot_coherence': 'Plot Coherence',
-  'pacing': 'Pacing',
-  'memory_usage': 'Memory Usage',
-  'foreshadowing': 'Foreshadowing',
-  'local_model_judge': 'Local Model Judge',
+  'repetition': '重复度',
+  'style_consistency': '文风一致性',
+  'character_consistency': '人物一致性',
+  'world_consistency': '世界观一致性',
+  'plot_coherence': '剧情连贯性',
+  'pacing': '节奏',
+  'memory_usage': '记忆使用',
+  'foreshadowing': '伏笔',
+  'local_model_judge': '本地模型裁判',
 };
 
 const defaultEvaluationEvaluators = <String>[

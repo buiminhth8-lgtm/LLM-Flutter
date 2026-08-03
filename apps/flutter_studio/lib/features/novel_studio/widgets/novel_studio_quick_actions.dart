@@ -31,17 +31,17 @@ class NovelStudioQuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final actions = [
-      _Action('Projects', Icons.library_books_outlined, onOpenProjects),
-      _Action('Prompts', Icons.description_outlined, onOpenPrompts),
-      _Action('Context', Icons.account_tree_outlined, onOpenContext),
-      _Action('Writing', Icons.edit_note_outlined, onOpenWriting),
-      _Action('Revision', Icons.rate_review_outlined, onOpenRevisions),
-      _Action('Dataset', Icons.dataset_outlined, onOpenDataset),
-      _Action('Fine-tune', Icons.memory_outlined, onOpenFinetune),
-      _Action('Adapter Eval', Icons.compare_outlined, onOpenAdapterEvaluation),
-      _Action('Memory', Icons.psychology_alt_outlined, onOpenMemory),
-      _Action('Evaluation', Icons.fact_check_outlined, onOpenEvaluation),
-      _Action('Diagnostics', Icons.bug_report_outlined, onOpenDiagnostics),
+      _Action('项目', Icons.library_books_outlined, onOpenProjects),
+      _Action('提示词', Icons.description_outlined, onOpenPrompts),
+      _Action('上下文', Icons.account_tree_outlined, onOpenContext),
+      _Action('写作', Icons.edit_note_outlined, onOpenWriting),
+      _Action('修订版本', Icons.rate_review_outlined, onOpenRevisions),
+      _Action('数据集', Icons.dataset_outlined, onOpenDataset),
+      _Action('微调', Icons.memory_outlined, onOpenFinetune),
+      _Action('适配器评估', Icons.compare_outlined, onOpenAdapterEvaluation),
+      _Action('记忆', Icons.psychology_alt_outlined, onOpenMemory),
+      _Action('评估', Icons.fact_check_outlined, onOpenEvaluation),
+      _Action('诊断', Icons.bug_report_outlined, onOpenDiagnostics),
     ];
     return Wrap(
       spacing: 8,

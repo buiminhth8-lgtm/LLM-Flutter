@@ -109,7 +109,7 @@ class RevisionController extends ChangeNotifier {
           projectId: revision.projectId,
           chapterId: revision.chapterId,
         ),
-      ).copyWith(saving: false, notice: 'Revision saved.');
+      ).copyWith(saving: false, notice: '修订已保存。');
     } catch (error) {
       state = state.copyWith(saving: false, error: _message(error));
     }

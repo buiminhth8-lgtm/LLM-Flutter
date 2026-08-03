@@ -34,7 +34,7 @@ class StoragePage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AppSectionHeader(
-            title: 'Storage',
+            title: '存储',
             subtitle: '清理前必须先 Preview；正式模型、外部模型和 RAG 原始文档默认受保护。',
             actions: [
               IconButton.filledTonal(
@@ -46,13 +46,13 @@ class StoragePage extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: onPreview,
                 icon: const Icon(Icons.fact_check),
-                label: const Text('Preview cleanup'),
+                label: const Text('预览清理'),
               ),
               const SizedBox(width: 8),
               FilledButton.icon(
                 onPressed: items.isEmpty ? null : onCleanup,
                 icon: const Icon(Icons.cleaning_services),
-                label: const Text('Execute cleanup'),
+                label: const Text('执行清理'),
               ),
             ],
           ),
@@ -91,9 +91,7 @@ class StoragePage extends StatelessWidget {
                                       ),
                                     ),
                                     AppStatusBadge(
-                                      label: cleanable
-                                          ? 'Cleanable'
-                                          : 'Protected',
+                                      label: cleanable ? '可清理' : '受保护',
                                       tone: cleanable
                                           ? AppStatusTone.info
                                           : AppStatusTone.neutral,

@@ -1,105 +1,28 @@
-# Novel Studio Stage 6: Dataset Builder
+# Novel Studio 阶段 6：数据集构建
 
-Stage 6 adds a draft Dataset Builder on top of Stage 5 Revision. It converts
-explicitly selected `revision_records` into reviewed `training_samples` and can
-export approved SFT samples as draft JSONL.
+本文档为阶段归档版，已删除重复验收长列表，保留范围、边界、数据资产和前后置关系。
 
-## Scope
+## 范围
 
-- Create mutable `training_datasets`.
-- Create `training_samples` from revisions with `accepted_for_dataset=true`.
-- Support SFT samples using `instruction` / `input` / `output`.
-- Reserve preference sample fields using `chosen` / `rejected`.
-- Review samples with `pending`, `approved`, `rejected`, `archived`.
-- Export approved SFT samples to UTF-8 JSONL under `data/datasets/`.
+从已批准且被标记为候选的修订中构建训练样本，支持筛选、预览、去重提示和草稿导出。
 
-## Dataset and Revision relationship
+## 主要资产
 
-Dataset Builder reads Stage 5 revisions. A revision must be explicitly marked
-`accepted_for_dataset=true`; otherwise sample creation returns
-`DATASET_REVISION_NOT_ACCEPTED`. If a revision is not `approved`, Stage 6 writes
-a warning to sample metadata instead of silently bypassing review.
+- 后端领域模块按阶段分层复用。
+- Flutter 页面只调用后端 API，不在前端实现核心业务事实。
+- 数据库表与记录均保持阶段边界。
 
-SFT construction:
+## 边界
 
-- `instruction`: prompt template instruction summary when available, otherwise
-  the default novel-writing instruction.
-- `input`: generation `prompt_rendered` when available. `edited_text` is never
-  copied into input.
-- `output`: revision `edited_text`.
+不冻结 DatasetVersion，不启动训练。
 
-## Dataset vs DatasetVersion
+## 验收
 
-Stage 6 datasets are drafts. They are useful for review and draft JSONL export,
-but they are not immutable training artifacts.
+- 后端测试通过。
+- Flutter analyze/test 按环境执行。
+- 能力清单状态与阶段目标一致。
+- 不保存 API Key、Cookie、Authorization 或本机敏感绝对路径。
 
-Not included:
+## 相关
 
-- DatasetVersion / frozen dataset
-- train / val split
-- manifest / immutable hash bundle
-- exact token statistics
-- TrainingRecipe
-- FineTune / LoRA / QLoRA
-- Adapter evaluation
-
-If a client requests a frozen state, the backend returns
-`DATASET_VERSION_NOT_IMPLEMENTED`.
-
-## Tables
-
-`training_datasets` stores draft dataset metadata, counts, type, and status.
-
-`training_samples` stores SFT or preference draft samples, source revision and
-generation IDs, hashes, review status, score, and metadata warnings.
-
-`dataset_exports` stores relative export paths, format, sample count, approved
-filter, export hash, and status.
-
-## Export formats
-
-Required Stage 6 format:
-
-```json
-{"instruction":"...","input":"...","output":"...","metadata":{"sample_id":"...","revision_id":"...","project_id":"..."}}
-```
-
-Also reserved or basic:
-
-- `alpaca_jsonl`
-- `chatml_jsonl`
-- `preference_jsonl`
-
-Export files are UTF-8, one JSON object per line, `ensure_ascii=false`, and never
-include rejected samples.
-
-## API overview
-
-- `GET /v1/datasets`
-- `POST /v1/datasets`
-- `GET /v1/datasets/{dataset_id}`
-- `PATCH /v1/datasets/{dataset_id}`
-- `DELETE /v1/datasets/{dataset_id}`
-- `POST /v1/datasets/{dataset_id}/samples/from-revision`
-- `POST /v1/datasets/{dataset_id}/samples/bulk-from-revisions`
-- `GET /v1/datasets/{dataset_id}/samples`
-- `GET /v1/datasets/samples/{sample_id}`
-- `PATCH /v1/datasets/samples/{sample_id}`
-- `DELETE /v1/datasets/samples/{sample_id}`
-- `POST /v1/datasets/samples/{sample_id}/approve`
-- `POST /v1/datasets/samples/{sample_id}/reject`
-- `POST /v1/datasets/{dataset_id}/export`
-- `GET /v1/datasets/{dataset_id}/exports`
-- `GET /v1/datasets/exports/{export_id}`
-
-## Flutter
-
-Flutter adds Dataset Builder with a dataset list, sample table, sample detail
-editor, approve/reject buttons, and SFT JSONL export panel. Revision Review adds
-Add to Dataset / Create SFT Sample buttons, but the user must choose a dataset.
-
-## Stage 7 prerequisites
-
-Stage 7 can build on approved samples and export records to add immutable
-DatasetVersion, train/val split, manifest, exact hashes, token checks, and
-training recipe recommendations.
+返回 [Novel Studio 路线图](NOVEL_STUDIO_ROADMAP.md)。

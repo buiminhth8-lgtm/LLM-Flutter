@@ -49,14 +49,16 @@ class _ModelsPageState extends State<ModelsPage> {
   @override
   Widget build(BuildContext context) {
     final models = _filteredModels();
-    final selected = models.isEmpty ? null : _asMap(models[_selectedIndex.clamp(0, models.length - 1)]);
+    final selected = models.isEmpty
+        ? null
+        : _asMap(models[_selectedIndex.clamp(0, models.length - 1)]);
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AppSectionHeader(
-            title: 'Models',
+            title: '模型',
             subtitle: '扫描、加载、选择聊天模型，或将受管理模型移入回收站。',
             actions: [
               OutlinedButton.icon(
@@ -83,7 +85,7 @@ class _ModelsPageState extends State<ModelsPage> {
             child: widget.models.isEmpty
                 ? AppEmptyState(
                     title: '没有发现模型',
-                    message: '请先扫描模型目录、注册外部模型，或在 Downloads 页面下载模型。',
+                    message: '请先扫描模型目录、注册外部模型，或在下载页面下载模型。',
                     icon: Icons.view_in_ar_outlined,
                     action: FilledButton.icon(
                       onPressed: widget.onScan,
@@ -104,15 +106,25 @@ class _ModelsPageState extends State<ModelsPage> {
                                 prefixIcon: Icon(Icons.search),
                                 border: OutlineInputBorder(),
                               ),
-                              onChanged: (_) => setState(() => _selectedIndex = 0),
+                              onChanged: (_) =>
+                                  setState(() => _selectedIndex = 0),
                             ),
                             const SizedBox(height: 8),
                             SegmentedButton<String>(
                               segments: const [
-                                ButtonSegment(value: 'all', label: Text('All')),
-                                ButtonSegment(value: 'ready', label: Text('Ready')),
-                                ButtonSegment(value: 'incomplete', label: Text('Incomplete')),
-                                ButtonSegment(value: 'unsupported', label: Text('Unsupported')),
+                                ButtonSegment(value: 'all', label: Text('全部')),
+                                ButtonSegment(
+                                  value: 'ready',
+                                  label: Text('就绪'),
+                                ),
+                                ButtonSegment(
+                                  value: 'incomplete',
+                                  label: Text('不完整'),
+                                ),
+                                ButtonSegment(
+                                  value: 'unsupported',
+                                  label: Text('不支持'),
+                                ),
                               ],
                               selected: {_statusFilter},
                               onSelectionChanged: (value) => setState(() {
@@ -124,27 +136,40 @@ class _ModelsPageState extends State<ModelsPage> {
                             Expanded(
                               child: ListView.separated(
                                 itemCount: models.length,
-                                separatorBuilder: (_, _) => const SizedBox(height: 8),
+                                separatorBuilder: (_, _) =>
+                                    const SizedBox(height: 8),
                                 itemBuilder: (context, index) {
                                   final map = _asMap(models[index]);
                                   final id = '${map['id'] ?? ''}';
-                                  final status = '${map['status'] ?? 'unknown'}';
-                                  final isLoaded = widget.currentModel?['loaded'] == true &&
+                                  final status =
+                                      '${map['status'] ?? 'unknown'}';
+                                  final isLoaded =
+                                      widget.currentModel?['loaded'] == true &&
                                       widget.currentModel?['model_id'] == id;
                                   return Card(
                                     color: index == _selectedIndex
-                                        ? Theme.of(context).colorScheme.primaryContainer
+                                        ? Theme.of(
+                                            context,
+                                          ).colorScheme.primaryContainer
                                         : null,
                                     child: ListTile(
                                       selected: index == _selectedIndex,
-                                      leading: Icon(isLoaded ? Icons.check_circle : Icons.view_in_ar_outlined),
+                                      leading: Icon(
+                                        isLoaded
+                                            ? Icons.check_circle
+                                            : Icons.view_in_ar_outlined,
+                                      ),
                                       title: Text(
                                         '${map['display_name'] ?? map['id'] ?? 'unknown'}',
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
-                                      subtitle: Text('$status · ${map['format'] ?? 'unknown'}'),
-                                      onTap: () => setState(() => _selectedIndex = index),
+                                      subtitle: Text(
+                                        '$status · ${map['format'] ?? 'unknown'}',
+                                      ),
+                                      onTap: () => setState(
+                                        () => _selectedIndex = index,
+                                      ),
                                     ),
                                   );
                                 },
@@ -180,7 +205,9 @@ class _ModelsPageState extends State<ModelsPage> {
     return widget.models.where((item) {
       final map = _asMap(item);
       final status = '${map['status'] ?? 'unknown'}'.toLowerCase();
-      final haystack = '${map['display_name'] ?? ''} ${map['id'] ?? ''} ${map['path'] ?? ''}'.toLowerCase();
+      final haystack =
+          '${map['display_name'] ?? ''} ${map['id'] ?? ''} ${map['path'] ?? ''}'
+              .toLowerCase();
       final matchesQuery = query.isEmpty || haystack.contains(query);
       final matchesStatus = _statusFilter == 'all' || status == _statusFilter;
       return matchesQuery && matchesStatus;
@@ -214,9 +241,12 @@ class _ModelDetails extends StatelessWidget {
     final id = '${model['id'] ?? ''}';
     final status = '${model['status'] ?? 'unknown'}';
     final isReady = status == 'ready';
-    final isLoaded = currentModel?['loaded'] == true && currentModel?['model_id'] == id;
+    final isLoaded =
+        currentModel?['loaded'] == true && currentModel?['model_id'] == id;
     final isSelected = selectedModelId == id;
-    final compatibility = model['compatibility'] is Map ? model['compatibility'] as Map : const {};
+    final compatibility = model['compatibility'] is Map
+        ? model['compatibility'] as Map
+        : const {};
     final statusTone = switch (status) {
       'ready' => AppStatusTone.success,
       'unsupported' => AppStatusTone.warning,
@@ -236,17 +266,25 @@ class _ModelDetails extends StatelessWidget {
                   Expanded(
                     child: Text(
                       '${model['display_name'] ?? model['id'] ?? model['path'] ?? 'unknown'}',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                   AppStatusBadge(label: status, tone: statusTone),
                   if (isLoaded) ...[
                     const SizedBox(width: 8),
-                    const AppStatusBadge(label: '已加载', tone: AppStatusTone.success),
+                    const AppStatusBadge(
+                      label: '已加载',
+                      tone: AppStatusTone.success,
+                    ),
                   ],
                   if (isSelected) ...[
                     const SizedBox(width: 8),
-                    const AppStatusBadge(label: '聊天模型', tone: AppStatusTone.info),
+                    const AppStatusBadge(
+                      label: '聊天模型',
+                      tone: AppStatusTone.info,
+                    ),
                   ],
                 ],
               ),
@@ -254,16 +292,38 @@ class _ModelDetails extends StatelessWidget {
               Wrap(
                 spacing: 24,
                 runSpacing: 12,
-              children: [
-                _Meta(label: '格式', value: '${model['format'] ?? 'unknown'}'),
-                _Meta(label: '架构', value: '${model['architecture'] ?? 'unknown'}'),
-                _Meta(label: '参数量', value: '${model['parameter_count'] ?? 'unknown'}'),
-                _Meta(label: '量化', value: '${model['quantization'] ?? 'none'}'),
-                _Meta(label: '兼容风险', value: '${compatibility['risk_level'] ?? model['risk_level'] ?? 'unknown'}'),
-                _Meta(label: '推荐后端', value: '${compatibility['recommended_backend'] ?? 'auto'}'),
-                _Meta(label: '来源 repo', value: '${model['repo_id'] ?? 'unknown'}'),
-                _Meta(label: 'revision', value: '${model['revision'] ?? 'unknown'}'),
-              ],
+                children: [
+                  _Meta(label: '格式', value: '${model['format'] ?? 'unknown'}'),
+                  _Meta(
+                    label: '架构',
+                    value: '${model['architecture'] ?? 'unknown'}',
+                  ),
+                  _Meta(
+                    label: '参数量',
+                    value: '${model['parameter_count'] ?? 'unknown'}',
+                  ),
+                  _Meta(
+                    label: '量化',
+                    value: '${model['quantization'] ?? 'none'}',
+                  ),
+                  _Meta(
+                    label: '兼容风险',
+                    value:
+                        '${compatibility['risk_level'] ?? model['risk_level'] ?? 'unknown'}',
+                  ),
+                  _Meta(
+                    label: '推荐后端',
+                    value: '${compatibility['recommended_backend'] ?? 'auto'}',
+                  ),
+                  _Meta(
+                    label: '来源 repo',
+                    value: '${model['repo_id'] ?? 'unknown'}',
+                  ),
+                  _Meta(
+                    label: 'revision',
+                    value: '${model['revision'] ?? 'unknown'}',
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               SelectableText('${model['path'] ?? ''}'),
@@ -277,7 +337,9 @@ class _ModelDetails extends StatelessWidget {
                     child: const Text('设为聊天模型'),
                   ),
                   FilledButton.icon(
-                    onPressed: isReady && !isLoaded && id.isNotEmpty ? () => onLoad(id) : null,
+                    onPressed: isReady && !isLoaded && id.isNotEmpty
+                        ? () => onLoad(id)
+                        : null,
                     icon: const Icon(Icons.play_arrow),
                     label: Text(isLoaded ? '已加载' : '加载'),
                   ),
@@ -343,7 +405,12 @@ class _Meta extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          Text(
+            label,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
           const SizedBox(height: 2),
           Text(value, maxLines: 2, overflow: TextOverflow.ellipsis),
         ],

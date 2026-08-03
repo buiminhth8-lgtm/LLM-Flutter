@@ -36,4 +36,3 @@ String formatEta(num? seconds) {
   }
   return '${secs}s';
 }
-

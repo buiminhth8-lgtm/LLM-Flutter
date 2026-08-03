@@ -36,6 +36,6 @@ void main() {
 
     expect(find.text('Rendered chapter prompt'), findsOneWidget);
     expect(find.textContaining('prompt-hash'), findsOneWidget);
-    expect(find.byTooltip('Copy rendered prompt'), findsOneWidget);
+    expect(find.byTooltip('复制已渲染提示词'), findsOneWidget);
   });
 }

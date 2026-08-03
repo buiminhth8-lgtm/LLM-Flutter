@@ -16,10 +16,10 @@ void main() {
         ),
       );
 
-      expect(find.text('Evaluation Report'), findsOneWidget);
-      expect(find.text('adapter_win_count: 1'), findsOneWidget);
-      expect(find.text('base_win_count: 0'), findsOneWidget);
-      expect(find.text('recommendation: adapter_candidate'), findsOneWidget);
+      expect(find.text('评估报告'), findsOneWidget);
+      expect(find.text('适配器胜出次数：1'), findsOneWidget);
+      expect(find.text('基础模型胜出次数：0'), findsOneWidget);
+      expect(find.text('建议：adapter_candidate'), findsOneWidget);
     },
   );
 }

@@ -23,11 +23,11 @@ class EvaluationReportPage extends StatelessWidget {
           SelectableText(report.summaryText!),
         ],
         const SizedBox(height: 12),
-        _Block(title: 'Summary', value: summary),
-        _Block(title: 'Automatic metrics', value: metrics),
-        _Block(title: 'Findings', value: findings),
-        _Block(title: 'Manual evaluation', value: manual),
-        _Block(title: 'Limitations', value: limitations),
+        _Block(title: '摘要', value: summary),
+        _Block(title: '自动指标', value: metrics),
+        _Block(title: '发现项', value: findings),
+        _Block(title: '人工评估', value: manual),
+        _Block(title: '限制', value: limitations),
       ],
     );
   }

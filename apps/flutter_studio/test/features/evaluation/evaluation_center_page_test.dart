@@ -96,7 +96,7 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Evaluation'), findsNothing);
+    expect(find.text('评估'), findsNothing);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -110,6 +110,6 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Evaluation'), findsOneWidget);
+    expect(find.text('评估'), findsOneWidget);
   });
 }

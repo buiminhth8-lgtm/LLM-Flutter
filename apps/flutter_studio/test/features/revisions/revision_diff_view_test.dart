@@ -34,7 +34,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Blocks: 1'), findsOneWidget);
+    expect(find.text('区块: 1'), findsOneWidget);
     expect(find.text('- old'), findsOneWidget);
     expect(find.text('+ new'), findsOneWidget);
   });

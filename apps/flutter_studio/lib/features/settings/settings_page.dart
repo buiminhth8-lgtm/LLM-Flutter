@@ -64,14 +64,14 @@ class SettingsPage extends StatelessWidget {
       child: ListView(
         children: [
           const Text(
-            'Connection settings',
+            '连接设置',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: apiBaseController,
             decoration: const InputDecoration(
-              labelText: 'FastAPI base URL',
+              labelText: 'FastAPI 基础地址',
               border: OutlineInputBorder(),
             ),
           ),
@@ -82,56 +82,56 @@ class SettingsPage extends StatelessWidget {
               FilledButton.icon(
                 onPressed: onApply,
                 icon: const Icon(Icons.check),
-                label: const Text('Apply'),
+                label: const Text('应用'),
               ),
               OutlinedButton.icon(
                 onPressed: onClearAuth,
                 icon: const Icon(Icons.key_off),
-                label: const Text('Clear auth'),
+                label: const Text('清除认证'),
               ),
               OutlinedButton.icon(
                 onPressed: onRestartBackend,
                 icon: const Icon(Icons.restart_alt),
-                label: const Text('Restart backend'),
+                label: const Text('重启后端'),
               ),
               OutlinedButton.icon(
                 onPressed: onStopBackend,
                 icon: const Icon(Icons.stop_circle_outlined),
-                label: const Text('Stop backend'),
+                label: const Text('停止后端'),
               ),
               OutlinedButton.icon(
                 onPressed: onTestBackend,
                 icon: const Icon(Icons.health_and_safety_outlined),
-                label: const Text('Test backend'),
+                label: const Text('测试后端'),
               ),
               OutlinedButton.icon(
                 onPressed: onOpenDiagnostics,
                 icon: const Icon(Icons.bug_report_outlined),
-                label: const Text('Diagnostics'),
+                label: const Text('诊断'),
               ),
               OutlinedButton.icon(
                 onPressed: onOpenReleaseNotes,
                 icon: const Icon(Icons.new_releases_outlined),
-                label: const Text('Release notes'),
+                label: const Text('发布说明'),
               ),
             ],
           ),
           const SizedBox(height: 16),
           SegmentedButton<String>(
             segments: const [
-              ButtonSegment(value: 'local', label: Text('Local backend')),
-              ButtonSegment(value: 'remote', label: Text('Remote backend')),
+              ButtonSegment(value: 'local', label: Text('本地后端')),
+              ButtonSegment(value: 'remote', label: Text('远程后端')),
             ],
             selected: {backendMode},
             onSelectionChanged: (value) => onBackendModeChanged(value.first),
           ),
           SwitchListTile(
-            title: const Text('Auto-start local backend'),
+            title: const Text('自动启动本地后端'),
             value: autoStartBackend,
             onChanged: onAutoStartChanged,
           ),
           SwitchListTile(
-            title: const Text('Close local backend on app exit'),
+            title: const Text('退出应用时关闭本地后端'),
             value: closeBackendOnExit,
             onChanged: onCloseOnExitChanged,
           ),
@@ -142,7 +142,7 @@ class SettingsPage extends StatelessWidget {
                 child: TextField(
                   controller: localPythonController,
                   decoration: const InputDecoration(
-                    labelText: 'Local Python path',
+                    labelText: '本地 Python 路径',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -152,7 +152,7 @@ class SettingsPage extends StatelessWidget {
                 child: TextField(
                   controller: localBackendRootController,
                   decoration: const InputDecoration(
-                    labelText: 'Local backend root',
+                    labelText: '本地后端根目录',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -166,9 +166,8 @@ class SettingsPage extends StatelessWidget {
                 child: TextField(
                   controller: userIdController,
                   decoration: const InputDecoration(
-                    labelText: 'User ID (optional)',
-                    helperText:
-                        'Leave empty to authenticate with Authorization: Bearer.',
+                    labelText: '用户 ID（可选）',
+                    helperText: '留空则使用 Authorization: Bearer 认证。',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -179,7 +178,7 @@ class SettingsPage extends StatelessWidget {
                   controller: apiKeyController,
                   obscureText: true,
                   decoration: const InputDecoration(
-                    labelText: 'X-API-Key',
+                    labelText: 'API Key（X-API-Key）',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -198,7 +197,7 @@ class SettingsPage extends StatelessWidget {
           Row(
             children: [
               const Text(
-                'Backend logs',
+                '后端日志',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               ),
               const Spacer(),
@@ -211,14 +210,12 @@ class SettingsPage extends StatelessWidget {
                         );
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Backend logs copied.'),
-                            ),
+                            const SnackBar(content: Text('后端日志已复制。')),
                           );
                         }
                       },
                 icon: const Icon(Icons.copy),
-                label: const Text('Copy logs'),
+                label: const Text('复制日志'),
               ),
             ],
           ),
@@ -235,7 +232,7 @@ class SettingsPage extends StatelessWidget {
                 children: backendLogs.isEmpty
                     ? const [
                         Text(
-                          'No backend logs captured yet.',
+                          '还没有捕获到后端日志。',
                           style: TextStyle(color: Colors.white70),
                         ),
                       ]
@@ -255,11 +252,11 @@ class SettingsPage extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           const Text(
-            'Novel Studio roadmap',
+            '小说工作台路线图',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
-          const Text('Status: planned / not implemented.'),
+          const Text('状态：已规划 / 未实现。'),
           const SizedBox(height: 4),
           const Text('阶段 0：工程基线准备中。下一阶段：Novel 项目与基础资料库。'),
         ],
@@ -290,14 +287,14 @@ class _AuthRecoverySection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Auth recovery',
+          '认证恢复',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 8),
         Text(
           currentUser == null
               ? '输入 API Key 后可以留空 User ID，客户端会使用 Bearer-only 认证让后端自动识别用户。'
-              : 'Current user: ${currentUser!.userId} (${currentUser!.role})',
+              : '当前用户：${currentUser!.userId}（${currentUser!.role}）',
         ),
         const SizedBox(height: 8),
         const Text('API Key 不能找回，只能由已认证 admin 重新生成。新 Key 只显示一次。'),
@@ -314,7 +311,7 @@ class _AuthRecoverySection extends StatelessWidget {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.people_outline),
-                label: const Text('Load users'),
+                label: const Text('加载用户'),
               ),
             ],
           ),
@@ -324,7 +321,7 @@ class _AuthRecoverySection extends StatelessWidget {
               child: ListTile(
                 title: Text('${user.userId} (${user.role})'),
                 subtitle: Text(
-                  'enabled=${user.enabled}  key=${user.apiKeyMasked ?? "***"}',
+                  '已启用=${user.enabled}  Key=${user.apiKeyMasked ?? "***"}',
                 ),
                 trailing: OutlinedButton.icon(
                   onPressed: () async {
@@ -332,7 +329,7 @@ class _AuthRecoverySection extends StatelessWidget {
                         await showDialog<bool>(
                           context: context,
                           builder: (dialogContext) => AlertDialog(
-                            title: const Text('Regenerate API Key'),
+                            title: const Text('重新生成 API Key'),
                             content: Text(
                               '即将让 ${user.userId} 的旧 API Key 立即失效。新 Key 只显示一次。',
                             ),
@@ -340,12 +337,12 @@ class _AuthRecoverySection extends StatelessWidget {
                               TextButton(
                                 onPressed: () =>
                                     Navigator.pop(dialogContext, false),
-                                child: const Text('Cancel'),
+                                child: const Text('取消'),
                               ),
                               FilledButton(
                                 onPressed: () =>
                                     Navigator.pop(dialogContext, true),
-                                child: const Text('Regenerate'),
+                                child: const Text('重新生成'),
                               ),
                             ],
                           ),
@@ -361,7 +358,7 @@ class _AuthRecoverySection extends StatelessWidget {
                     await showDialog<void>(
                       context: context,
                       builder: (dialogContext) => AlertDialog(
-                        title: const Text('New API Key'),
+                        title: const Text('新 API Key'),
                         content: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -379,26 +376,26 @@ class _AuthRecoverySection extends StatelessWidget {
                               );
                             },
                             icon: const Icon(Icons.copy),
-                            label: const Text('Copy'),
+                            label: const Text('复制'),
                           ),
                           FilledButton(
                             onPressed: () => Navigator.pop(dialogContext),
-                            child: const Text('Close'),
+                            child: const Text('关闭'),
                           ),
                         ],
                       ),
                     );
                   },
                   icon: const Icon(Icons.key),
-                  label: const Text('Regenerate'),
+                  label: const Text('重新生成'),
                 ),
               ),
             ),
           ),
         ] else
-          const Text('User Management 仅 admin 可见。'),
+          const Text('用户管理仅 admin 可见。'),
         const SizedBox(height: 12),
-        const Text('Admin 密码丢失时不能通过远程 UI 重置。请在后端所在机器运行：'),
+        const Text('admin 密码丢失时不能通过远程 UI 重置。请在后端所在机器运行：'),
         const SizedBox(height: 4),
         const SelectableText('python tools/reset_auth.py --reset-admin'),
         const SizedBox(height: 8),

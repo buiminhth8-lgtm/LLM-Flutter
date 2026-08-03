@@ -16,7 +16,7 @@ class RevisionTagSelector extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text('Edit Tags', style: Theme.of(context).textTheme.titleSmall),
+      Text('修改标签', style: Theme.of(context).textTheme.titleSmall),
       const SizedBox(height: 8),
       Wrap(
         spacing: 8,

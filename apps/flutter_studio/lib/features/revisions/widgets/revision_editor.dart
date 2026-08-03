@@ -22,16 +22,16 @@ class RevisionEditor extends StatelessWidget {
           children: [
             Expanded(
               child: _TextPanel(
-                title: 'Model Original',
+                title: '模型原文',
                 child: SelectableText(
-                  originalText.isEmpty ? 'No original text.' : originalText,
+                  originalText.isEmpty ? '暂无原文。' : originalText,
                 ),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _TextPanel(
-                title: 'Human Edited',
+                title: '人工修订',
                 scrollable: false,
                 child: TextField(
                   key: const Key('revision-edited-text'),
@@ -42,7 +42,7 @@ class RevisionEditor extends StatelessWidget {
                   textAlignVertical: TextAlignVertical.top,
                   onChanged: onChanged,
                   decoration: const InputDecoration.collapsed(
-                    hintText: 'Edit the revision text here.',
+                    hintText: '在这里编辑修订文本。',
                   ),
                 ),
               ),

@@ -46,11 +46,10 @@ void main() {
       ),
     );
 
-    expect(find.text('Fine-tune Center'), findsOneWidget);
+    expect(find.text('微调中心'), findsOneWidget);
     expect(find.text('adapter'), findsOneWidget);
     expect(find.byKey(const Key('finetune-new-run')), findsOneWidget);
-    expect(find.textContaining('Adapter Evaluation'), findsNothing);
-    expect(find.text('Evaluate Adapter'), findsNothing);
+    expect(find.text('创建评估会话'), findsNothing);
   });
 
   testWidgets('finetune_center capability flag controls navigation entry', (
@@ -70,7 +69,7 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Fine-tune'), findsNothing);
+    expect(find.text('微调'), findsNothing);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -84,6 +83,6 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Fine-tune'), findsOneWidget);
+    expect(find.text('微调'), findsOneWidget);
   });
 }

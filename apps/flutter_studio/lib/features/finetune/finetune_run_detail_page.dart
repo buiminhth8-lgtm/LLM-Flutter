@@ -25,7 +25,7 @@ class FinetuneRunDetailPage extends StatelessWidget {
     final state = controller.state;
     final run = state.currentRun;
     if (run == null) {
-      return const Center(child: Text('Select a fine-tune run.'));
+      return const Center(child: Text('请选择微调任务。'));
     }
     final canCancel = !{
       'completed',
@@ -60,15 +60,15 @@ class FinetuneRunDetailPage extends StatelessWidget {
                     FinetuneStatusBadge(status: run.status),
                   ],
                 ),
-                Text('run_id: ${run.runId}'),
-                Text('dataset_version: ${run.datasetVersionId}'),
-                Text('recipe: ${run.recipeId}'),
-                Text('base_model: ${run.baseModelId}'),
-                Text('method: ${run.method}'),
-                Text('progress: ${run.currentStep}/${run.totalSteps}'),
-                Text('train_loss: ${run.trainLoss ?? '-'}'),
-                Text('val_loss: ${run.valLoss ?? '-'}'),
-                Text('best_val_loss: ${run.bestValLoss ?? '-'}'),
+                Text('运行 ID：${run.runId}'),
+                Text('数据集版本：${run.datasetVersionId}'),
+                Text('配方：${run.recipeId}'),
+                Text('基础模型：${run.baseModelId}'),
+                Text('方法：${run.method}'),
+                Text('进度：${run.currentStep}/${run.totalSteps}'),
+                Text('训练 loss：${run.trainLoss ?? '-'}'),
+                Text('验证 loss：${run.valLoss ?? '-'}'),
+                Text('最佳验证 loss：${run.bestValLoss ?? '-'}'),
                 Wrap(
                   spacing: 8,
                   children: [
@@ -77,33 +77,31 @@ class FinetuneRunDetailPage extends StatelessWidget {
                       onPressed: run.status == 'created'
                           ? controller.startCurrentRun
                           : null,
-                      child: const Text('Start'),
+                      child: const Text('开始'),
                     ),
                     if (canCancel)
                       OutlinedButton(
                         key: const Key('finetune-cancel'),
                         onPressed: controller.cancelCurrentRun,
-                        child: const Text('Cancel'),
+                        child: const Text('取消'),
                       ),
                     if (canResume)
                       OutlinedButton(
                         key: const Key('finetune-resume-last'),
                         onPressed: controller.resumeCurrentRun,
-                        child: const Text('Resume from Last'),
+                        child: const Text('从最近检查点恢复'),
                       ),
                     if (canCreateEvaluation)
                       FilledButton.icon(
                         key: const Key('finetune-create-evaluation-session'),
                         onPressed: () => onCreateEvaluationSession!(run),
                         icon: const Icon(Icons.compare_outlined),
-                        label: const Text('Create Evaluation Session'),
+                        label: const Text('创建评估会话'),
                       ),
                   ],
                 ),
-                Text('config snapshot: ${run.configSnapshot}'),
-                Text(
-                  'dataset manifest snapshot: ${run.datasetManifestSnapshot}',
-                ),
+                Text('配置快照：${run.configSnapshot}'),
+                Text('数据集清单快照：${run.datasetManifestSnapshot}'),
               ],
             ),
           ),

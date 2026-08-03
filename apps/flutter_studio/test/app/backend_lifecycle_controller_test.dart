@@ -52,7 +52,7 @@ void main() {
     );
 
     expect(service.ensureCalls, 0);
-    expect(controller.backendStatus, 'Using remote backend.');
+    expect(controller.backendStatus, '正在使用远程后端。');
   });
 
   test('restart and stop delegate to backend service', () async {
@@ -64,6 +64,6 @@ void main() {
 
     expect(service.stopCalls, 2);
     expect(service.ensureCalls, 1);
-    expect(controller.backendStatus, 'Backend stopped by Flutter.');
+    expect(controller.backendStatus, 'Flutter 已停止后端。');
   });
 }

@@ -16,16 +16,10 @@ class AppFeatureDisabledBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialBanner(
       leading: const Icon(Icons.info_outline),
-      content: Text(
-        message ??
-            '$featureName is not enabled by backend capabilities. Open Settings to verify the backend and feature flags.',
-      ),
+      content: Text(message ?? '$featureName 未在后端能力中启用。请打开设置检查后端与功能开关。'),
       actions: [
         if (onOpenSettings != null)
-          TextButton(
-            onPressed: onOpenSettings,
-            child: const Text('Open Settings'),
-          ),
+          TextButton(onPressed: onOpenSettings, child: const Text('打开设置')),
       ],
     );
   }

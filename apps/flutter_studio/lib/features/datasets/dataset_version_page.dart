@@ -23,14 +23,11 @@ class DatasetVersionPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const AppSectionHeader(
-              title: 'DatasetVersion',
-              subtitle:
-                  'Frozen immutable dataset artifact for Stage 8 preparation.',
+              title: '数据集版本',
+              subtitle: '为阶段 8 准备的冻结且不可变的数据集产物。',
             ),
             if (version == null)
-              const Expanded(
-                child: Center(child: Text('Select a frozen version.')),
-              )
+              const Expanded(child: Center(child: Text('请选择冻结版本。')))
             else
               Expanded(
                 child: ListView(

@@ -25,7 +25,7 @@ class EvaluationCreateRunDialog extends StatefulWidget {
 }
 
 class _EvaluationCreateRunDialogState extends State<EvaluationCreateRunDialog> {
-  late final _name = TextEditingController(text: 'Novel evaluation');
+  late final _name = TextEditingController(text: '小说评估');
   final _description = TextEditingController();
   late final _targetId = TextEditingController(text: widget.initialTargetId);
   late final _projectId = TextEditingController(text: widget.initialProjectId);
@@ -48,7 +48,7 @@ class _EvaluationCreateRunDialogState extends State<EvaluationCreateRunDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Create Evaluation Run'),
+    title: const Text('创建评估运行'),
     content: SizedBox(
       width: 640,
       child: SingleChildScrollView(
@@ -60,7 +60,7 @@ class _EvaluationCreateRunDialogState extends State<EvaluationCreateRunDialog> {
               key: const Key('evaluation-run-name'),
               controller: _name,
               decoration: const InputDecoration(
-                labelText: 'Run name',
+                labelText: '运行名称',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -68,7 +68,7 @@ class _EvaluationCreateRunDialogState extends State<EvaluationCreateRunDialog> {
             TextField(
               controller: _description,
               decoration: const InputDecoration(
-                labelText: 'Description',
+                labelText: '描述',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -82,7 +82,7 @@ class _EvaluationCreateRunDialogState extends State<EvaluationCreateRunDialog> {
                   setState(() => _targetType = value),
             ),
             const SizedBox(height: 14),
-            Text('Evaluators', style: Theme.of(context).textTheme.titleMedium),
+            Text('评估器', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 6),
             Wrap(
               spacing: 8,
@@ -109,8 +109,8 @@ class _EvaluationCreateRunDialogState extends State<EvaluationCreateRunDialog> {
               key: const Key('evaluation-local-model-judge'),
               contentPadding: EdgeInsets.zero,
               value: _useLocalModelJudge,
-              title: const Text('Use local model judge'),
-              subtitle: const Text('Optional; uses local Runtime only.'),
+              title: const Text('使用本地模型裁判'),
+              subtitle: const Text('可选；仅使用本地 Runtime。'),
               onChanged: (value) => setState(() {
                 _useLocalModelJudge = value;
                 if (value) {
@@ -125,14 +125,12 @@ class _EvaluationCreateRunDialogState extends State<EvaluationCreateRunDialog> {
               controller: _localModel,
               enabled: _useLocalModelJudge,
               decoration: const InputDecoration(
-                labelText: 'Local judge model id',
+                labelText: '本地裁判模型 ID',
                 border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Evaluation reads existing Novel Studio assets only. It does not rewrite chapters, create training samples, or start fine-tuning.',
-            ),
+            const Text('评估只读取现有小说工作台资产，不会重写章节、创建训练样本或启动微调。'),
           ],
         ),
       ),
@@ -140,7 +138,7 @@ class _EvaluationCreateRunDialogState extends State<EvaluationCreateRunDialog> {
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancel'),
+        child: const Text('取消'),
       ),
       FilledButton(
         key: const Key('evaluation-create-run-submit'),
@@ -152,7 +150,7 @@ class _EvaluationCreateRunDialogState extends State<EvaluationCreateRunDialog> {
                 widget.onCreate(
                   CreateEvaluationRunRequest(
                     name: _name.text.trim().isEmpty
-                        ? 'Novel evaluation'
+                        ? '小说评估'
                         : _name.text.trim(),
                     description: _description.text.trim(),
                     targetType: _targetType,
@@ -173,7 +171,7 @@ class _EvaluationCreateRunDialogState extends State<EvaluationCreateRunDialog> {
                   ),
                 );
               },
-        child: const Text('Run Evaluation'),
+        child: const Text('运行评估'),
       ),
     ],
   );

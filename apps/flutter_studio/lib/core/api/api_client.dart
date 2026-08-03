@@ -57,7 +57,7 @@ class LlmStudioClient {
     if (user is Map) {
       return AuthUserDto.fromMap(user);
     }
-    throw StudioApiException('API response does not contain current user.');
+    throw StudioApiException('API 响应缺少当前用户。');
   }
 
   Future<List<AuthUserDto>> authUsers() async {
@@ -1494,7 +1494,7 @@ class LlmStudioClient {
     if (body is Map<String, dynamic>) {
       return body;
     }
-    throw StudioApiException('API response is not a JSON object.');
+    throw StudioApiException('API 响应不是 JSON 对象。');
   }
 
   Map<String, String> _authHeaders() {

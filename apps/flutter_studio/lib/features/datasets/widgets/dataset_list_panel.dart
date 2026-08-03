@@ -36,7 +36,7 @@ class DatasetListPanel extends StatelessWidget {
         key: const Key('dataset-create-button'),
         onPressed: onCreate,
         icon: const Icon(Icons.add),
-        label: const Text('New Dataset'),
+        label: const Text('新建数据集'),
       ),
       const SizedBox(height: 12),
       DatasetFilterBar(
@@ -59,10 +59,19 @@ class DatasetListPanel extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
           subtitle: Text(
-            '${dataset.type} · ${dataset.status} · ${dataset.sampleCount} samples',
+            '${dataset.type} · ${datasetStatusLabel(dataset.status)} · ${dataset.sampleCount} 个样本',
           ),
           onTap: () => onSelect(dataset.datasetId),
         ),
     ],
   );
 }
+
+String datasetStatusLabel(String value) => switch (value) {
+  'draft' => '草稿',
+  'ready' => '可冻结',
+  'dirty' => '已变更',
+  'frozen' => '已冻结',
+  'archived' => '已归档',
+  _ => value,
+};

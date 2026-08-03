@@ -71,19 +71,18 @@ class _PromptStudioPageState extends State<PromptStudioPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AppSectionHeader(
-            title: 'Prompt Studio',
-            subtitle:
-                'Stage 2: template versions, variable validation, and render preview only. No model generation is connected.',
+            title: '提示词工作室',
+            subtitle: '阶段 2：模板版本、变量校验与渲染预览；不连接模型生成。',
             actions: [
               IconButton.filledTonal(
                 onPressed: widget.controller.refresh,
                 icon: const Icon(Icons.refresh),
-                tooltip: 'Refresh',
+                tooltip: '刷新',
               ),
               FilledButton.icon(
                 onPressed: widget.controller.ensureDefaults,
                 icon: const Icon(Icons.library_add_outlined),
-                label: const Text('Ensure defaults'),
+                label: const Text('确保默认模板'),
               ),
             ],
           ),
@@ -95,7 +94,7 @@ class _PromptStudioPageState extends State<PromptStudioPage> {
               actions: [
                 TextButton(
                   onPressed: () => setState(() {}),
-                  child: const Text('Dismiss'),
+                  child: const Text('关闭'),
                 ),
               ],
             ),
@@ -117,7 +116,7 @@ class _PromptStudioPageState extends State<PromptStudioPage> {
                   child: ListView(
                     children: [
                       Text(
-                        'Create template',
+                        '创建模板',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 8),
@@ -170,7 +169,7 @@ class _PromptStudioPageState extends State<PromptStudioPage> {
                         maxLines: 5,
                         onChanged: (_) => setState(() {}),
                         decoration: InputDecoration(
-                          labelText: 'variables_schema JSON',
+                          labelText: '变量结构 JSON',
                           border: const OutlineInputBorder(),
                           errorText: validSchema ? null : '必须是合法 JSON object',
                         ),
@@ -182,7 +181,7 @@ class _PromptStudioPageState extends State<PromptStudioPage> {
                         maxLines: 4,
                         onChanged: (_) => setState(() {}),
                         decoration: InputDecoration(
-                          labelText: 'default_values JSON',
+                          labelText: '默认值 JSON',
                           border: const OutlineInputBorder(),
                           errorText: validDefaults ? null : '必须是合法 JSON object',
                         ),
@@ -204,7 +203,7 @@ class _PromptStudioPageState extends State<PromptStudioPage> {
                               )
                             : null,
                         icon: const Icon(Icons.save_outlined),
-                        label: const Text('Create template'),
+                        label: const Text('创建模板'),
                       ),
                     ],
                   ),
@@ -213,8 +212,8 @@ class _PromptStudioPageState extends State<PromptStudioPage> {
                 Expanded(
                   child: selected == null
                       ? const AppEmptyState(
-                          title: 'No prompt template',
-                          message: 'Create or ensure default templates first.',
+                          title: '暂无提示词模板',
+                          message: '请先创建或确保默认模板存在。',
                           icon: Icons.description_outlined,
                         )
                       : _PreviewPanel(
@@ -249,8 +248,8 @@ class _TemplateList extends StatelessWidget {
   Widget build(BuildContext context) {
     if (templates.isEmpty) {
       return const AppEmptyState(
-        title: 'No templates',
-        message: 'Use Ensure defaults or create a prompt template.',
+        title: '暂无模板',
+        message: '请使用“确保默认模板”或创建提示词模板。',
         icon: Icons.description_outlined,
       );
     }
@@ -300,10 +299,10 @@ class _PreviewPanel extends StatelessWidget {
       children: [
         Text(template.name, style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 4),
-        Text('Type: ${promptTypeLabels[template.type] ?? template.type}'),
-        Text('Scope: ${template.scope}'),
+        Text('类型：${promptTypeLabels[template.type] ?? template.type}'),
+        Text('范围：${template.scope}'),
         const SizedBox(height: 12),
-        Text('Versions', style: Theme.of(context).textTheme.titleMedium),
+        Text('版本', style: Theme.of(context).textTheme.titleMedium),
         for (final version in state.versions)
           ListTile(
             dense: true,
@@ -320,7 +319,7 @@ class _PreviewPanel extends StatelessWidget {
           maxLines: 8,
           onChanged: (_) => onVariablesChanged(),
           decoration: InputDecoration(
-            labelText: 'variables JSON',
+            labelText: '变量 JSON',
             border: const OutlineInputBorder(),
             errorText: variablesValid ? null : '必须是合法 JSON object',
           ),
@@ -331,26 +330,23 @@ class _PreviewPanel extends StatelessWidget {
               ? () => controller.renderPreview(variablesJson: variables.text)
               : null,
           icon: const Icon(Icons.visibility_outlined),
-          label: const Text('Render preview'),
+          label: const Text('渲染预览'),
         ),
         const SizedBox(height: 16),
         if (result != null) ...[
-          Text(
-            'Rendered prompt',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
+          Text('已渲染提示词', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           SelectableText(result.renderedPrompt),
           if (result.missingVariables.isNotEmpty) ...[
             const SizedBox(height: 12),
-            Text('Missing variables: ${result.missingVariables.join(', ')}'),
+            Text('缺失变量：${result.missingVariables.join(', ')}'),
           ],
           if (result.warnings.isNotEmpty) ...[
             const SizedBox(height: 12),
-            Text('Warnings: ${result.warnings.join('; ')}'),
+            Text('警告：${result.warnings.join('; ')}'),
           ],
           const SizedBox(height: 12),
-          SelectableText('prompt_hash: ${result.promptHash}'),
+          SelectableText('提示词哈希：${result.promptHash}'),
         ],
       ],
     );

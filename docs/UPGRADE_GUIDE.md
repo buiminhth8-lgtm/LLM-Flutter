@@ -1,24 +1,13 @@
-# Upgrade Guide
+# 升级指南
 
-1. 停止 Flutter 和本地后端。
-2. 运行备份：
+## 推荐步骤
 
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/windows/backup_data.ps1
-```
+1. 停止 Flutter 和后端。
+2. 备份 `data/` 与 `config.yaml`。
+3. 拉取新版本。
+4. 安装或更新 Python / Flutter 依赖。
+5. 运行后端与 Flutter 验证命令。
 
-3. 拉取或安装新版本。
-4. 检查环境：
+## 注意
 
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/windows/check_environment.ps1
-```
-
-5. 启动后端并检查：
-
-```powershell
-curl http://127.0.0.1:8000/v1/version
-curl http://127.0.0.1:8000/v1/health/full
-```
-
-Stage 12 不修改冻结的 DatasetVersion，也不会自动训练或自动激活 Adapter。
+如果能力入口缺失，优先检查 `config.yaml` 和 `/v1/capabilities`。

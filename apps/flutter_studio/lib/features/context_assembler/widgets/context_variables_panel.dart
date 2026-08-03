@@ -25,7 +25,7 @@ class ContextVariablesPanel extends StatelessWidget {
             IconButton(
               onPressed: () => Clipboard.setData(ClipboardData(text: json)),
               icon: const Icon(Icons.copy_outlined),
-              tooltip: 'Copy variables JSON',
+              tooltip: '复制变量 JSON',
             ),
           ],
         ),

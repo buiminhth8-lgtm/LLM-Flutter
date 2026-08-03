@@ -37,21 +37,21 @@ class NovelStudioHealthPanel extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text('Health', style: Theme.of(context).textTheme.titleMedium),
+                Text('健康状态', style: Theme.of(context).textTheme.titleMedium),
                 const Spacer(),
                 AppStatusBadge(label: status, tone: tone),
               ],
             ),
             const SizedBox(height: 12),
-            Text('Backend: $backendStatus'),
-            Text('Model: $modelLabel'),
-            Text('Adapter: $adapterLabel'),
-            Text('Jobs: $runningJobs running'),
+            Text('后端：$backendStatus'),
+            Text('模型：$modelLabel'),
+            Text('适配器：$adapterLabel'),
+            Text('任务：$runningJobs 个运行中'),
             const SizedBox(height: 12),
             OutlinedButton.icon(
               onPressed: onRefresh,
               icon: const Icon(Icons.refresh),
-              label: const Text('Refresh health'),
+              label: const Text('刷新健康状态'),
             ),
           ],
         ),

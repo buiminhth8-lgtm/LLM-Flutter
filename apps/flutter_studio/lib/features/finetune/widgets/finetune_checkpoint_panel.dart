@@ -19,26 +19,29 @@ class FinetuneCheckpointPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Checkpoints',
-            style: TextStyle(fontWeight: FontWeight.w700),
-          ),
+          const Text('检查点', style: TextStyle(fontWeight: FontWeight.w700)),
           for (final checkpoint in checkpoints)
             ListTile(
               dense: true,
               title: Text(
-                '${checkpoint.checkpointType} step ${checkpoint.step}'
-                '${checkpoint.isBest ? ' · best' : ''}'
-                '${checkpoint.isLast ? ' · last' : ''}',
+                '${_checkpointTypeLabel(checkpoint.checkpointType)} 步数 ${checkpoint.step}'
+                '${checkpoint.isBest ? ' · 最佳' : ''}'
+                '${checkpoint.isLast ? ' · 最近' : ''}',
               ),
               subtitle: Text(checkpoint.checkpointPath),
               trailing: TextButton(
                 onPressed: () => onResumeCheckpoint(checkpoint.checkpointId),
-                child: const Text('Resume'),
+                child: const Text('恢复'),
               ),
             ),
         ],
       ),
     ),
   );
+
+  String _checkpointTypeLabel(String value) => switch (value) {
+    'best' => '最佳检查点',
+    'last' => '最近检查点',
+    _ => value,
+  };
 }

@@ -59,7 +59,7 @@ class _RecipeConfigEditorState extends State<RecipeConfigEditor> {
                 double.tryParse(_learningRate.text.trim()) ?? 0.0002,
           },
         }),
-        child: const Text('Save Recipe Config'),
+        child: const Text('保存配方配置'),
       ),
     ],
   );

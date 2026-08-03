@@ -71,7 +71,7 @@ class ContextBudgetPanel extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '估算 $estimatedTokens tokens / ${result!.estimatedChars ?? 0} 字符',
+        '估算 $estimatedTokens Token / ${result!.estimatedChars ?? 0} 字符',
             style: TextStyle(color: color),
           ),
         ],

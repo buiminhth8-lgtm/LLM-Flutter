@@ -16,7 +16,7 @@ class DatasetManifestPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (version == null) {
-      return const Text('Select a DatasetVersion to view manifest.');
+      return const Text('请选择数据集版本查看清单。');
     }
     return Card(
       child: Padding(
@@ -25,18 +25,18 @@ class DatasetManifestPanel extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Manifest v${version!.version}',
+              '清单 v${version!.version}',
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
-            Text('manifest: ${version!.manifestPath}'),
-            Text('train: ${version!.trainPath}'),
-            Text('val: ${version!.valPath ?? 'none'}'),
+            Text('清单路径：${version!.manifestPath}'),
+            Text('训练集：${version!.trainPath}'),
+            Text('验证集：${version!.valPath ?? '无'}'),
             Text(
-              'tokens: ${version!.trainTokenEstimate} train / ${version!.valTokenEstimate} val',
+              'Token：训练 ${version!.trainTokenEstimate} / 验证 ${version!.valTokenEstimate}',
             ),
             if (manifest != null)
               Text(
-                'split: ${manifest!.split['strategy'] ?? '-'} · format: ${manifest!.format}',
+                '拆分：${manifest!.split['strategy'] ?? '-'} · 格式：${manifest!.format}',
               ),
           ],
         ),

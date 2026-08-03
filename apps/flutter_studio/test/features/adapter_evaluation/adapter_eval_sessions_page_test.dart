@@ -26,8 +26,8 @@ void main() {
       ),
     );
 
-    expect(find.text('Adapter Evaluation'), findsOneWidget);
-    expect(find.text('Adapter comparison'), findsWidgets);
+    expect(find.text('适配器评估'), findsOneWidget);
+    expect(find.text('适配器对比'), findsWidgets);
     expect(find.text('Opening continuation'), findsWidgets);
     expect(find.text('base output'), findsOneWidget);
     expect(find.text('adapter output'), findsOneWidget);
@@ -51,7 +51,7 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Adapter Eval'), findsNothing);
+    expect(find.text('适配器评估'), findsNothing);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -65,6 +65,6 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Adapter Eval'), findsOneWidget);
+    expect(find.text('适配器评估'), findsOneWidget);
   });
 }

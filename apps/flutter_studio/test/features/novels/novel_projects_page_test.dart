@@ -54,7 +54,7 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Novel Studio'), findsNothing);
+    expect(find.text('小说工作台'), findsNothing);
 
     await tester.pumpWidget(
       _wrap(
@@ -65,7 +65,7 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Novel Studio', skipOffstage: false), findsOneWidget);
+    expect(find.text('小说工作台', skipOffstage: false), findsOneWidget);
   });
 
   testWidgets('new project form submits to controller API', (tester) async {
@@ -78,7 +78,7 @@ void main() {
 
     await tester.pumpWidget(_wrap(NovelProjectsPage(controller: controller)));
     await tester.enterText(find.byType(TextField).first, 'Created Novel');
-    await tester.tap(find.text('Create project'));
+    await tester.tap(find.text('创建项目'));
     await tester.pumpAndSettle();
 
     final body = jsonDecode(httpClient.lastPostBody) as Map;
@@ -137,17 +137,17 @@ void main() {
     await tester.pumpWidget(_wrap(NovelProjectsPage(controller: controller)));
     expect(find.text('Novel'), findsWidgets);
 
-    await tester.tap(find.text('Chapters'));
+    await tester.tap(find.text('章节'));
     await tester.pumpAndSettle();
     expect(find.text('1. Chapter 1'), findsOneWidget);
 
-    await tester.ensureVisible(find.text('Characters'));
-    await tester.tap(find.text('Characters'), warnIfMissed: false);
+    await tester.ensureVisible(find.text('人物'));
+    await tester.tap(find.text('人物'), warnIfMissed: false);
     await tester.pumpAndSettle();
     expect(find.text('Alice'), findsOneWidget);
 
-    await tester.ensureVisible(find.text('World Bible'));
-    await tester.tap(find.text('World Bible'), warnIfMissed: false);
+    await tester.ensureVisible(find.text('世界观设定'));
+    await tester.tap(find.text('世界观设定'), warnIfMissed: false);
     await tester.pumpAndSettle();
     expect(find.text('City'), findsOneWidget);
   });

@@ -110,39 +110,42 @@ class FinetuneApiHttpClient extends http.BaseClient {
 }
 
 void main() {
-  test('FinetuneApiClient parses preflight, run, metrics, logs, checkpoints', () async {
-    final httpClient = FinetuneApiHttpClient();
-    final api = FinetuneApiClient(
-      LlmStudioClient('http://localhost', httpClient: httpClient),
-    );
+  test(
+    'FinetuneApiClient parses preflight, run, metrics, logs, checkpoints',
+    () async {
+      final httpClient = FinetuneApiHttpClient();
+      final api = FinetuneApiClient(
+        LlmStudioClient('http://localhost', httpClient: httpClient),
+      );
 
-    final preflight = await api.preflightFinetune(
-      const FinetunePreflightRequestDto(
-        datasetVersionId: 'dsv-1',
-        recipeId: 'recipe-1',
-        baseModelId: 'qwen-local',
-        adapterName: 'adapter',
-      ),
-    );
-    final run = await api.createFinetuneRun(
-      const FinetuneCreateRunRequestDto(
-        datasetVersionId: 'dsv-1',
-        recipeId: 'recipe-1',
-        baseModelId: 'qwen-local',
-        adapterName: 'adapter',
-      ),
-    );
+      final preflight = await api.preflightFinetune(
+        const FinetunePreflightRequestDto(
+          datasetVersionId: 'dsv-1',
+          recipeId: 'recipe-1',
+          baseModelId: 'qwen-local',
+          adapterName: 'adapter',
+        ),
+      );
+      final run = await api.createFinetuneRun(
+        const FinetuneCreateRunRequestDto(
+          datasetVersionId: 'dsv-1',
+          recipeId: 'recipe-1',
+          baseModelId: 'qwen-local',
+          adapterName: 'adapter',
+        ),
+      );
 
-    expect(preflight.ok, isTrue);
-    expect(preflight.warnings.first['code'], 'FINETUNE_NO_VALIDATION_SPLIT');
-    expect(run.status, 'queued');
-    expect((await api.listFinetuneRuns()).first.runId, 'run-1');
-    expect((await api.getFinetuneMetrics('run-1')).first.trainLoss, 2.9);
-    expect((await api.getFinetuneLogs('run-1')).first.message, 'started');
-    expect((await api.getFinetuneCheckpoints('run-1')).first.isLast, isTrue);
-    await api.startFinetuneRun('run-1');
-    await api.cancelFinetuneRun('run-1');
-    await api.resumeFinetuneRun('run-1', checkpointId: 'ckpt-1');
-    expect(httpClient.paths, contains('POST /v1/finetune/preflight'));
-  });
+      expect(preflight.ok, isTrue);
+      expect(preflight.warnings.first['code'], 'FINETUNE_NO_VALIDATION_SPLIT');
+      expect(run.status, 'queued');
+      expect((await api.listFinetuneRuns()).first.runId, 'run-1');
+      expect((await api.getFinetuneMetrics('run-1')).first.trainLoss, 2.9);
+      expect((await api.getFinetuneLogs('run-1')).first.message, 'started');
+      expect((await api.getFinetuneCheckpoints('run-1')).first.isLast, isTrue);
+      await api.startFinetuneRun('run-1');
+      await api.cancelFinetuneRun('run-1');
+      await api.resumeFinetuneRun('run-1', checkpointId: 'ckpt-1');
+      expect(httpClient.paths, contains('POST /v1/finetune/preflight'));
+    },
+  );
 }

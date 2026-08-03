@@ -118,7 +118,7 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Dataset'), findsNothing);
+    expect(find.text('数据集'), findsNothing);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -132,6 +132,6 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Dataset'), findsOneWidget);
+    expect(find.text('数据集'), findsOneWidget);
   });
 }

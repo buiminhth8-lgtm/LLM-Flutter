@@ -30,11 +30,11 @@ void main() {
       ),
     );
 
-    expect(find.text('Novel Studio'), findsOneWidget);
-    expect(find.text('Projects'), findsOneWidget);
-    expect(find.text('Evaluation'), findsOneWidget);
+    expect(find.text('小说工作台'), findsOneWidget);
+    expect(find.text('项目'), findsOneWidget);
+    expect(find.text('评估'), findsOneWidget);
 
-    await tester.tap(find.text('Projects'));
+    await tester.tap(find.text('项目'));
     expect(selected, novelProjectsPageIndex);
   });
 }

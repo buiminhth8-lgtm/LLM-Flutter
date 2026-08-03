@@ -61,10 +61,7 @@ void main() {
     controller.userIdController.text = '';
     controller.apiKeyController.text = 'bearer-only-key';
 
-    await controller.save(
-      selectedModelId: null,
-      chatStreamingEnabled: true,
-    );
+    await controller.save(selectedModelId: null, chatStreamingEnabled: true);
 
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString('llm_studio.user_id'), '');

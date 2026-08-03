@@ -32,8 +32,8 @@ class AppCapabilityGate extends StatelessWidget {
     }
     return fallback ??
         AppEmptyState(
-          title: 'Capability unavailable',
-          message: '$capabilityName is disabled or not exposed by the backend.',
+          title: '能力不可用',
+          message: '$capabilityName 已禁用或后端未暴露。',
           icon: Icons.lock_outline,
         );
   }

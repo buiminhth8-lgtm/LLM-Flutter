@@ -6,7 +6,7 @@ class AppErrorState extends StatelessWidget {
   const AppErrorState({
     super.key,
     required this.message,
-    this.title = 'Something needs attention',
+    this.title = '需要处理的问题',
     this.onRetry,
   });
 

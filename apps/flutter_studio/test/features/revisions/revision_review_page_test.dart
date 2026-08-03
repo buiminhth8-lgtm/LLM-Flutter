@@ -136,7 +136,7 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Revision'), findsNothing);
+    expect(find.text('修订版本'), findsNothing);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -150,6 +150,6 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Revision'), findsOneWidget);
+    expect(find.text('修订版本'), findsOneWidget);
   });
 }

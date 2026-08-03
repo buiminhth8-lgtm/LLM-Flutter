@@ -42,13 +42,10 @@ class _TrainingRecipePanelState extends State<TrainingRecipePanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'Training Recipe Preview',
-            style: TextStyle(fontWeight: FontWeight.w700),
-          ),
+          const Text('训练配方预览', style: TextStyle(fontWeight: FontWeight.w700)),
           TextField(
             controller: _baseModel,
-            decoration: const InputDecoration(labelText: 'base_model_id'),
+            decoration: const InputDecoration(labelText: '基础模型 ID'),
           ),
           DropdownButtonFormField<String>(
             initialValue: _method,
@@ -61,15 +58,15 @@ class _TrainingRecipePanelState extends State<TrainingRecipePanel> {
           ),
           TextField(
             controller: _vram,
-            decoration: const InputDecoration(labelText: 'GPU VRAM GB'),
+            decoration: const InputDecoration(labelText: 'GPU 显存 GB'),
           ),
           DropdownButtonFormField<String>(
             initialValue: _quality,
-            decoration: const InputDecoration(labelText: 'quality'),
+            decoration: const InputDecoration(labelText: '质量偏好'),
             items: const [
-              DropdownMenuItem(value: 'fast', child: Text('Fast')),
-              DropdownMenuItem(value: 'balanced', child: Text('Balanced')),
-              DropdownMenuItem(value: 'quality', child: Text('Quality')),
+              DropdownMenuItem(value: 'fast', child: Text('快速')),
+              DropdownMenuItem(value: 'balanced', child: Text('均衡')),
+              DropdownMenuItem(value: 'quality', child: Text('质量优先')),
             ],
             onChanged: (value) => setState(() => _quality = value ?? _quality),
           ),
@@ -85,18 +82,14 @@ class _TrainingRecipePanelState extends State<TrainingRecipePanel> {
                 quality: _quality,
               ),
             ),
-            child: const Text('Recommend Recipe'),
+            child: const Text('推荐配方'),
           ),
           if (widget.recipe != null) ...[
             const SizedBox(height: 8),
-            Text(
-              'method: ${widget.recipe!.method} · status: ${widget.recipe!.status}',
-            ),
-            Text('estimated VRAM: ${widget.recipe!.estimatedVramGb ?? '-'} GB'),
-            Text(
-              'estimated time: ${widget.recipe!.estimatedTrainTimeMinutes ?? '-'} min',
-            ),
-            Text('config: ${widget.recipe!.recommendedConfig}'),
+            Text('方法：${widget.recipe!.method} · 状态：${widget.recipe!.status}'),
+            Text('预计显存：${widget.recipe!.estimatedVramGb ?? '-'} GB'),
+            Text('预计耗时：${widget.recipe!.estimatedTrainTimeMinutes ?? '-'} 分钟'),
+            Text('配置：${widget.recipe!.recommendedConfig}'),
             RecipeConfigEditor(
               initialConfig: widget.recipe!.recommendedConfig,
               onSave: widget.onSaveConfig,
@@ -106,11 +99,9 @@ class _TrainingRecipePanelState extends State<TrainingRecipePanel> {
               onPressed: widget.recipe!.status == 'confirmed'
                   ? null
                   : widget.onConfirm,
-              child: const Text('Confirm Recipe'),
+              child: const Text('确认配方'),
             ),
-            const Text(
-              'Confirmed recipe does not start training. Stage 8 will consume it.',
-            ),
+            const Text('确认配方不会启动训练，阶段 8 会使用它。'),
           ],
         ],
       ),

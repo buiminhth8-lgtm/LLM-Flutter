@@ -45,20 +45,19 @@ class _EvaluationCenterPageState extends State<EvaluationCenterPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             AppSectionHeader(
-              title: 'Evaluation Center',
-              subtitle:
-                  'Stage 11: automatic heuristics, optional local model judge, findings, manual scores and reports.',
+              title: '评估中心',
+              subtitle: '阶段 11：自动启发式评估、可选本地模型裁判、发现项、人工评分和报告。',
               actions: [
                 FilledButton.icon(
                   key: const Key('evaluation-new-run'),
                   onPressed: state.loading ? null : _showCreateRunDialog,
                   icon: const Icon(Icons.add_task_outlined),
-                  label: const Text('New Run'),
+                  label: const Text('新建运行'),
                 ),
                 IconButton.filledTonal(
                   onPressed: state.loading ? null : widget.controller.refresh,
                   icon: const Icon(Icons.refresh),
-                  tooltip: 'Refresh',
+                  tooltip: '刷新',
                 ),
               ],
             ),
@@ -106,7 +105,7 @@ class _EvaluationCenterPageState extends State<EvaluationCenterPage> {
           key: const Key('evaluation-project-filter'),
           controller: _projectFilter,
           decoration: const InputDecoration(
-            labelText: 'Project filter',
+            labelText: '项目筛选',
             border: OutlineInputBorder(),
           ),
           onSubmitted: (value) => widget.controller.setFilters(
@@ -120,19 +119,19 @@ class _EvaluationCenterPageState extends State<EvaluationCenterPage> {
           initialValue: state.selectedTargetType,
           isExpanded: true,
           decoration: const InputDecoration(
-            labelText: 'Target type',
+            labelText: '目标类型',
             border: OutlineInputBorder(),
           ),
           items: const [
-            DropdownMenuItem(value: null, child: Text('All')),
-            DropdownMenuItem(value: 'project', child: Text('Project')),
-            DropdownMenuItem(value: 'chapter', child: Text('Chapter')),
-            DropdownMenuItem(value: 'generation', child: Text('Generation')),
-            DropdownMenuItem(value: 'revision', child: Text('Revision')),
-            DropdownMenuItem(value: 'memory_retrieval', child: Text('Memory')),
+            DropdownMenuItem(value: null, child: Text('全部')),
+            DropdownMenuItem(value: 'project', child: Text('项目')),
+            DropdownMenuItem(value: 'chapter', child: Text('章节')),
+            DropdownMenuItem(value: 'generation', child: Text('生成记录')),
+            DropdownMenuItem(value: 'revision', child: Text('修订版本')),
+            DropdownMenuItem(value: 'memory_retrieval', child: Text('记忆')),
             DropdownMenuItem(
               value: 'adapter_eval_session',
-              child: Text('Adapter Eval'),
+              child: Text('适配器评估'),
             ),
           ],
           onChanged: (value) => widget.controller.setFilters(
@@ -146,11 +145,11 @@ class _EvaluationCenterPageState extends State<EvaluationCenterPage> {
           initialValue: state.selectedStatus,
           isExpanded: true,
           decoration: const InputDecoration(
-            labelText: 'Status',
+            labelText: '状态',
             border: OutlineInputBorder(),
           ),
           items: const [
-            DropdownMenuItem(value: null, child: Text('All')),
+            DropdownMenuItem(value: null, child: Text('全部')),
             DropdownMenuItem(value: 'created', child: Text('created')),
             DropdownMenuItem(value: 'queued', child: Text('queued')),
             DropdownMenuItem(value: 'running', child: Text('running')),
@@ -165,9 +164,7 @@ class _EvaluationCenterPageState extends State<EvaluationCenterPage> {
           ),
         ),
         const SizedBox(height: 10),
-        const Text(
-          'Boundary: Evaluation Center only reads existing assets. It never creates training samples or rewrites draft/final content.',
-        ),
+        const Text('边界：评估中心只读取现有资产，不创建训练样本，也不重写草稿或定稿内容。'),
         const SizedBox(height: 8),
         Expanded(
           child: EvaluationRunList(

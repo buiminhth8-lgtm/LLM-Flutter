@@ -18,7 +18,7 @@ class SampleTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (samples.isEmpty) {
-      return const Center(child: Text('No samples yet.'));
+      return const Center(child: Text('暂无样本。'));
     }
     return ListView(
       key: const Key('sample-table'),
@@ -35,7 +35,7 @@ class SampleTable extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
               subtitle: Text(
-                '${sample.sampleType} · score ${sample.qualityScore ?? '-'} · revision ${sample.revisionId ?? '-'}',
+                '${sample.sampleType} · 评分 ${sample.qualityScore ?? '-'} · 修订 ${sample.revisionId ?? '-'}',
               ),
               onTap: () => onSelect(sample),
             ),

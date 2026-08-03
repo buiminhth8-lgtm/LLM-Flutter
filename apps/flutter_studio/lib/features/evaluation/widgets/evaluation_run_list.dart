@@ -17,7 +17,7 @@ class EvaluationRunList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (runs.isEmpty) {
-      return const Center(child: Text('No evaluation runs yet.'));
+      return const Center(child: Text('暂无评估运行。'));
     }
     return ListView.builder(
       key: const Key('evaluation-run-list'),
@@ -50,5 +50,5 @@ class EvaluationRunList extends StatelessWidget {
   };
 
   static String _score(double? score) =>
-      score == null ? 'no score' : 'score ${score.toStringAsFixed(1)}';
+      score == null ? '暂无评分' : '评分 ${score.toStringAsFixed(1)}';
 }

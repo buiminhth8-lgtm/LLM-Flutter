@@ -61,7 +61,7 @@ class AdapterEvalApiHttpClient extends http.BaseClient {
 
   Map<String, Object?> _session({bool includeCases = false}) => {
     'session_id': 'session-1',
-    'name': 'Adapter Eval',
+    'name': '适配器评估',
     'project_id': 'project-1',
     'dataset_version_id': 'dsv-1',
     'finetune_run_id': 'run-1',
@@ -170,7 +170,7 @@ void main() {
 
       final session = await api.createSession(
         const CreateAdapterEvalSessionRequest(
-          name: 'Adapter Eval',
+          name: '适配器评估',
           baseModelId: 'qwen-local',
           adapterId: 'adapter-1',
           finetuneRunId: 'run-1',

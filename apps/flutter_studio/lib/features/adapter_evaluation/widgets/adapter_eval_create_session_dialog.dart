@@ -14,7 +14,7 @@ class AdapterEvalCreateSessionDialog extends StatefulWidget {
 
 class _AdapterEvalCreateSessionDialogState
     extends State<AdapterEvalCreateSessionDialog> {
-  final _name = TextEditingController(text: 'Adapter comparison');
+  final _name = TextEditingController(text: '适配器对比');
   final _project = TextEditingController();
   final _run = TextEditingController();
   final _datasetVersion = TextEditingController();
@@ -35,7 +35,7 @@ class _AdapterEvalCreateSessionDialogState
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Create Evaluation Session'),
+      title: const Text('创建评估会话'),
       content: SizedBox(
         width: 520,
         child: Column(
@@ -43,29 +43,29 @@ class _AdapterEvalCreateSessionDialogState
           children: [
             TextField(
               controller: _name,
-              decoration: const InputDecoration(labelText: 'name'),
+              decoration: const InputDecoration(labelText: '名称'),
             ),
             TextField(
               controller: _project,
-              decoration: const InputDecoration(
-                labelText: 'project_id optional',
-              ),
+              decoration: const InputDecoration(labelText: 'project_id（可选）'),
             ),
             TextField(
               controller: _run,
               decoration: const InputDecoration(
-                labelText: 'finetune_run_id optional',
+                labelText: 'finetune_run_id（可选）',
               ),
             ),
             TextField(
               controller: _datasetVersion,
               decoration: const InputDecoration(
-                labelText: 'dataset_version_id optional',
+                labelText: 'dataset_version_id（可选）',
               ),
             ),
             TextField(
               controller: _baseModel,
-              decoration: const InputDecoration(labelText: 'base_model_id'),
+              decoration: const InputDecoration(
+                labelText: 'base_model_id（基础模型）',
+              ),
             ),
             TextField(
               controller: _adapter,
@@ -77,7 +77,7 @@ class _AdapterEvalCreateSessionDialogState
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: const Text('取消'),
         ),
         FilledButton(
           key: const Key('adapter-eval-create-session-submit'),
@@ -94,7 +94,7 @@ class _AdapterEvalCreateSessionDialogState
             );
             Navigator.pop(context);
           },
-          child: const Text('Create'),
+          child: const Text('创建'),
         ),
       ],
     );

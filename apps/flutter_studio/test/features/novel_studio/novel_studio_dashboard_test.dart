@@ -45,7 +45,7 @@ void main() {
           evaluationRunCount: 2,
           backendStatus: 'healthy',
           modelLabel: 'qwen-local',
-          adapterLabel: 'None',
+          adapterLabel: '无',
           runningJobs: 0,
           health: const {'status': 'ok'},
           onRefresh: () {},
@@ -64,13 +64,13 @@ void main() {
       ),
     );
 
-    expect(find.text('Novel Studio Dashboard'), findsOneWidget);
-    expect(find.text('Workflow map'), findsOneWidget);
-    expect(find.text('Projects'), findsWidgets);
-    expect(find.text('Writing'), findsWidgets);
-    expect(find.text('Recent activity'), findsOneWidget);
+    expect(find.text('小说工作台仪表盘'), findsOneWidget);
+    expect(find.text('工作流地图'), findsOneWidget);
+    expect(find.text('项目'), findsWidgets);
+    expect(find.text('写作'), findsWidgets);
+    expect(find.text('最近活动'), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Writing'));
+    await tester.tap(find.widgetWithText(FilledButton, '写作'));
     expect(openedWriting, isTrue);
   });
 }

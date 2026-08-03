@@ -19,9 +19,8 @@ class FinetuneRunList extends StatelessWidget {
   Widget build(BuildContext context) => Card(
     child: ListView(
       children: [
-        const ListTile(title: Text('Fine-tune Runs')),
-        if (runs.isEmpty)
-          const ListTile(title: Text('No runs yet.')),
+        const ListTile(title: Text('微调任务')),
+        if (runs.isEmpty) const ListTile(title: Text('暂无运行记录。')),
         for (final run in runs)
           ListTile(
             selected: run.runId == selectedRunId,

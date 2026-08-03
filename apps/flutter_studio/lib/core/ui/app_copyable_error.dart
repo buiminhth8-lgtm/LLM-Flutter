@@ -12,10 +12,10 @@ class AppCopyableError extends StatelessWidget {
       color: Theme.of(context).colorScheme.errorContainer,
       child: ListTile(
         leading: const Icon(Icons.error_outline),
-        title: const Text('Error'),
+        title: const Text('错误'),
         subtitle: SelectableText(message),
         trailing: IconButton(
-          tooltip: 'Copy error',
+          tooltip: '复制错误',
           icon: const Icon(Icons.copy),
           onPressed: () => Clipboard.setData(ClipboardData(text: message)),
         ),

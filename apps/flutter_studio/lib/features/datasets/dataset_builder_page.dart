@@ -61,14 +61,13 @@ class _DatasetBuilderPageState extends State<DatasetBuilderPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             AppSectionHeader(
-              title: 'Dataset Builder',
-              subtitle:
-                  'Stage 6：从 approved revision candidates 构建 SFT samples 并导出 draft JSONL。',
+              title: '数据集构建器',
+              subtitle: '阶段 6：从已批准修订候选构建 SFT 样本并导出草稿 JSONL。',
               actions: [
                 IconButton.filledTonal(
                   onPressed: state.loading ? null : widget.controller.refresh,
                   icon: const Icon(Icons.refresh),
-                  tooltip: 'Refresh',
+                  tooltip: '刷新',
                 ),
               ],
             ),
@@ -128,7 +127,7 @@ class _DatasetBuilderPageState extends State<DatasetBuilderPage> {
       Row(
         children: [
           const Text(
-            'Samples',
+            '样本',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
           ),
           const Spacer(),
@@ -138,7 +137,7 @@ class _DatasetBuilderPageState extends State<DatasetBuilderPage> {
                 ? null
                 : _bulkCreate,
             icon: const Icon(Icons.playlist_add_outlined),
-            label: const Text('Bulk from accepted revisions'),
+            label: const Text('从已接受修订批量构建'),
           ),
         ],
       ),
@@ -156,7 +155,7 @@ class _DatasetBuilderPageState extends State<DatasetBuilderPage> {
   Widget _buildDetailPane(DatasetState state) {
     final dataset = state.currentDataset;
     if (dataset == null) {
-      return const Center(child: Text('Select a dataset.'));
+      return const Center(child: Text('请选择数据集。'));
     }
     return ListView(
       children: [
@@ -170,7 +169,7 @@ class _DatasetBuilderPageState extends State<DatasetBuilderPage> {
                   ? null
                   : widget.controller.markCurrentDatasetReady,
               icon: const Icon(Icons.verified_outlined),
-              label: const Text('Mark Ready'),
+              label: const Text('标记为就绪'),
             ),
             const SizedBox(width: 8),
             FilledButton.icon(
@@ -179,7 +178,7 @@ class _DatasetBuilderPageState extends State<DatasetBuilderPage> {
                   ? _showFreezeDialog
                   : null,
               icon: const Icon(Icons.ac_unit_outlined),
-              label: const Text('Freeze'),
+              label: const Text('冻结'),
             ),
           ],
         ),
@@ -291,12 +290,10 @@ class _DatasetSummary extends StatelessWidget {
           ),
           Text('${dataset.type} · ${dataset.status}'),
           Text(
-            '${dataset.sampleCount} samples · ${dataset.approvedSampleCount} approved · ${dataset.rejectedSampleCount} rejected',
+            '${dataset.sampleCount} 个样本 · ${dataset.approvedSampleCount} 个已通过 · ${dataset.rejectedSampleCount} 个已拒绝',
           ),
           if (dataset.status == 'frozen')
-            const Text(
-              'Frozen: old DatasetVersion is immutable; new sample changes will mark dirty.',
-            ),
+            const Text('已冻结：旧数据集版本不可变；新的样本变更会标记为已变更。'),
         ],
       ),
     ),

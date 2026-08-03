@@ -31,16 +31,26 @@ void main() {
       find.byKey(const Key('finetune-dataset-version')),
       'dsv-1',
     );
-    await tester.enterText(find.byKey(const Key('finetune-recipe')), 'recipe-1');
+    await tester.enterText(
+      find.byKey(const Key('finetune-recipe')),
+      'recipe-1',
+    );
     await tester.tap(find.byKey(const Key('finetune-preflight')));
     await tester.pump();
 
     expect(preflightRequest?.datasetVersionId, 'dsv-1');
-    expect(tester.widget<FilledButton>(find.byKey(const Key('finetune-create-run'))).onPressed, isNull);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('finetune-create-run')))
+          .onPressed,
+      isNull,
+    );
     expect(createRequest, isNull);
   });
 
-  testWidgets('Create Run dialog submits after preflight passes', (tester) async {
+  testWidgets('Create Run dialog submits after preflight passes', (
+    tester,
+  ) async {
     FinetuneCreateRunRequestDto? createRequest;
     await tester.pumpWidget(
       MaterialApp(
@@ -58,7 +68,10 @@ void main() {
       find.byKey(const Key('finetune-dataset-version')),
       'dsv-1',
     );
-    await tester.enterText(find.byKey(const Key('finetune-recipe')), 'recipe-1');
+    await tester.enterText(
+      find.byKey(const Key('finetune-recipe')),
+      'recipe-1',
+    );
     await tester.tap(find.byKey(const Key('finetune-create-run')));
     await tester.pump();
 

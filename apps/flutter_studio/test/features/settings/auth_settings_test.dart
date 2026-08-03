@@ -4,7 +4,9 @@ import 'package:flutter_studio/features/settings/settings_page.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('admin can see user management and recovery guide', (tester) async {
+  testWidgets('admin can see user management and recovery guide', (
+    tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(1000, 1200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     var loadCalled = false;
@@ -13,7 +15,9 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: SettingsPage(
-            apiBaseController: TextEditingController(text: 'http://127.0.0.1:8000'),
+            apiBaseController: TextEditingController(
+              text: 'http://127.0.0.1:8000',
+            ),
             userIdController: TextEditingController(text: 'admin'),
             apiKeyController: TextEditingController(text: 'sk-admin'),
             localPythonController: TextEditingController(),
@@ -22,7 +26,11 @@ void main() {
             autoStartBackend: true,
             closeBackendOnExit: true,
             backendLogs: const [],
-            currentUser: const AuthUserDto(userId: 'admin', role: 'admin', enabled: true),
+            currentUser: const AuthUserDto(
+              userId: 'admin',
+              role: 'admin',
+              enabled: true,
+            ),
             authUsers: const [
               AuthUserDto(
                 userId: 'operator',
@@ -55,22 +63,25 @@ void main() {
       ),
     );
 
-    expect(find.text('Load users'), findsOneWidget);
-    expect(find.text('Regenerate'), findsOneWidget);
-    expect(find.text('python tools/reset_auth.py --reset-admin'), findsOneWidget);
+    expect(find.text('加载用户'), findsOneWidget);
+    expect(find.text('重新生成'), findsOneWidget);
+    expect(
+      find.text('python tools/reset_auth.py --reset-admin'),
+      findsOneWidget,
+    );
 
-    await tester.ensureVisible(find.text('Load users'));
-    await tester.tap(find.text('Load users'));
+    await tester.ensureVisible(find.text('加载用户'));
+    await tester.tap(find.text('加载用户'));
     await tester.pump();
     expect(loadCalled, isTrue);
 
-    await tester.ensureVisible(find.text('Regenerate'));
-    await tester.tap(find.text('Regenerate'));
+    await tester.ensureVisible(find.text('重新生成'));
+    await tester.tap(find.text('重新生成'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Regenerate').last);
+    await tester.tap(find.text('重新生成').last);
     await tester.pumpAndSettle();
     expect(regenerateCalled, isTrue);
-    expect(find.text('New API Key'), findsOneWidget);
+    expect(find.text('新 API Key'), findsOneWidget);
   });
 
   testWidgets('non-admin does not see regenerate controls', (tester) async {
@@ -80,7 +91,9 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: SettingsPage(
-            apiBaseController: TextEditingController(text: 'http://127.0.0.1:8000'),
+            apiBaseController: TextEditingController(
+              text: 'http://127.0.0.1:8000',
+            ),
             userIdController: TextEditingController(),
             apiKeyController: TextEditingController(),
             localPythonController: TextEditingController(),
@@ -89,7 +102,11 @@ void main() {
             autoStartBackend: true,
             closeBackendOnExit: true,
             backendLogs: const [],
-            currentUser: const AuthUserDto(userId: 'viewer', role: 'viewer', enabled: true),
+            currentUser: const AuthUserDto(
+              userId: 'viewer',
+              role: 'viewer',
+              enabled: true,
+            ),
             authUsers: const [],
             loadingAuthUsers: false,
             onApply: () {},
@@ -110,7 +127,7 @@ void main() {
       ),
     );
 
-    expect(find.text('User Management 仅 admin 可见。'), findsOneWidget);
-    expect(find.text('Regenerate'), findsNothing);
+    expect(find.text('用户管理仅 admin 可见。'), findsOneWidget);
+    expect(find.text('重新生成'), findsNothing);
   });
 }

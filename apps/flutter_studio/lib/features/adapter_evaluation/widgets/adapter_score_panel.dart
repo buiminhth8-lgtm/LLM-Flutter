@@ -119,7 +119,7 @@ class _AdapterScorePanelState extends State<AdapterScorePanel> {
                   notes: _notes.text,
                 ),
               ),
-              child: const Text('Save Score'),
+              child: const Text('保存评分'),
             ),
           ],
         ),

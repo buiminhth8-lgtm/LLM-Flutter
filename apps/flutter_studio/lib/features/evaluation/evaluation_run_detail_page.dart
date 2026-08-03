@@ -17,7 +17,7 @@ class EvaluationRunDetailPage extends StatelessWidget {
     final state = controller.state;
     final run = state.currentRun;
     if (run == null) {
-      return const Center(child: Text('Select an evaluation run.'));
+      return const Center(child: Text('请选择评估运行。'));
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -104,13 +104,11 @@ class _RunHeader extends StatelessWidget {
               children: [
                 Text(run.name, style: Theme.of(context).textTheme.titleMedium),
                 Text(
-                  '${run.targetType} ${run.targetId} · ${run.status} · ${run.summaryText ?? 'No summary yet'}',
+                  '${run.targetType} ${run.targetId} · ${run.status} · ${run.summaryText ?? '暂无摘要'}',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const Text(
-                  'Automatic evaluation is advisory only. It does not modify novel content or training data.',
-                ),
+                const Text('自动评估仅供参考，不会修改小说正文或训练数据。'),
               ],
             ),
           ),
@@ -124,7 +122,7 @@ class _RunHeader extends StatelessWidget {
           OutlinedButton(
             key: const Key('evaluation-start-run'),
             onPressed: run.status == 'completed' ? null : onStart,
-            child: const Text('Start'),
+            child: const Text('开始'),
           ),
           const SizedBox(width: 8),
           OutlinedButton(
@@ -132,14 +130,14 @@ class _RunHeader extends StatelessWidget {
             onPressed: {'running', 'queued', 'created'}.contains(run.status)
                 ? onCancel
                 : null,
-            child: const Text('Cancel'),
+            child: const Text('取消'),
           ),
           const SizedBox(width: 8),
           IconButton(
             key: const Key('evaluation-archive-run'),
             onPressed: onArchive,
             icon: const Icon(Icons.archive_outlined),
-            tooltip: 'Archive',
+            tooltip: '归档',
           ),
         ],
       ),

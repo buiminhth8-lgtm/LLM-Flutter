@@ -1,57 +1,28 @@
-# Novel Studio Stage 0 Baseline
+# Novel Studio 阶段 0：基线预留
 
-Stage 0 prepared the engineering entry point for Novel Studio without adding
-business APIs or data tables. Stage 1 now builds on that foundation.
+本文档为阶段归档版，已删除重复验收长列表，保留范围、边界、数据资产和前后置关系。
 
-## Stage 0 Verification
+## 范围
 
-- `python -m compileall llm_studio`: passed.
-- `python -m pytest --basetemp .pytest_tmp`: passed.
-- `python -m llm_studio.server --help`: passed.
-- `python -m ruff check llm_studio tests`: passed.
-- `flutter analyze`: passed.
-- `flutter test`: passed.
+预留 Novel Studio 能力开关、占位目录、路线图和基线测试。
 
-## Backend Entry
+## 主要资产
 
-- Service entrypoint: `python -m llm_studio.server`.
-- FastAPI export: `llm_studio.api_server:app`.
-- Router package: `llm_studio/api/routers/`.
+- 后端领域模块按阶段分层复用。
+- Flutter 页面只调用后端 API，不在前端实现核心业务事实。
+- 数据库表与记录均保持阶段边界。
 
-## Flutter Entry
+## 边界
 
-- App shell: `apps/flutter_studio/lib/app/app_shell.dart`.
-- Settings: `apps/flutter_studio/lib/features/settings/settings_page.dart`.
-- Shared API client: `apps/flutter_studio/lib/core/api/api_client.dart`.
-- Shared UI components: `apps/flutter_studio/lib/core/ui/`.
+不实现业务 API、数据库表、Flutter 业务调用。
 
-## Reusable Modules
+## 验收
 
-- `llm_studio/models/`
-- `llm_studio/runtime/`
-- `llm_studio/adapters/`
-- `llm_studio/jobs/`
-- `llm_studio/storage/`
-- `llm_studio/downloads/`
-- `llm_studio/diagnostics/`
-- `llm_studio/api/errors.py`
-- `llm_studio/api/routers/`
-- `apps/flutter_studio/lib/core/api/`
-- `apps/flutter_studio/lib/core/ui/`
+- 后端测试通过。
+- Flutter analyze/test 按环境执行。
+- 能力清单状态与阶段目标一致。
+- 不保存 API Key、Cookie、Authorization 或本机敏感绝对路径。
 
-## No-Touch Modules For Stage 0
+## 相关
 
-- Runtime / Runner.
-- ModelScope download logic.
-- Authentication recovery.
-- LoRA / QLoRA training.
-
-## Stage 1 Prerequisites
-
-- Define Novel data model and migrations.
-- Define `/v1/novels` API contract.
-- Define initial RBAC policy.
-- Gate Flutter navigation with capabilities and feature flag state.
-
-Stage 1 implementation details are documented in
-[NOVEL_STAGE1_FOUNDATION.md](NOVEL_STAGE1_FOUNDATION.md).
+返回 [Novel Studio 路线图](NOVEL_STUDIO_ROADMAP.md)。

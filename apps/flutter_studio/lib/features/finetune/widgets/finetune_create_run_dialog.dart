@@ -38,7 +38,7 @@ class _FinetuneCreateRunDialogState extends State<FinetuneCreateRunDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Create Fine-tune Run'),
+    title: const Text('创建微调任务'),
     content: SizedBox(
       width: 460,
       child: SingleChildScrollView(
@@ -49,20 +49,20 @@ class _FinetuneCreateRunDialogState extends State<FinetuneCreateRunDialog> {
               key: const Key('finetune-dataset-version'),
               controller: _datasetVersion,
               decoration: const InputDecoration(
-                labelText: 'frozen dataset_version_id',
+                labelText: '冻结 dataset_version_id',
               ),
             ),
             TextField(
               key: const Key('finetune-recipe'),
               controller: _recipe,
-              decoration: const InputDecoration(
-                labelText: 'confirmed recipe_id',
-              ),
+              decoration: const InputDecoration(labelText: '已确认 recipe_id'),
             ),
             TextField(
               key: const Key('finetune-base-model'),
               controller: _baseModel,
-              decoration: const InputDecoration(labelText: 'base_model_id'),
+              decoration: const InputDecoration(
+                labelText: 'base_model_id（基础模型）',
+              ),
             ),
             TextField(
               key: const Key('finetune-adapter-name'),
@@ -77,8 +77,8 @@ class _FinetuneCreateRunDialogState extends State<FinetuneCreateRunDialog> {
             if (widget.preflight != null)
               Text(
                 widget.preflight!.ok
-                    ? 'Preflight passed.'
-                    : 'Preflight has ${widget.preflight!.errors.length} errors.',
+                    ? '预检通过。'
+                    : '预检发现 ${widget.preflight!.errors.length} 个错误。',
               ),
           ],
         ),
@@ -88,7 +88,7 @@ class _FinetuneCreateRunDialogState extends State<FinetuneCreateRunDialog> {
       TextButton(
         key: const Key('finetune-preflight'),
         onPressed: () => widget.onPreflight(_request()),
-        child: const Text('Preflight'),
+        child: const Text('预检'),
       ),
       FilledButton(
         key: const Key('finetune-create-run'),
@@ -103,7 +103,7 @@ class _FinetuneCreateRunDialogState extends State<FinetuneCreateRunDialog> {
                 ),
               )
             : null,
-        child: const Text('Create Run'),
+        child: const Text('创建任务'),
       ),
     ],
   );

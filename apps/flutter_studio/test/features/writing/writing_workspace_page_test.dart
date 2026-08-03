@@ -143,7 +143,7 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Writing'), findsNothing);
+    expect(find.text('写作'), findsNothing);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -157,6 +157,6 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Writing'), findsOneWidget);
+    expect(find.text('写作'), findsOneWidget);
   });
 }

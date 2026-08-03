@@ -1,13 +1,17 @@
-# Release Notes
+# 发布说明
 
-## Novel Studio Stage 12
+## 版本范围
 
-- Added Novel Studio Dashboard and productized navigation.
-- Added unified UI states for empty, loading, error, retry, capability gate, and diagnostics hint.
-- Added `/v1/version`, `/v1/health`, and `/v1/health/full`.
-- Expanded diagnostics API and redacted diagnostics package export.
-- Added Windows scripts for environment checks, backend launch, Flutter launch, diagnostics, backup, restore, and release packaging.
-- Added backup/restore scripts that exclude model weights and checkpoints.
-- Added release checklist and Windows release documentation.
+本发布候选聚焦 Flutter Windows 产品化、Novel Studio 全流程入口、诊断与发布脚本。
 
-No new core generation, training, dataset mutation, RAG indexing, or evaluation capability is introduced in this stage.
+## 主要变化
+
+- 桌面 UI 全局中文化。
+- Novel Studio 阶段 0～12 文档归档。
+- 保留 Windows 验收、备份、恢复、诊断、升级说明。
+- 文档删除重复段落并统一中文表达。
+
+## 已知边界
+
+- 本地模型、训练和评估仍需用户显式触发。
+- 大模型权重不进入发布包。

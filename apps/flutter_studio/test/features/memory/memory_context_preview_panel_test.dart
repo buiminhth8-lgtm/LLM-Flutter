@@ -30,7 +30,7 @@ void main() {
       ),
     );
 
-    expect(find.textContaining('Retrieved Memory Preview'), findsOneWidget);
+    expect(find.textContaining('检索记忆预览'), findsOneWidget);
     expect(find.textContaining('黑市位于旧城地下'), findsOneWidget);
   });
 }

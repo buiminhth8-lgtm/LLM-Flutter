@@ -33,11 +33,11 @@ class AdapterEvalRevisionButton extends StatelessWidget {
                 chapterId: chapterId,
                 editTags: const ['style_unify'],
                 userScore: 4,
-                qualityNotes: 'Created from Adapter Evaluation.',
+                qualityNotes: '由适配器评估创建。',
               ),
             )
           : null,
-      child: Text('Create Revision from ${result.variant}'),
+      child: Text('从 ${result.variant} 创建修订'),
     );
   }
 }

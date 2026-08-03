@@ -31,7 +31,7 @@ class FinetuneController extends ChangeNotifier {
       result = await _api.preflightFinetune(request);
       state = state.copyWith(
         preflight: result,
-        notice: result!.ok ? 'Preflight passed.' : 'Preflight has errors.',
+        notice: result!.ok ? '预检通过。' : '预检存在错误。',
       );
     });
     return result;
@@ -43,7 +43,7 @@ class FinetuneController extends ChangeNotifier {
       state = state.copyWith(
         currentRun: run,
         runs: await _api.listFinetuneRuns(),
-        notice: 'Fine-tune run created.',
+        notice: '微调任务已创建。',
       );
       await _loadRun(run.runId);
     });
@@ -74,7 +74,7 @@ class FinetuneController extends ChangeNotifier {
     }
     await _run(() async {
       final updated = await _api.cancelFinetuneRun(run.runId);
-      state = state.copyWith(currentRun: updated, notice: 'Cancel requested.');
+      state = state.copyWith(currentRun: updated, notice: '取消请求已提交。');
       await refresh();
     });
   }
@@ -89,7 +89,7 @@ class FinetuneController extends ChangeNotifier {
         run.runId,
         checkpointId: checkpointId,
       );
-      state = state.copyWith(currentRun: updated, notice: 'Resume queued.');
+      state = state.copyWith(currentRun: updated, notice: '恢复请求已入队。');
       await refresh();
     });
   }
