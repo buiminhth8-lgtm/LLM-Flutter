@@ -112,3 +112,33 @@ def is_adapter_evaluation_enabled(config: Any) -> bool:
         return bool(adapter_eval.get("enabled", True))
     except Exception:
         return False
+
+
+def is_novel_memory_enabled(config: Any) -> bool:
+    """Return whether Stage 10 Novel Memory / RAG APIs should be exposed."""
+
+    if not is_adapter_evaluation_enabled(config):
+        return False
+    try:
+        features = config.get("features", {}) if config is not None else {}
+        memory = features.get("novel_memory", {})
+        if not isinstance(memory, dict):
+            return True
+        return bool(memory.get("enabled", True))
+    except Exception:
+        return False
+
+
+def is_memory_retrieval_enabled(config: Any) -> bool:
+    """Return whether Stage 10 Memory retrieval should be exposed."""
+
+    if not is_novel_memory_enabled(config):
+        return False
+    try:
+        features = config.get("features", {}) if config is not None else {}
+        retrieval = features.get("memory_retrieval", {})
+        if not isinstance(retrieval, dict):
+            return True
+        return bool(retrieval.get("enabled", True))
+    except Exception:
+        return False

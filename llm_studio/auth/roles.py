@@ -43,6 +43,8 @@ class Permission(StrEnum):
     MANAGE_FINETUNE = "manage_finetune"
     VIEW_ADAPTER_EVALUATION = "view_adapter_evaluation"
     MANAGE_ADAPTER_EVALUATION = "manage_adapter_evaluation"
+    VIEW_MEMORY = "view_memory"
+    MANAGE_MEMORY = "manage_memory"
 
 
 ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
@@ -58,6 +60,7 @@ ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.VIEW_DATASETS,
             Permission.VIEW_FINETUNE,
             Permission.VIEW_ADAPTER_EVALUATION,
+            Permission.VIEW_MEMORY,
         }
     ),
     Role.OPERATOR: frozenset(
@@ -84,6 +87,8 @@ ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.MANAGE_FINETUNE,
             Permission.VIEW_ADAPTER_EVALUATION,
             Permission.MANAGE_ADAPTER_EVALUATION,
+            Permission.VIEW_MEMORY,
+            Permission.MANAGE_MEMORY,
         }
     ),
     Role.ADMIN: frozenset(Permission),

@@ -10,7 +10,8 @@ const revisionReviewPageIndex = 13;
 const datasetBuilderPageIndex = 14;
 const finetuneCenterPageIndex = 15;
 const adapterEvaluationPageIndex = 16;
-const settingsPageIndex = 17;
+const memoryCenterPageIndex = 17;
+const settingsPageIndex = 18;
 
 class ShellDestination {
   const ShellDestination({
@@ -100,6 +101,7 @@ Widget buildShellNavigation({
   bool showDatasetBuilder = false,
   bool showFinetuneCenter = false,
   bool showAdapterEvaluation = false,
+  bool showMemoryCenter = false,
 }) {
   return ListView(
     padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
@@ -178,6 +180,14 @@ Widget buildShellNavigation({
             selectedIndex: selectedIndex,
             icon: Icons.compare_outlined,
             label: 'Adapter Eval',
+            onSelected: onSelected,
+          ),
+        if (showMemoryCenter)
+          SideNavItem(
+            index: memoryCenterPageIndex,
+            selectedIndex: selectedIndex,
+            icon: Icons.psychology_alt_outlined,
+            label: 'Memory',
             onSelected: onSelected,
           ),
       ],

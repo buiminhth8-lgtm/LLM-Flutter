@@ -32,6 +32,9 @@ import '../features/finetune/finetune_center_page.dart';
 import '../features/finetune/finetune_controller.dart';
 import '../features/finetune/models/finetune_run_dto.dart';
 import '../features/jobs/job_controller.dart';
+import '../features/memory/memory_api_client.dart';
+import '../features/memory/memory_center_page.dart';
+import '../features/memory/memory_controller.dart';
 import '../features/models/model_controller.dart';
 import '../features/models/models_page.dart';
 import '../features/novels/novel_api_client.dart';
@@ -128,9 +131,12 @@ class _StudioShellState extends State<StudioShell> {
   late final AdapterEvalController _adapterEval = AdapterEvalController(
     AdapterEvalApiClient(_client),
   );
+  late final MemoryApiClient _memoryApi = MemoryApiClient(_client);
+  late final MemoryController _memory = MemoryController(_memoryApi);
   late final WritingController _writing = WritingController(
     WritingApiClient(_client),
     revisionApi: _revisionApi,
+    memoryApi: _memoryApi,
   );
 
   @override
@@ -193,6 +199,7 @@ class _StudioShellState extends State<StudioShell> {
     _datasets,
     _finetune,
     _adapterEval,
+    _memory,
   ];
 
   void _onNotifierChanged() {
@@ -296,6 +303,7 @@ class _StudioShellState extends State<StudioShell> {
         if (_finetuneCenterAvailable()) _finetune.refresh().catchError((_) {}),
         if (_adapterEvaluationAvailable())
           _adapterEval.refresh().catchError((_) {}),
+        if (_memoryCenterAvailable()) _memory.refresh().catchError((_) {}),
       ]);
       await _savePreferences();
     });
@@ -678,6 +686,17 @@ class _StudioShellState extends State<StudioShell> {
     });
   }
 
+  bool _memoryCenterAvailable() {
+    return _status.state.capabilities.any((item) {
+      if (item is! Map) {
+        return false;
+      }
+      return item['name'] == 'novel_rag_memory' &&
+          item['status'] == 'available' &&
+          item['frontend_exposed'] == true;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_shell.initialSetupCheckDone && widget.autoRefresh) {
@@ -841,6 +860,7 @@ class _StudioShellState extends State<StudioShell> {
         onCreateEvaluationSession: _createAdapterEvaluationFromRun,
       ),
       AdapterEvalSessionsPage(controller: _adapterEval),
+      MemoryCenterPage(controller: _memory),
       SettingsPage(
         apiBaseController: _settings.apiBaseController,
         userIdController: _settings.userIdController,
@@ -895,6 +915,7 @@ class _StudioShellState extends State<StudioShell> {
               showDatasetBuilder: _datasetBuilderAvailable(),
               showFinetuneCenter: _finetuneCenterAvailable(),
               showAdapterEvaluation: _adapterEvaluationAvailable(),
+              showMemoryCenter: _memoryCenterAvailable(),
             ),
           ),
           const VerticalDivider(width: 1),

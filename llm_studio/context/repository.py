@@ -52,6 +52,7 @@ class ContextAssemblyRepository:
             "estimated_tokens": int(data.get("estimated_tokens") or 0),
             "estimated_chars": int(data.get("estimated_chars") or 0),
             "context_hash": data["context_hash"],
+            "retrieval_id": data.get("retrieval_id"),
             "created_at": _now(),
         }
         with self._lock, self._connect() as conn:
@@ -61,8 +62,8 @@ class ContextAssemblyRepository:
                     id, project_id, chapter_id, scene_id, template_id,
                     template_version_id, mode, budget_json, variables_json,
                     selected_items_json, warnings_json, estimated_tokens,
-                    estimated_chars, context_hash, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    estimated_chars, context_hash, retrieval_id, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 tuple(item.values()),
             )

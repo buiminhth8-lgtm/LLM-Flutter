@@ -539,6 +539,133 @@ class LlmStudioClient {
     );
   }
 
+  Future<List<dynamic>> memoryDocuments({
+    required String projectId,
+    String? sourceType,
+    String? status,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final query = <String, String>{
+      'project_id': projectId,
+      if (sourceType != null && sourceType.isNotEmpty)
+        'source_type': sourceType,
+      if (status != null && status.isNotEmpty) 'status': status,
+      'limit': '$limit',
+      'offset': '$offset',
+    };
+    final body = await _getMap(
+      Uri(path: '/v1/memory/documents', queryParameters: query).toString(),
+    );
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> createMemoryDocument(
+    Map<String, Object?> body,
+  ) {
+    return _postMap('/v1/memory/documents', body: body);
+  }
+
+  Future<Map<String, dynamic>> updateMemoryDocument(
+    String documentId,
+    Map<String, Object?> body,
+  ) {
+    return _patchMap(
+      '/v1/memory/documents/${Uri.encodeComponent(documentId)}',
+      body,
+    );
+  }
+
+  Future<Map<String, dynamic>> archiveMemoryDocument(String documentId) {
+    return _deleteMap('/v1/memory/documents/${Uri.encodeComponent(documentId)}');
+  }
+
+  Future<Map<String, dynamic>> buildMemoryFromNovel(
+    String projectId,
+    Map<String, Object?> body,
+  ) {
+    return _postMap(
+      '/v1/memory/projects/${Uri.encodeComponent(projectId)}/build-from-novel',
+      body: body,
+      timeout: const Duration(minutes: 2),
+    );
+  }
+
+  Future<Map<String, dynamic>> rebuildProjectMemoryIndex(String projectId) {
+    return _postMap(
+      '/v1/memory/projects/${Uri.encodeComponent(projectId)}/index/rebuild',
+      body: const {},
+      timeout: const Duration(minutes: 2),
+    );
+  }
+
+  Future<Map<String, dynamic>> memoryIndexStatus(String projectId) {
+    return _getMap(
+      '/v1/memory/projects/${Uri.encodeComponent(projectId)}/index/status',
+    );
+  }
+
+  Future<Map<String, dynamic>> retrieveMemory(Map<String, Object?> body) {
+    return _postMap('/v1/memory/retrieve', body: body);
+  }
+
+  Future<List<dynamic>> memoryRetrievalRecords({
+    required String projectId,
+    String? chapterId,
+    int limit = 50,
+  }) async {
+    final query = <String, String>{
+      'project_id': projectId,
+      if (chapterId != null && chapterId.isNotEmpty) 'chapter_id': chapterId,
+      'limit': '$limit',
+    };
+    final body = await _getMap(
+      Uri(
+        path: '/v1/memory/retrieval-records',
+        queryParameters: query,
+      ).toString(),
+    );
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<List<dynamic>> chapterSummaries(String chapterId) async {
+    final body = await _getMap(
+      '/v1/memory/chapters/${Uri.encodeComponent(chapterId)}/summaries',
+    );
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> createChapterSummary(
+    String chapterId,
+    Map<String, Object?> body,
+  ) {
+    return _postMap(
+      '/v1/memory/chapters/${Uri.encodeComponent(chapterId)}/summaries',
+      body: body,
+    );
+  }
+
+  Future<Map<String, dynamic>> generateChapterSummary(
+    String chapterId,
+    Map<String, Object?> body,
+  ) {
+    return _postMap(
+      '/v1/memory/chapters/${Uri.encodeComponent(chapterId)}/summaries/generate',
+      body: body,
+      timeout: const Duration(minutes: 5),
+    );
+  }
+
+  Future<Map<String, dynamic>> activateChapterSummary(
+    String chapterId,
+    String summaryId,
+  ) {
+    return _postMap(
+      '/v1/memory/chapters/${Uri.encodeComponent(chapterId)}/summaries/${Uri.encodeComponent(summaryId)}/activate',
+      body: {'sync_to_chapter': true},
+    );
+  }
+
   Future<List<dynamic>> revisions({
     String? projectId,
     String? chapterId,

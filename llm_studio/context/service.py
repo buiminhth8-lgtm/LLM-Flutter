@@ -37,12 +37,14 @@ class ContextService:
         *,
         novel_service: Any,
         prompt_service: Any,
+        memory_service: Any | None = None,
     ):
         self.db_path = Path(db_path)
         initialize_context_database(self.db_path)
         self.records = ContextAssemblyRepository(self.db_path)
         self.novel_service = novel_service
         self.prompt_service = prompt_service
+        self.memory_service = memory_service
         self.assembler = ContextAssembler()
         self.estimator = TokenEstimator()
         self.scene_selector = SceneSelector()
@@ -101,10 +103,24 @@ class ContextService:
                 template_id=template["id"],
                 template_version_id=version["id"],
             )
+        payload = result.to_dict()
+        if (data.get("memory") or {}).get("enabled", False):
+            if self.memory_service is None:
+                payload["warnings"] = [
+                    *payload.get("warnings", []),
+                    {
+                        "code": "MEMORY_FEATURE_DISABLED",
+                        "message": "Memory service is not configured; context uses Stage 3 behavior.",
+                    },
+                ]
+            else:
+                from llm_studio.memory.context_bridge import ContextMemoryBridge
+
+                payload = ContextMemoryBridge(self.memory_service).enrich(payload, data)
         if data.get("save_record", True):
-            record = self.records.save(result.to_dict())
-            result = replace(result, context_id=record["context_id"])
-        return result.to_dict()
+            record = self.records.save(payload)
+            payload["context_id"] = record["context_id"]
+        return payload
 
     def assemble_and_render(self, request: Any) -> dict[str, Any]:
         data = _model_dump(request)

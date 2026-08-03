@@ -35,6 +35,7 @@ class WritingGenerationRequest(BaseModel):
     mode: str = "chapter_generate"
     target_length: TargetLengthRequest = Field(default_factory=TargetLengthRequest)
     user_variables: dict[str, Any] = Field(default_factory=dict)
+    memory: dict[str, Any] = Field(default_factory=dict)
     generation_params: WritingGenerationParamsRequest = Field(
         default_factory=WritingGenerationParamsRequest
     )

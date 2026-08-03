@@ -13,6 +13,7 @@ class WritingGenerationRequestDto {
     this.mode = 'chapter_generate',
     this.targetLength = const TargetLengthDto(),
     this.userVariables = const {},
+    this.memory = const {},
     this.temperature = 0.8,
     this.topP = 0.9,
     this.maxTokens = 2048,
@@ -33,6 +34,7 @@ class WritingGenerationRequestDto {
   final String mode;
   final TargetLengthDto targetLength;
   final Map<String, Object?> userVariables;
+  final Map<String, Object?> memory;
   final double temperature;
   final double topP;
   final int maxTokens;
@@ -54,6 +56,7 @@ class WritingGenerationRequestDto {
     'mode': mode,
     'target_length': targetLength.toMap(),
     'user_variables': userVariables,
+    if (memory.isNotEmpty) 'memory': memory,
     'generation_params': {
       'temperature': temperature,
       'top_p': topP,

@@ -477,6 +477,7 @@ class WritingService:
                 "hard_limit": True,
             },
             "user_variables": data["user_variables"],
+            "memory": data.get("memory") or {},
             "save_record": True,
         }
         try:
@@ -526,6 +527,7 @@ class WritingService:
                     "variables": prepared.get("variables") or {},
                     "selected_items": prepared.get("selected_items") or {},
                     "warnings": prepared.get("warnings") or [],
+                    "retrieval_id": prepared.get("retrieval_id"),
                 },
                 "generation_params": params,
                 "target_length": target.to_dict(),

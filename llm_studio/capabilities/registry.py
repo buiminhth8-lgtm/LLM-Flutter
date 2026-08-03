@@ -9,6 +9,8 @@ from llm_studio.features import (
     is_dataset_builder_enabled,
     is_dataset_versioning_enabled,
     is_finetune_center_enabled,
+    is_memory_retrieval_enabled,
+    is_novel_memory_enabled,
     is_novel_studio_enabled,
     is_revision_system_enabled,
     is_training_recipe_recommender_enabled,
@@ -98,6 +100,12 @@ _CAPABILITIES: tuple[CapabilityInfo, ...] = (
     CapabilityInfo("adapter_evaluation_report", CapabilityStatus.NOT_IMPLEMENTED, "Adapter evaluation reports are not implemented.", False),
     CapabilityInfo("full_evaluation_center", CapabilityStatus.NOT_IMPLEMENTED, "Full automatic Evaluation Center is not implemented.", False),
     CapabilityInfo("novel_rag_memory", CapabilityStatus.NOT_IMPLEMENTED, "Novel memory and long-form RAG are planned but not implemented.", False),
+    CapabilityInfo("memory_documents", CapabilityStatus.NOT_IMPLEMENTED, "Novel memory documents are planned but not implemented.", False),
+    CapabilityInfo("memory_keyword_retrieval", CapabilityStatus.NOT_IMPLEMENTED, "Keyword memory retrieval is planned but not implemented.", False),
+    CapabilityInfo("memory_sqlite_fts", CapabilityStatus.NOT_IMPLEMENTED, "SQLite FTS memory retrieval is planned but not implemented.", False),
+    CapabilityInfo("memory_embedding_retrieval", CapabilityStatus.NOT_IMPLEMENTED, "Embedding memory retrieval is planned but not implemented.", False),
+    CapabilityInfo("chapter_summary_versions", CapabilityStatus.NOT_IMPLEMENTED, "Chapter summary versions are planned but not implemented.", False),
+    CapabilityInfo("context_memory_bridge", CapabilityStatus.NOT_IMPLEMENTED, "ContextAssembler memory bridge is planned but not implemented.", False),
     CapabilityInfo("novel_evaluation", CapabilityStatus.NOT_IMPLEMENTED, "Novel evaluation workflows are planned but not implemented.", False),
 )
 
@@ -185,6 +193,26 @@ def get_capabilities_for_config(config) -> tuple[CapabilityInfo, ...]:
                 "full_evaluation_center": (CapabilityStatus.NOT_IMPLEMENTED, "Full automatic Evaluation Center is intentionally out of Stage 9 scope.", False),
             }
         )
+    if is_novel_memory_enabled(config):
+        overrides.update(
+            {
+                "novel_rag_memory": (CapabilityStatus.AVAILABLE, "Novel Memory / RAG documents, chunks, retrieval traces, and ContextAssembler bridge are available.", True),
+                "memory_documents": (CapabilityStatus.AVAILABLE, "Memory documents can be created manually or built from existing novel data.", True),
+                "memory_keyword_retrieval": (CapabilityStatus.AVAILABLE, "Deterministic keyword retrieval is available without external vector services.", True),
+                "memory_sqlite_fts": (CapabilityStatus.PARTIAL, "SQLite FTS5 is used when available and falls back to keyword retrieval when unavailable.", True),
+                "memory_embedding_retrieval": (CapabilityStatus.NOT_IMPLEMENTED, "Embedding retrieval remains a reserved interface in Stage 10.", False),
+                "chapter_summary_versions": (CapabilityStatus.AVAILABLE, "Manual and model-generated chapter summary versions are persisted.", True),
+                "context_memory_bridge": (CapabilityStatus.AVAILABLE, "ContextAssembler can inject budgeted retrieved_memory when memory.enabled=true.", True),
+                "full_evaluation_center": (CapabilityStatus.NOT_IMPLEMENTED, "Full automatic Evaluation Center is intentionally out of Stage 10 scope.", False),
+                "novel_evaluation": (CapabilityStatus.NOT_IMPLEMENTED, "Automatic literary evaluation remains out of scope.", False),
+            }
+        )
+        if not is_memory_retrieval_enabled(config):
+            overrides["memory_keyword_retrieval"] = (
+                CapabilityStatus.NOT_IMPLEMENTED,
+                "Memory retrieval is disabled by feature flag.",
+                False,
+            )
     existing = {cap.name for cap in _CAPABILITIES}
     result: list[CapabilityInfo] = []
     for cap in _CAPABILITIES:

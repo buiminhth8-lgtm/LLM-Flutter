@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../../core/api/api_exception.dart';
+import '../memory/memory_api_client.dart';
+import '../memory/models/memory_retrieval_result_dto.dart';
 import '../revisions/models/revision_record_dto.dart';
 import '../revisions/revision_api_client.dart';
 import 'models/target_length_dto.dart';
@@ -13,10 +15,11 @@ import 'writing_api_client.dart';
 import 'writing_state.dart';
 
 class WritingController extends ChangeNotifier {
-  WritingController(this._api, {this.revisionApi});
+  WritingController(this._api, {this.revisionApi, this.memoryApi});
 
   final WritingApiClient _api;
   final RevisionApiClient? revisionApi;
+  final MemoryApiClient? memoryApi;
   StreamSubscription<WritingStreamEventDto>? _streamSubscription;
   WritingState state = const WritingState();
 
@@ -163,6 +166,7 @@ class WritingController extends ChangeNotifier {
           'target_length':
               '${targetLength.min}-${targetLength.max} ${targetLength.unit == 'chars' ? '中文字符' : 'tokens'}',
         },
+        'memory': _memoryConfig(currentChapterGoal),
         'save_record': true,
       });
       state = state.copyWith(contextPreview: preview);
@@ -198,6 +202,7 @@ class WritingController extends ChangeNotifier {
         if (currentChapterGoal.trim().isNotEmpty)
           'current_chapter_goal': currentChapterGoal.trim(),
       },
+      memory: _memoryConfig(currentChapterGoal),
       temperature: temperature,
       topP: topP,
       maxTokens: maxTokens,
@@ -269,6 +274,69 @@ class WritingController extends ChangeNotifier {
       return;
     }
     notifyListeners();
+  }
+
+  void setMemoryEnabled(bool value) {
+    state = state.copyWith(
+      memoryEnabled: value,
+      clearMemoryPreview: !value,
+      clearPreview: true,
+    );
+    notifyListeners();
+  }
+
+  void setMemoryTopK(int value) {
+    final bounded = value < 1 ? 1 : (value > 50 ? 50 : value);
+    state = state.copyWith(memoryTopK: bounded, clearPreview: true);
+    notifyListeners();
+  }
+
+  void setMemoryMaxTokens(int value) {
+    final bounded = value < 1 ? 1 : (value > 12000 ? 12000 : value);
+    state = state.copyWith(memoryMaxTokens: bounded, clearPreview: true);
+    notifyListeners();
+  }
+
+  void toggleMemorySourceType(String sourceType, bool selected) {
+    final next = [...state.memorySourceTypes];
+    if (selected && !next.contains(sourceType)) {
+      next.add(sourceType);
+    }
+    if (!selected) {
+      next.remove(sourceType);
+    }
+    state = state.copyWith(memorySourceTypes: next, clearPreview: true);
+    notifyListeners();
+  }
+
+  Future<void> retrieveMemoryPreview(String queryText) async {
+    final api = memoryApi;
+    final projectId = state.selectedProjectId;
+    if (api == null) {
+      _setError('Memory system is not available.');
+      return;
+    }
+    if (projectId == null || projectId.isEmpty) {
+      _setError('请先选择小说项目。');
+      return;
+    }
+    await _run(() async {
+      final result = await api.retrieveMemory(
+        MemoryRetrieveRequest(
+          projectId: projectId,
+          chapterId: state.selectedChapterId,
+          sceneId: state.selectedSceneId,
+          queryText: queryText.trim().isEmpty ? ' ' : queryText.trim(),
+          mode: state.mode,
+          topK: state.memoryTopK,
+          maxMemoryTokens: state.memoryMaxTokens,
+          maxChunks: state.memoryTopK,
+          sourceTypes: state.memorySourceTypes,
+          saveRetrievalRecord: true,
+        ),
+      );
+      state = state.copyWith(memoryPreview: result);
+    });
   }
 
   Future<void> saveToChapter({bool append = false}) async {
@@ -444,6 +512,21 @@ class WritingController extends ChangeNotifier {
       return selected;
     }
     return items.isEmpty ? null : items.first;
+  }
+
+  Map<String, Object?> _memoryConfig(String queryText) {
+    if (!state.memoryEnabled) {
+      return const {'enabled': false};
+    }
+    return {
+      'enabled': true,
+      'query_text': queryText.trim(),
+      'top_k': state.memoryTopK,
+      'max_memory_tokens': state.memoryMaxTokens,
+      'max_chunks': state.memoryTopK,
+      'source_types': state.memorySourceTypes,
+      'save_retrieval_record': true,
+    };
   }
 
   Future<void> _run(Future<void> Function() action) async {
