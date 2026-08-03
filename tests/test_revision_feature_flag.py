@@ -48,7 +48,9 @@ novels:
     assert enabled["dataset_sft_export"].status.value == "available"
     assert enabled["dataset_versioning"].status.value == "available"
     assert enabled["training_recipe_recommender"].status.value == "available"
-    assert enabled["finetune_center"].status.value == "not_implemented"
+    assert enabled["finetune_center"].status.value == "available"
+    assert enabled["finetune_runs"].status.value == "available"
+    assert enabled["adapter_training"].status.value == "partial"
 
 
 def test_revision_rbac_permissions():

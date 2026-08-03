@@ -100,6 +100,8 @@ features:
     enabled: true
   training_recipe_recommender:
     enabled: true
+  finetune_center:
+    enabled: true
 novels:
   db_path: "./data/novels/novels.sqlite"
 prompts:
@@ -161,7 +163,10 @@ vision_model_registry:
 
 # Default fine-tune settings
 finetune:
+  db_path: "./data/novels/novels.sqlite"
+  output_dir: "./data/finetune"
   method: "qlora"          # lora, qlora
+  use_fake_trainer: false
   lora_r: 16
   lora_alpha: 32
   lora_dropout: 0.05

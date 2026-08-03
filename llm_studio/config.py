@@ -104,6 +104,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "training_recipe_recommender": {
             "enabled": True,
         },
+        "finetune_center": {
+            "enabled": True,
+        },
     },
     "novels": {
         "db_path": "./data/novels/novels.sqlite",
@@ -126,7 +129,10 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "export_dir": "./data/datasets",
     },
     "finetune": {
+        "db_path": "./data/novels/novels.sqlite",
+        "output_dir": "./data/finetune",
         "method": "qlora",
+        "use_fake_trainer": False,
         "lora_r": 16,
         "lora_alpha": 32,
         "lora_dropout": 0.05,

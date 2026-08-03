@@ -7,6 +7,7 @@ from dataclasses import dataclass, replace
 from llm_studio.features import (
     is_dataset_builder_enabled,
     is_dataset_versioning_enabled,
+    is_finetune_center_enabled,
     is_novel_studio_enabled,
     is_revision_system_enabled,
     is_training_recipe_recommender_enabled,
@@ -84,8 +85,13 @@ _CAPABILITIES: tuple[CapabilityInfo, ...] = (
     CapabilityInfo("dataset_train_val_split", CapabilityStatus.NOT_IMPLEMENTED, "Dataset train/validation split is planned for DatasetVersion.", False),
     CapabilityInfo("training_recipe_recommender", CapabilityStatus.NOT_IMPLEMENTED, "Training recipe recommendation is planned for a later stage.", False),
     CapabilityInfo("finetune_center", CapabilityStatus.NOT_IMPLEMENTED, "Novel-specific fine-tune workflows are not implemented.", False),
+    CapabilityInfo("finetune_preflight", CapabilityStatus.NOT_IMPLEMENTED, "Fine-tune preflight checks are not implemented.", False),
     CapabilityInfo("finetune_runs", CapabilityStatus.NOT_IMPLEMENTED, "FineTuneRun execution is not implemented.", False),
+    CapabilityInfo("finetune_metrics", CapabilityStatus.NOT_IMPLEMENTED, "Fine-tune metrics are not implemented.", False),
+    CapabilityInfo("finetune_checkpoints", CapabilityStatus.NOT_IMPLEMENTED, "Fine-tune checkpoint tracking is not implemented.", False),
     CapabilityInfo("adapter_training", CapabilityStatus.NOT_IMPLEMENTED, "Adapter training and registration are not implemented.", False),
+    CapabilityInfo("adapter_registration_after_training", CapabilityStatus.NOT_IMPLEMENTED, "Adapter registration after training is not implemented.", False),
+    CapabilityInfo("adapter_evaluation", CapabilityStatus.NOT_IMPLEMENTED, "Adapter quality evaluation is not implemented.", False),
     CapabilityInfo("novel_rag_memory", CapabilityStatus.NOT_IMPLEMENTED, "Novel memory and long-form RAG are planned but not implemented.", False),
     CapabilityInfo("novel_evaluation", CapabilityStatus.NOT_IMPLEMENTED, "Novel evaluation workflows are planned but not implemented.", False),
 )
@@ -151,6 +157,18 @@ def get_capabilities_for_config(config) -> tuple[CapabilityInfo, ...]:
             CapabilityStatus.AVAILABLE,
             "Draft LoRA/QLoRA recipe recommendation is available without launching training.",
             True,
+        )
+    if is_finetune_center_enabled(config):
+        overrides.update(
+            {
+                "finetune_center": (CapabilityStatus.AVAILABLE, "Fine-tune Center can create queued LoRA/QLoRA runs from frozen DatasetVersions and confirmed recipes.", True),
+                "finetune_preflight": (CapabilityStatus.AVAILABLE, "Preflight validates dataset artifacts, recipes, base model, dependencies, GPU, and output paths before queueing.", True),
+                "finetune_runs": (CapabilityStatus.AVAILABLE, "FineTuneRun lifecycle is persisted and executed through JobQueue.", True),
+                "finetune_metrics": (CapabilityStatus.AVAILABLE, "Fine-tune train/eval metrics and sanitized logs are available for Flutter.", True),
+                "finetune_checkpoints": (CapabilityStatus.AVAILABLE, "Best and last checkpoints are tracked separately for resume.", True),
+                "adapter_training": (CapabilityStatus.PARTIAL, "LoRA/QLoRA training has a real trainer interface; fake trainer is test-only and real runs require local dependencies and GPU.", True),
+                "adapter_registration_after_training": (CapabilityStatus.AVAILABLE, "Completed runs register produced adapters without auto activation.", True),
+            }
         )
     existing = {cap.name for cap in _CAPABILITIES}
     result: list[CapabilityInfo] = []

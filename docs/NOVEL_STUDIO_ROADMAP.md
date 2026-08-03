@@ -9,6 +9,7 @@ Stage 4 Writing details: [NOVEL_STAGE4_WRITING.md](NOVEL_STAGE4_WRITING.md).
 Stage 5 Revisions details: [NOVEL_STAGE5_REVISIONS.md](NOVEL_STAGE5_REVISIONS.md).
 Stage 6 Dataset Builder details: [NOVEL_STAGE6_DATASET_BUILDER.md](NOVEL_STAGE6_DATASET_BUILDER.md).
 Stage 7 Dataset Versioning details: [NOVEL_STAGE7_DATASET_VERSIONING.md](NOVEL_STAGE7_DATASET_VERSIONING.md).
+Stage 8 Fine-tune Center details: [NOVEL_STAGE8_FINETUNE_CENTER.md](NOVEL_STAGE8_FINETUNE_CENTER.md).
 
 Stage 6 is implemented: approved revision candidates can be converted into
 reviewable SFT samples, sample review state is persisted, and approved samples
@@ -19,7 +20,7 @@ Stage 6 boundaries:
 - `revision_records` saves `original_text`, `edited_text`, `diff_json`, tags, score, status, hashes, and `accepted_for_dataset`.
 - `revision_autosaves` saves editing drafts separately and never changes formal revision text.
 - `training_datasets`, `training_samples`, and `dataset_exports` are mutable draft builder records.
-- FineTuneRun, LoRA / QLoRA execution, Adapter registration, RAG/Memory, and Evaluation remain later stages.
+- Adapter evaluation, base-vs-adapter comparison, RAG/Memory, and Evaluation remain later stages.
 
 ## 阶段 0：工程基线整理与开发入口
 
@@ -69,6 +70,12 @@ Stage 6 boundaries:
 - 支持 draft `training_recipes` 推荐和 confirm，但不启动训练。
 
 ## 阶段 8：LoRA / QLoRA Fine-tune Center
+
+- `confirmed` training recipe + `frozen` DatasetVersion 可创建 `finetune_runs`。
+- 训练任务通过 JobQueue 后台执行，并受 GPU Scheduler 保护。
+- 记录 metrics、logs、last checkpoint、best checkpoint、取消与 resume 状态。
+- 训练完成后注册 Adapter，但默认不自动激活。
+- 不包含 Adapter 评估、基础模型 vs Adapter 对比、RAG/Memory 或 Evaluation Center。
 
 ## 阶段 9：Adapter 评估与生成对比
 

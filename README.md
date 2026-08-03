@@ -8,6 +8,7 @@ Novel Studio Stage 4 Writing Workspace: [docs/NOVEL_STAGE4_WRITING.md](docs/NOVE
 Novel Studio Stage 5 Revisions: [docs/NOVEL_STAGE5_REVISIONS.md](docs/NOVEL_STAGE5_REVISIONS.md).
 Novel Studio Stage 6 Dataset Builder: [docs/NOVEL_STAGE6_DATASET_BUILDER.md](docs/NOVEL_STAGE6_DATASET_BUILDER.md).
 Novel Studio Stage 7 Dataset Versioning: [docs/NOVEL_STAGE7_DATASET_VERSIONING.md](docs/NOVEL_STAGE7_DATASET_VERSIONING.md).
+Novel Studio Stage 8 Fine-tune Center: [docs/NOVEL_STAGE8_FINETUNE_CENTER.md](docs/NOVEL_STAGE8_FINETUNE_CENTER.md).
 
 认证恢复、API Key 重新生成和本机 admin 恢复流程见 [docs/AUTH_RECOVERY.md](docs/AUTH_RECOVERY.md)。
 
@@ -671,6 +672,14 @@ C:\Users\zkjr\...
 | `dataset_manifest` | available* | yes | manifest 记录 split、counts、stats、hashes、warnings |
 | `dataset_train_val_split` | available* | yes | 支持 group_by_chapter 等分组切分，不做连续 token 9:1 |
 | `training_recipe_recommender` | available* | yes | 生成 draft LoRA/QLoRA 配方建议，不启动训练 |
+| `finetune_center` | available* | yes | 从 frozen DatasetVersion 和 confirmed recipe 创建 FineTuneRun |
+| `finetune_preflight` | available* | yes | 检查 dataset manifest、base model、依赖、GPU 和输出目录 |
+| `finetune_runs` | available* | yes | 训练生命周期通过 JobQueue 持久化执行 |
+| `finetune_metrics` | available* | yes | 记录 train/eval metrics 和脱敏日志 |
+| `finetune_checkpoints` | available* | yes | 分离 last / best checkpoint，支持 resume |
+| `adapter_training` | partial* | yes | LoRA/QLoRA 真实 trainer 接口可用，fake trainer 仅用于测试/验收 |
+| `adapter_registration_after_training` | available* | yes | 训练完成后注册 Adapter，默认不自动激活 |
+| `adapter_evaluation` | not_implemented | no | Stage 9 规划 |
 
 \* 需要 `features.novel_studio.enabled=true`。
 

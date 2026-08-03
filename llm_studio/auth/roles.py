@@ -39,6 +39,8 @@ class Permission(StrEnum):
     MANAGE_REVISIONS = "manage_revisions"
     VIEW_DATASETS = "view_datasets"
     MANAGE_DATASETS = "manage_datasets"
+    VIEW_FINETUNE = "view_finetune"
+    MANAGE_FINETUNE = "manage_finetune"
 
 
 ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
@@ -52,6 +54,7 @@ ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.VIEW_WRITING,
             Permission.VIEW_REVISIONS,
             Permission.VIEW_DATASETS,
+            Permission.VIEW_FINETUNE,
         }
     ),
     Role.OPERATOR: frozenset(
@@ -74,6 +77,8 @@ ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.MANAGE_REVISIONS,
             Permission.VIEW_DATASETS,
             Permission.MANAGE_DATASETS,
+            Permission.VIEW_FINETUNE,
+            Permission.MANAGE_FINETUNE,
         }
     ),
     Role.ADMIN: frozenset(Permission),

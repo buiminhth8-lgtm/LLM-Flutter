@@ -54,7 +54,9 @@ def test_dataset_feature_flag_and_capabilities(monkeypatch, tmp_path):
     assert caps["dataset_freeze"].status == CapabilityStatus.AVAILABLE
     assert caps["dataset_manifest"].status == CapabilityStatus.AVAILABLE
     assert caps["training_recipe_recommender"].status == CapabilityStatus.AVAILABLE
-    assert caps["finetune_center"].status == CapabilityStatus.NOT_IMPLEMENTED
+    assert caps["finetune_center"].status == CapabilityStatus.AVAILABLE
+    assert caps["finetune_runs"].status == CapabilityStatus.AVAILABLE
+    assert caps["adapter_training"].status == CapabilityStatus.PARTIAL
 
 
 def test_dataset_permissions():

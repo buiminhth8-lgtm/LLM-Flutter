@@ -118,6 +118,11 @@ def required_permission_for_request(method: str, path: str) -> Permission | None
             return Permission.VIEW_DATASETS
         return Permission.MANAGE_DATASETS
 
+    if path.startswith("/v1/finetune"):
+        if method == "GET":
+            return Permission.VIEW_FINETUNE
+        return Permission.MANAGE_FINETUNE
+
     if path.startswith("/v1/vision"):
         return Permission.CHAT
 

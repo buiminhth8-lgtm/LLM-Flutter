@@ -34,5 +34,6 @@ Boundaries:
 - `DatasetFreezeService`: freezes `ready` or `dirty` datasets and writes
   `train.jsonl`, optional `val.jsonl`, and `manifest.json`.
 
-Stage 7 still does not create `finetune_runs`, call GPU training code, or
-register adapters.
+Stage 7 itself still does not create `finetune_runs`, call GPU training code,
+or register adapters. Stage 8 consumes frozen versions and confirmed recipes
+from this package through `llm_studio.finetune`.

@@ -55,6 +55,6 @@ def test_dataset_stage7_feature_flags(monkeypatch, tmp_path):
     assert caps["dataset_manifest"].status == CapabilityStatus.AVAILABLE
     assert caps["dataset_train_val_split"].status == CapabilityStatus.AVAILABLE
     assert caps["training_recipe_recommender"].status == CapabilityStatus.AVAILABLE
-    assert caps["finetune_center"].status == CapabilityStatus.NOT_IMPLEMENTED
-    assert caps["finetune_runs"].status == CapabilityStatus.NOT_IMPLEMENTED
-    assert caps["adapter_training"].status == CapabilityStatus.NOT_IMPLEMENTED
+    assert caps["finetune_center"].status == CapabilityStatus.AVAILABLE
+    assert caps["finetune_runs"].status == CapabilityStatus.AVAILABLE
+    assert caps["adapter_training"].status == CapabilityStatus.PARTIAL

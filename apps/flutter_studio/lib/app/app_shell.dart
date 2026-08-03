@@ -23,6 +23,9 @@ import '../features/diagnostics/diagnostics_controller.dart';
 import '../features/diagnostics/diagnostics_page.dart';
 import '../features/downloads/download_controller.dart';
 import '../features/downloads/downloads_page.dart';
+import '../features/finetune/finetune_api_client.dart';
+import '../features/finetune/finetune_center_page.dart';
+import '../features/finetune/finetune_controller.dart';
 import '../features/jobs/job_controller.dart';
 import '../features/models/model_controller.dart';
 import '../features/models/models_page.dart';
@@ -114,6 +117,9 @@ class _StudioShellState extends State<StudioShell> {
   late final DatasetController _datasets = DatasetController(
     DatasetApiClient(_client),
   );
+  late final FinetuneController _finetune = FinetuneController(
+    FinetuneApiClient(_client),
+  );
   late final WritingController _writing = WritingController(
     WritingApiClient(_client),
     revisionApi: _revisionApi,
@@ -177,6 +183,7 @@ class _StudioShellState extends State<StudioShell> {
     _writing,
     _revisions,
     _datasets,
+    _finetune,
   ];
 
   void _onNotifierChanged() {
@@ -277,6 +284,7 @@ class _StudioShellState extends State<StudioShell> {
         if (_writingWorkspaceAvailable()) _writing.refresh().catchError((_) {}),
         if (_revisionSystemAvailable()) _revisions.refresh().catchError((_) {}),
         if (_datasetBuilderAvailable()) _datasets.refresh().catchError((_) {}),
+        if (_finetuneCenterAvailable()) _finetune.refresh().catchError((_) {}),
       ]);
       await _savePreferences();
     });
@@ -614,6 +622,17 @@ class _StudioShellState extends State<StudioShell> {
     });
   }
 
+  bool _finetuneCenterAvailable() {
+    return _status.state.capabilities.any((item) {
+      if (item is! Map) {
+        return false;
+      }
+      return item['name'] == 'finetune_center' &&
+          item['status'] == 'available' &&
+          item['frontend_exposed'] == true;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_shell.initialSetupCheckDone && widget.autoRefresh) {
@@ -769,6 +788,12 @@ class _StudioShellState extends State<StudioShell> {
         },
       ),
       DatasetBuilderPage(controller: _datasets),
+      FinetuneCenterPage(
+        controller: _finetune,
+        onOpenAdapter: () {
+          _navigation.select(5);
+        },
+      ),
       SettingsPage(
         apiBaseController: _settings.apiBaseController,
         userIdController: _settings.userIdController,
@@ -821,6 +846,7 @@ class _StudioShellState extends State<StudioShell> {
               showWritingWorkspace: _writingWorkspaceAvailable(),
               showRevisionReview: _revisionSystemAvailable(),
               showDatasetBuilder: _datasetBuilderAvailable(),
+              showFinetuneCenter: _finetuneCenterAvailable(),
             ),
           ),
           const VerticalDivider(width: 1),
