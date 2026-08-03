@@ -9,6 +9,10 @@ import '../core/logging/client_logger.dart';
 import '../core/models/dto.dart';
 import '../features/adapters/adapter_controller.dart';
 import '../features/adapters/adapters_page.dart';
+import '../features/adapter_evaluation/adapter_eval_api_client.dart';
+import '../features/adapter_evaluation/adapter_eval_controller.dart';
+import '../features/adapter_evaluation/adapter_eval_sessions_page.dart';
+import '../features/adapter_evaluation/models/adapter_eval_create_request_dto.dart';
 import '../features/benchmarks/benchmark_controller.dart';
 import '../features/benchmarks/benchmarks_page.dart';
 import '../features/chat/chat_controller.dart';
@@ -26,6 +30,7 @@ import '../features/downloads/downloads_page.dart';
 import '../features/finetune/finetune_api_client.dart';
 import '../features/finetune/finetune_center_page.dart';
 import '../features/finetune/finetune_controller.dart';
+import '../features/finetune/models/finetune_run_dto.dart';
 import '../features/jobs/job_controller.dart';
 import '../features/models/model_controller.dart';
 import '../features/models/models_page.dart';
@@ -120,6 +125,9 @@ class _StudioShellState extends State<StudioShell> {
   late final FinetuneController _finetune = FinetuneController(
     FinetuneApiClient(_client),
   );
+  late final AdapterEvalController _adapterEval = AdapterEvalController(
+    AdapterEvalApiClient(_client),
+  );
   late final WritingController _writing = WritingController(
     WritingApiClient(_client),
     revisionApi: _revisionApi,
@@ -184,6 +192,7 @@ class _StudioShellState extends State<StudioShell> {
     _revisions,
     _datasets,
     _finetune,
+    _adapterEval,
   ];
 
   void _onNotifierChanged() {
@@ -285,6 +294,8 @@ class _StudioShellState extends State<StudioShell> {
         if (_revisionSystemAvailable()) _revisions.refresh().catchError((_) {}),
         if (_datasetBuilderAvailable()) _datasets.refresh().catchError((_) {}),
         if (_finetuneCenterAvailable()) _finetune.refresh().catchError((_) {}),
+        if (_adapterEvaluationAvailable())
+          _adapterEval.refresh().catchError((_) {}),
       ]);
       await _savePreferences();
     });
@@ -465,6 +476,29 @@ class _StudioShellState extends State<StudioShell> {
     await _diagnostics.export();
   });
 
+  Future<void> _createAdapterEvaluationFromRun(
+    FinetuneRunDto run,
+  ) async => _guarded(() async {
+    final adapterId = run.adapterId;
+    if (run.status != 'completed' || adapterId == null || adapterId.isEmpty) {
+      throw StudioApiException(
+        'Only completed fine-tune runs with a registered adapter can be evaluated.',
+        code: 'ADAPTER_EVAL_FINETUNE_RUN_NOT_COMPLETED',
+      );
+    }
+    await _adapterEval.createSession(
+      CreateAdapterEvalSessionRequest(
+        name: 'Evaluation for ${run.adapterName}',
+        description: 'Created from fine-tune run ${run.runId}.',
+        finetuneRunId: run.runId,
+        datasetVersionId: run.datasetVersionId,
+        baseModelId: run.baseModelId,
+        adapterId: adapterId,
+      ),
+    );
+    _navigation.select(adapterEvaluationPageIndex);
+  });
+
   Future<void> _clearAuth() async {
     _settings.clearApiKey();
     _models.restoreSelectedModel(null);
@@ -633,6 +667,17 @@ class _StudioShellState extends State<StudioShell> {
     });
   }
 
+  bool _adapterEvaluationAvailable() {
+    return _status.state.capabilities.any((item) {
+      if (item is! Map) {
+        return false;
+      }
+      return item['name'] == 'adapter_evaluation' &&
+          item['status'] == 'available' &&
+          item['frontend_exposed'] == true;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_shell.initialSetupCheckDone && widget.autoRefresh) {
@@ -793,7 +838,9 @@ class _StudioShellState extends State<StudioShell> {
         onOpenAdapter: () {
           _navigation.select(5);
         },
+        onCreateEvaluationSession: _createAdapterEvaluationFromRun,
       ),
+      AdapterEvalSessionsPage(controller: _adapterEval),
       SettingsPage(
         apiBaseController: _settings.apiBaseController,
         userIdController: _settings.userIdController,
@@ -847,6 +894,7 @@ class _StudioShellState extends State<StudioShell> {
               showRevisionReview: _revisionSystemAvailable(),
               showDatasetBuilder: _datasetBuilderAvailable(),
               showFinetuneCenter: _finetuneCenterAvailable(),
+              showAdapterEvaluation: _adapterEvaluationAvailable(),
             ),
           ),
           const VerticalDivider(width: 1),

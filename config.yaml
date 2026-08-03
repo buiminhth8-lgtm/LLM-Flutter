@@ -102,6 +102,8 @@ features:
     enabled: true
   finetune_center:
     enabled: true
+  adapter_evaluation:
+    enabled: true
 novels:
   db_path: "./data/novels/novels.sqlite"
 prompts:
@@ -184,6 +186,9 @@ finetune:
   logging_steps: 5
   fp16: false
   bf16: false
+
+adapter_evaluation:
+  db_path: "./data/novels/novels.sqlite"
 
 # Popular models registry (for quick download)
 model_registry:

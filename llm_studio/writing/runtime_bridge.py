@@ -75,6 +75,11 @@ class WritingRuntimeBridge:
                     api_errors.WRITING_ADAPTER_NOT_FOUND,
                     "指定 Adapter 不存在或无法加载。",
                 ) from exc
+        else:
+            try:
+                await asyncio.to_thread(runner.deactivate_adapter)
+            except Exception:
+                pass
         return resolved_model_id, runner
 
     async def generate_text(

@@ -20,13 +20,19 @@ class DetailHttpClient extends http.BaseClient {
     paths.add('${request.method} ${request.url.path}');
     Object response = _run(status: 'cancelled');
     if (request.url.path == '/v1/finetune/runs') {
-      response = {'data': [_run(status: 'cancelled')]};
+      response = {
+        'data': [_run(status: 'cancelled')],
+      };
     } else if (request.url.path.endsWith('/metrics')) {
-      response = {'data': [_metric()]};
+      response = {
+        'data': [_metric()],
+      };
     } else if (request.url.path.endsWith('/logs')) {
       response = {'data': <Object?>[]};
     } else if (request.url.path.endsWith('/checkpoints')) {
-      response = {'data': [_checkpoint()]};
+      response = {
+        'data': [_checkpoint()],
+      };
     } else if (request.url.path.endsWith('/resume')) {
       response = _run(status: 'queued');
     }
@@ -156,7 +162,9 @@ void main() {
     await tester.pump();
     expect(httpClient.paths, contains('POST /v1/finetune/runs/run-1/cancel'));
 
-    controller.state = controller.state.copyWith(currentRun: _run(status: 'failed'));
+    controller.state = controller.state.copyWith(
+      currentRun: _run(status: 'failed'),
+    );
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -176,6 +184,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1200, 1800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     var opened = false;
+    FinetuneRunDto? evaluationRun;
     final controller = FinetuneController(
       FinetuneApiClient(
         LlmStudioClient('http://localhost', httpClient: DetailHttpClient()),
@@ -191,15 +200,25 @@ void main() {
           body: FinetuneRunDetailPage(
             controller: controller,
             onOpenAdapter: () => opened = true,
+            onCreateEvaluationSession: (run) => evaluationRun = run,
           ),
         ),
       ),
     );
+    await tester.ensureVisible(
+      find.byKey(const Key('finetune-create-evaluation-session')),
+    );
+    await tester.tap(
+      find.byKey(const Key('finetune-create-evaluation-session')),
+    );
+    await tester.pump();
+
     await tester.ensureVisible(find.byKey(const Key('finetune-open-adapter')));
     await tester.tap(find.byKey(const Key('finetune-open-adapter')));
     await tester.pump();
 
     expect(find.textContaining('not auto activated'), findsOneWidget);
+    expect(evaluationRun?.runId, 'run-1');
     expect(opened, isTrue);
   });
 }

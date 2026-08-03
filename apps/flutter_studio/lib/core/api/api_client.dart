@@ -876,15 +876,11 @@ class LlmStudioClient {
     return _deleteMap('/v1/datasets/recipes/${Uri.encodeComponent(recipeId)}');
   }
 
-  Future<Map<String, dynamic>> preflightFinetune(
-    Map<String, Object?> body,
-  ) {
+  Future<Map<String, dynamic>> preflightFinetune(Map<String, Object?> body) {
     return _postMap('/v1/finetune/preflight', body: body);
   }
 
-  Future<Map<String, dynamic>> createFinetuneRun(
-    Map<String, Object?> body,
-  ) {
+  Future<Map<String, dynamic>> createFinetuneRun(Map<String, Object?> body) {
     return _postMap(
       '/v1/finetune/runs',
       body: body,
@@ -966,6 +962,114 @@ class LlmStudioClient {
       '/v1/finetune/runs/${Uri.encodeComponent(runId)}/checkpoints',
     );
     return (body['data'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> createAdapterEvalSession(
+    Map<String, Object?> body,
+  ) {
+    return _postMap('/v1/adapter-evaluations/sessions', body: body);
+  }
+
+  Future<List<dynamic>> adapterEvalSessions({
+    String? status,
+    String? projectId,
+    String? adapterId,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final query = <String, String>{
+      if (status != null && status.isNotEmpty) 'status': status,
+      if (projectId != null && projectId.isNotEmpty) 'project_id': projectId,
+      if (adapterId != null && adapterId.isNotEmpty) 'adapter_id': adapterId,
+      'limit': '$limit',
+      'offset': '$offset',
+    };
+    final body = await _getMap(
+      Uri(
+        path: '/v1/adapter-evaluations/sessions',
+        queryParameters: query,
+      ).toString(),
+    );
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> adapterEvalSession(String sessionId) {
+    return _getMap(
+      '/v1/adapter-evaluations/sessions/${Uri.encodeComponent(sessionId)}',
+    );
+  }
+
+  Future<Map<String, dynamic>> createAdapterEvalCase(
+    String sessionId,
+    Map<String, Object?> body,
+  ) {
+    return _postMap(
+      '/v1/adapter-evaluations/sessions/${Uri.encodeComponent(sessionId)}/cases',
+      body: body,
+    );
+  }
+
+  Future<Map<String, dynamic>> adapterEvalCase(String caseId) {
+    return _getMap(
+      '/v1/adapter-evaluations/cases/${Uri.encodeComponent(caseId)}',
+    );
+  }
+
+  Future<Map<String, dynamic>> prepareAdapterEvalCase(String caseId) {
+    return _postMap(
+      '/v1/adapter-evaluations/cases/${Uri.encodeComponent(caseId)}/prepare',
+      body: const {},
+    );
+  }
+
+  Future<Map<String, dynamic>> runAdapterEvalCase(String caseId) {
+    return _postMap(
+      '/v1/adapter-evaluations/cases/${Uri.encodeComponent(caseId)}/run',
+      body: const {},
+      timeout: const Duration(minutes: 5),
+    );
+  }
+
+  Future<Map<String, dynamic>> runAdapterEvalSession(String sessionId) {
+    return _postMap(
+      '/v1/adapter-evaluations/sessions/${Uri.encodeComponent(sessionId)}/run',
+      body: const {},
+      timeout: const Duration(minutes: 10),
+    );
+  }
+
+  Future<Map<String, dynamic>> scoreAdapterEvalCase(
+    String caseId,
+    Map<String, Object?> body,
+  ) {
+    return _postMap(
+      '/v1/adapter-evaluations/cases/${Uri.encodeComponent(caseId)}/score',
+      body: body,
+    );
+  }
+
+  Future<Map<String, dynamic>> generateAdapterEvalReport(String sessionId) {
+    return _postMap(
+      '/v1/adapter-evaluations/sessions/${Uri.encodeComponent(sessionId)}/report',
+      body: const {},
+    );
+  }
+
+  Future<List<dynamic>> adapterEvalReports(String sessionId) async {
+    final body = await _getMap(
+      '/v1/adapter-evaluations/sessions/${Uri.encodeComponent(sessionId)}/reports',
+    );
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> createRevisionFromEvalResult(
+    String resultId,
+    Map<String, Object?> body,
+  ) {
+    return _postMap(
+      '/v1/adapter-evaluations/results/${Uri.encodeComponent(resultId)}/create-revision',
+      body: body,
+    );
   }
 
   Future<String> ragQuery(String query, {int topK = 5}) async {

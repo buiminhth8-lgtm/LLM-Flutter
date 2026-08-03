@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'finetune_controller.dart';
+import 'models/finetune_run_dto.dart';
 import 'widgets/finetune_adapter_result_panel.dart';
 import 'widgets/finetune_checkpoint_panel.dart';
 import 'widgets/finetune_logs_panel.dart';
@@ -12,10 +13,12 @@ class FinetuneRunDetailPage extends StatelessWidget {
     super.key,
     required this.controller,
     required this.onOpenAdapter,
+    this.onCreateEvaluationSession,
   });
 
   final FinetuneController controller;
   final VoidCallback onOpenAdapter;
+  final ValueChanged<FinetuneRunDto>? onCreateEvaluationSession;
 
   @override
   Widget build(BuildContext context) {
@@ -24,10 +27,19 @@ class FinetuneRunDetailPage extends StatelessWidget {
     if (run == null) {
       return const Center(child: Text('Select a fine-tune run.'));
     }
-    final canCancel = !{'completed', 'failed', 'cancelled'}.contains(run.status);
+    final canCancel = !{
+      'completed',
+      'failed',
+      'cancelled',
+    }.contains(run.status);
     final canResume =
         {'failed', 'cancelled'}.contains(run.status) &&
         run.lastCheckpointId != null;
+    final canCreateEvaluation =
+        run.status == 'completed' &&
+        run.adapterId != null &&
+        run.adapterId!.isNotEmpty &&
+        onCreateEvaluationSession != null;
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
@@ -79,10 +91,19 @@ class FinetuneRunDetailPage extends StatelessWidget {
                         onPressed: controller.resumeCurrentRun,
                         child: const Text('Resume from Last'),
                       ),
+                    if (canCreateEvaluation)
+                      FilledButton.icon(
+                        key: const Key('finetune-create-evaluation-session'),
+                        onPressed: () => onCreateEvaluationSession!(run),
+                        icon: const Icon(Icons.compare_outlined),
+                        label: const Text('Create Evaluation Session'),
+                      ),
                   ],
                 ),
                 Text('config snapshot: ${run.configSnapshot}'),
-                Text('dataset manifest snapshot: ${run.datasetManifestSnapshot}'),
+                Text(
+                  'dataset manifest snapshot: ${run.datasetManifestSnapshot}',
+                ),
               ],
             ),
           ),

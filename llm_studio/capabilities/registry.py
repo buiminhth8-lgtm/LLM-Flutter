@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 
 from llm_studio.features import (
+    is_adapter_evaluation_enabled,
     is_dataset_builder_enabled,
     is_dataset_versioning_enabled,
     is_finetune_center_enabled,
@@ -92,6 +93,10 @@ _CAPABILITIES: tuple[CapabilityInfo, ...] = (
     CapabilityInfo("adapter_training", CapabilityStatus.NOT_IMPLEMENTED, "Adapter training and registration are not implemented.", False),
     CapabilityInfo("adapter_registration_after_training", CapabilityStatus.NOT_IMPLEMENTED, "Adapter registration after training is not implemented.", False),
     CapabilityInfo("adapter_evaluation", CapabilityStatus.NOT_IMPLEMENTED, "Adapter quality evaluation is not implemented.", False),
+    CapabilityInfo("adapter_base_compare", CapabilityStatus.NOT_IMPLEMENTED, "Base-vs-adapter comparison is not implemented.", False),
+    CapabilityInfo("adapter_manual_scoring", CapabilityStatus.NOT_IMPLEMENTED, "Manual adapter comparison scoring is not implemented.", False),
+    CapabilityInfo("adapter_evaluation_report", CapabilityStatus.NOT_IMPLEMENTED, "Adapter evaluation reports are not implemented.", False),
+    CapabilityInfo("full_evaluation_center", CapabilityStatus.NOT_IMPLEMENTED, "Full automatic Evaluation Center is not implemented.", False),
     CapabilityInfo("novel_rag_memory", CapabilityStatus.NOT_IMPLEMENTED, "Novel memory and long-form RAG are planned but not implemented.", False),
     CapabilityInfo("novel_evaluation", CapabilityStatus.NOT_IMPLEMENTED, "Novel evaluation workflows are planned but not implemented.", False),
 )
@@ -168,6 +173,16 @@ def get_capabilities_for_config(config) -> tuple[CapabilityInfo, ...]:
                 "finetune_checkpoints": (CapabilityStatus.AVAILABLE, "Best and last checkpoints are tracked separately for resume.", True),
                 "adapter_training": (CapabilityStatus.PARTIAL, "LoRA/QLoRA training has a real trainer interface; fake trainer is test-only and real runs require local dependencies and GPU.", True),
                 "adapter_registration_after_training": (CapabilityStatus.AVAILABLE, "Completed runs register produced adapters without auto activation.", True),
+            }
+        )
+    if is_adapter_evaluation_enabled(config):
+        overrides.update(
+            {
+                "adapter_evaluation": (CapabilityStatus.AVAILABLE, "Adapter Evaluation sessions compare base model and base+adapter outputs under frozen prompt/context/params.", True),
+                "adapter_base_compare": (CapabilityStatus.AVAILABLE, "Base-vs-adapter side-by-side generation uses WritingRuntimeBridge with identical prompt and params.", True),
+                "adapter_manual_scoring": (CapabilityStatus.AVAILABLE, "Human reviewers can score base and adapter results and choose a winner.", True),
+                "adapter_evaluation_report": (CapabilityStatus.AVAILABLE, "Lightweight reports summarize manual scores and win counts.", True),
+                "full_evaluation_center": (CapabilityStatus.NOT_IMPLEMENTED, "Full automatic Evaluation Center is intentionally out of Stage 9 scope.", False),
             }
         )
     existing = {cap.name for cap in _CAPABILITIES}
