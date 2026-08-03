@@ -112,12 +112,8 @@ class PromptApiClient {
     return PromptRenderResultDto.fromMap(item);
   }
 
-  Future<List<PromptTemplateDto>> ensureDefaults() async {
-    final items = await _client.ensureDefaultPromptTemplates();
-    return items
-        .whereType<Map>()
-        .map((item) => PromptTemplateDto.fromMap(item))
-        .toList();
+  Future<Map<String, dynamic>> ensureDefaults() async {
+    return _client.ensureDefaultPromptTemplates();
   }
 
   static Map<String, dynamic>? parseJsonObject(String text) {

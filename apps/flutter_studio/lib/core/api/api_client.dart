@@ -450,9 +450,15 @@ class LlmStudioClient {
     return _postMap('/v1/prompts/render', body: body);
   }
 
-  Future<List<dynamic>> ensureDefaultPromptTemplates() async {
+  Future<Map<String, dynamic>> ensureDefaultPromptTemplates() async {
     final body = await _postMap('/v1/prompts/defaults/ensure', body: const {});
-    return (body['data'] as List?) ?? const [];
+    final data = body['data'];
+    if (data is Map) {
+      return data.map(
+        (key, value) => MapEntry('$key', value),
+      );
+    }
+    return const {};
   }
 
   Future<Map<String, dynamic>> copyPromptTemplateToProject(

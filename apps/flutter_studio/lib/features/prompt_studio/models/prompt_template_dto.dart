@@ -12,6 +12,7 @@ class PromptTemplateDto {
     this.activeVersionId,
     this.activeVersion,
     this.updatedAt,
+    this.metadata = const {},
   });
 
   factory PromptTemplateDto.fromMap(Map<dynamic, dynamic> map) {
@@ -30,6 +31,11 @@ class PromptTemplateDto {
       activeVersion: active is Map
           ? PromptTemplateVersionDto.fromMap(active)
           : null,
+      metadata: map['metadata'] is Map
+          ? Map<String, dynamic>.from(
+              map['metadata'].map((key, value) => MapEntry('$key', value)),
+            )
+          : const {},
     );
   }
 
@@ -43,4 +49,19 @@ class PromptTemplateDto {
   final String status;
   final String? updatedAt;
   final PromptTemplateVersionDto? activeVersion;
+  final Map<String, dynamic> metadata;
+
+  bool get isBuiltin => metadata['builtin'] == true;
+
+  String? get builtinKey {
+    final value = metadata['builtin_key'];
+    return value == null ? null : '$value';
+  }
+
+  String? get category {
+    final value = metadata['category'];
+    return value == null ? null : '$value';
+  }
+
+  bool get isRecommended => metadata['recommended'] == true;
 }

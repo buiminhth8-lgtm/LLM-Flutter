@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/ui/app_empty_state.dart';
 import '../../core/ui/app_section_header.dart';
@@ -19,6 +22,19 @@ const promptTypeLabels = {
   'summary_generate': '摘要生成',
   'custom': '自定义',
 };
+
+const promptCategoryLabels = {
+  'writing': '正文生成',
+  'planning': '规划设定',
+  'editing': '辅助编辑',
+};
+
+String promptCategoryLabel(String? category) {
+  if (category == null) {
+    return '自定义';
+  }
+  return promptCategoryLabels[category] ?? '自定义';
+}
 
 class PromptStudioPage extends StatefulWidget {
   const PromptStudioPage({super.key, required this.controller});
@@ -253,25 +269,107 @@ class _TemplateList extends StatelessWidget {
         icon: Icons.description_outlined,
       );
     }
-    return ListView.separated(
-      itemCount: templates.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 8),
-      itemBuilder: (context, index) {
-        final template = templates[index];
-        final isSelected = template.id == selected?.id;
-        return ListTile(
-          selected: isSelected,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          tileColor: isSelected
-              ? Theme.of(context).colorScheme.secondaryContainer
-              : null,
-          title: Text(template.name),
-          subtitle: Text(
-            '${promptTypeLabels[template.type] ?? template.type} · ${template.scope}',
+    final grouped = <String, List<PromptTemplateDto>>{};
+    for (final template in templates) {
+      grouped
+          .putIfAbsent(promptCategoryLabel(template.category), () => [])
+          .add(template);
+    }
+    const order = ['正文生成', '规划设定', '辅助编辑', '自定义'];
+    final sections = <(String, List<PromptTemplateDto>)>[
+      for (final label in order)
+        if (grouped.containsKey(label)) (label, grouped[label]!),
+      for (final entry in grouped.entries)
+        if (!order.contains(entry.key)) (entry.key, entry.value),
+    ];
+    return ListView(
+      children: [
+        for (final (label, items) in sections) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
           ),
-          onTap: () => onSelect(template.id),
-        );
-      },
+          for (final template in items) ...[
+            _TemplateTile(
+              template: template,
+              isSelected: template.id == selected?.id,
+              onTap: () => onSelect(template.id),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ],
+      ],
+    );
+  }
+}
+
+class _TemplateTile extends StatelessWidget {
+  const _TemplateTile({
+    required this.template,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final PromptTemplateDto template;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final subtitle = template.description?.isNotEmpty ?? false
+        ? template.description!
+        : '${promptTypeLabels[template.type] ?? template.type} · ${template.scope}';
+    return ListTile(
+      selected: isSelected,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      tileColor: isSelected
+          ? Theme.of(context).colorScheme.secondaryContainer
+          : null,
+      isThreeLine: (template.description?.isNotEmpty ?? false),
+      title: Row(
+        children: [
+          Flexible(child: Text(template.name, overflow: TextOverflow.ellipsis)),
+          if (template.isBuiltin) ...[
+            const SizedBox(width: 6),
+            _Badge(label: '内置', color: Colors.teal),
+          ],
+          if (template.isRecommended) ...[
+            const SizedBox(width: 6),
+            _Badge(label: '推荐', color: Colors.deepOrange),
+          ],
+        ],
+      ),
+      subtitle: Text(
+        subtitle,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
+      onTap: onTap,
+    );
+  }
+}
+
+class _Badge extends StatelessWidget {
+  const _Badge({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 11, color: color),
+      ),
     );
   }
 }
@@ -295,12 +393,116 @@ class _PreviewPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = controller.state;
     final result = state.renderResult;
+    final activeVersion = state.versions.isEmpty
+        ? null
+        : state.versions.firstWhere(
+            (version) => version.id == template.activeVersionId,
+            orElse: () => state.versions.first,
+          );
+    final schema = activeVersion?.variablesSchema ?? const {};
+    final requiredVariables = schema.entries
+        .where((entry) => entry.value is Map && entry.value['required'] == true)
+        .map((entry) => entry.key)
+        .toList();
     return ListView(
       children: [
         Text(template.name, style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 4),
         Text('类型：${promptTypeLabels[template.type] ?? template.type}'),
         Text('范围：${template.scope}'),
+        if (template.description != null && template.description!.isNotEmpty)
+          Text('描述：${template.description}'),
+        Text('分类：${promptCategoryLabel(template.category)}'),
+        if (template.isBuiltin) ...[
+          const Text('内置模板'),
+          if (template.builtinKey != null)
+            SelectableText(
+              'builtin_key: ${template.builtinKey}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+        ],
+        if (activeVersion != null) ...[
+          const SizedBox(height: 12),
+          Text('模板详情', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text('active version: v${activeVersion.version}'),
+          if (requiredVariables.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text('必填变量（${requiredVariables.length}）：'),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: [
+                for (final name in requiredVariables)
+                  Chip(
+                    label: Text(name),
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize:
+                        MaterialTapTargetSize.shrinkWrap,
+                  ),
+              ],
+            ),
+          ],
+          if (activeVersion.defaultValues.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text('默认值：'),
+            const SizedBox(height: 4),
+            for (final entry in activeVersion.defaultValues.entries)
+              Text('${entry.key}: ${entry.value}'),
+          ],
+          if (activeVersion.outputConstraints != null &&
+              activeVersion.outputConstraints!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text('输出约束：'),
+            const SizedBox(height: 4),
+            SelectableText(activeVersion.outputConstraints!),
+          ],
+          if (activeVersion.negativePrompt != null &&
+              activeVersion.negativePrompt!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text('禁止项：'),
+            const SizedBox(height: 4),
+            SelectableText(activeVersion.negativePrompt!),
+          ],
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => _copy(
+                  context,
+                  jsonEncode({
+                    'name': template.name,
+                    'type': template.type,
+                    'description': template.description,
+                    'system_prompt': activeVersion.systemPrompt,
+                    'role_prompt': activeVersion.rolePrompt,
+                    'instruction_template':
+                        activeVersion.instructionTemplate,
+                    'negative_prompt': activeVersion.negativePrompt,
+                    'output_constraints':
+                        activeVersion.outputConstraints,
+                    'variables_schema': activeVersion.variablesSchema,
+                    'default_values': activeVersion.defaultValues,
+                  }),
+                  '模板已复制',
+                ),
+                icon: const Icon(Icons.copy_outlined),
+                label: const Text('复制模板'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => _copy(
+                  context,
+                  jsonEncode(activeVersion.variablesSchema),
+                  '变量 schema 已复制',
+                ),
+                icon: const Icon(Icons.data_object),
+                label: const Text('复制变量 schema'),
+              ),
+            ],
+          ),
+        ],
         const SizedBox(height: 12),
         Text('版本', style: Theme.of(context).textTheme.titleMedium),
         for (final version in state.versions)
@@ -337,6 +539,16 @@ class _PreviewPanel extends StatelessWidget {
           Text('已渲染提示词', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           SelectableText(result.renderedPrompt),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () => _copy(
+              context,
+              result.renderedPrompt,
+              '已渲染提示词已复制',
+            ),
+            icon: const Icon(Icons.copy_outlined),
+            label: const Text('复制已渲染提示词'),
+          ),
           if (result.missingVariables.isNotEmpty) ...[
             const SizedBox(height: 12),
             Text('缺失变量：${result.missingVariables.join(', ')}'),
@@ -350,5 +562,12 @@ class _PreviewPanel extends StatelessWidget {
         ],
       ],
     );
+  }
+
+  void _copy(BuildContext context, String text, String message) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 }

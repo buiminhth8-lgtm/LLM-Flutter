@@ -9,6 +9,7 @@ LLM-Studio 是面向 Windows 本地大模型工作的桌面应用。当前形态
 - 默认配置：`config.yaml`
 - 运行数据：`data/`（已通过 `.gitignore` 排除）
 - Novel Studio：阶段 0～12 已整理为产品化闭环；入口由 `/v1/capabilities` 和 `features.novel_studio.enabled` 控制。
+- Prompt Studio：内置 24 个中文小说创作默认模板，幂等安装、按 `builtin_key` 匹配且不覆盖用户修改。
 
 ## 快速启动
 

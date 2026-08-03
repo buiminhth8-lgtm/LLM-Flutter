@@ -185,7 +185,7 @@ class PromptService:
     def get_render_record(self, render_id: str) -> dict[str, Any]:
         return self.records.get_render_record(render_id)
 
-    def ensure_defaults(self) -> list[dict[str, Any]]:
+    def ensure_defaults(self) -> dict[str, Any]:
         return ensure_default_prompt_templates(self)
 
     def copy_to_project(self, template_id: str, request: Any) -> dict[str, Any]:
