@@ -138,6 +138,11 @@ def required_permission_for_request(method: str, path: str) -> Permission | None
             return Permission.VIEW_MEMORY
         return Permission.MANAGE_MEMORY
 
+    if path.startswith("/v1/evaluation"):
+        if method == "GET":
+            return Permission.VIEW_EVALUATION
+        return Permission.MANAGE_EVALUATION
+
     if path.startswith("/v1/vision"):
         return Permission.CHAT
 

@@ -11,9 +11,14 @@ import 'widgets/adapter_eval_create_session_dialog.dart';
 import 'widgets/adapter_eval_session_list.dart';
 
 class AdapterEvalSessionsPage extends StatefulWidget {
-  const AdapterEvalSessionsPage({super.key, required this.controller});
+  const AdapterEvalSessionsPage({
+    super.key,
+    required this.controller,
+    this.onOpenFullEvaluation,
+  });
 
   final AdapterEvalController controller;
+  final ValueChanged<String>? onOpenFullEvaluation;
 
   @override
   State<AdapterEvalSessionsPage> createState() =>
@@ -43,6 +48,18 @@ class _AdapterEvalSessionsPageState extends State<AdapterEvalSessionsPage> {
               title: 'Adapter Evaluation',
               subtitle: 'Stage 9：同一提示下对比基础模型与 Adapter 输出，人工评分并生成轻量报告。',
               actions: [
+                OutlinedButton.icon(
+                  key: const Key('adapter-eval-open-full-evaluation'),
+                  onPressed:
+                      state.currentSession == null ||
+                          widget.onOpenFullEvaluation == null
+                      ? null
+                      : () => widget.onOpenFullEvaluation?.call(
+                          state.currentSession!.sessionId,
+                        ),
+                  icon: const Icon(Icons.fact_check_outlined),
+                  label: const Text('Open Full Evaluation'),
+                ),
                 FilledButton.icon(
                   key: const Key('adapter-eval-new-session'),
                   onPressed: state.loading ? null : _showCreateSession,

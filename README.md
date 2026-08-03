@@ -11,6 +11,7 @@ Novel Studio Stage 7 Dataset Versioning: [docs/NOVEL_STAGE7_DATASET_VERSIONING.m
 Novel Studio Stage 8 Fine-tune Center: [docs/NOVEL_STAGE8_FINETUNE_CENTER.md](docs/NOVEL_STAGE8_FINETUNE_CENTER.md).
 Novel Studio Stage 9 Adapter Evaluation: [docs/NOVEL_STAGE9_ADAPTER_EVALUATION.md](docs/NOVEL_STAGE9_ADAPTER_EVALUATION.md).
 Novel Studio Stage 10 RAG / Memory: [docs/NOVEL_STAGE10_RAG_MEMORY.md](docs/NOVEL_STAGE10_RAG_MEMORY.md).
+Novel Studio Stage 11 Evaluation Center: [docs/NOVEL_STAGE11_EVALUATION_CENTER.md](docs/NOVEL_STAGE11_EVALUATION_CENTER.md).
 
 认证恢复、API Key 重新生成和本机 admin 恢复流程见 [docs/AUTH_RECOVERY.md](docs/AUTH_RECOVERY.md)。
 
@@ -61,6 +62,7 @@ LLM-Studio/
 │   ├── datasets/                 # Novel Stage 6/7 Dataset Builder、Version 与 Recipe Preview
 │   ├── adapter_evaluation/        # Novel Stage 9 Adapter 对比、人工评分与报告
 │   ├── memory/                    # Novel Stage 10 长篇小说 Memory / RAG 与章节摘要
+│   ├── evaluation/                # Novel Stage 11 完整评估中心、指标、问题与报告
 │   ├── auth/                     # RBAC 角色和权限
 │   └── security/                 # 上传安全等
 ├── apps/flutter_studio/          # Flutter Windows 桌面客户端
@@ -694,7 +696,18 @@ C:\Users\zkjr\...
 | `memory_embedding_retrieval` | not_implemented | no | Stage 10 只预留接口，不强制 embedding |
 | `chapter_summary_versions` | available* | yes | 手动/模型章节摘要版本，激活后可同步 chapter.summary |
 | `context_memory_bridge` | available* | yes | `memory.enabled=true` 时注入 retrieved_memory |
-| `full_evaluation_center` | not_implemented | no | 自动风格/人物/剧情评估属于后续阶段 |
+| `full_evaluation_center` | available* | yes | 完整 Evaluation Center，可运行自动/人工评估并生成报告 |
+| `novel_evaluation` | available* | yes | Stage 11 小说评估入口 |
+| `evaluation_repetition` | available* | yes | 重复句、重复段和短语重复启发式评估 |
+| `evaluation_style_consistency` | available* | yes | 文风一致性启发式评估 |
+| `evaluation_character_consistency` | available* | yes | 人物一致性启发式评估 |
+| `evaluation_world_consistency` | available* | yes | 世界观一致性启发式评估 |
+| `evaluation_plot_coherence` | available* | yes | 剧情连贯性启发式评估 |
+| `evaluation_pacing` | available* | yes | 节奏启发式评估 |
+| `evaluation_memory_usage` | available* | yes | Memory/RAG 使用质量启发式评估 |
+| `evaluation_foreshadowing` | available* | yes | 伏笔设置/回收启发式评估 |
+| `evaluation_local_model_judge` | partial* | yes | 可选本地模型 judge，仅复用本地 Runtime |
+| `windows_packaging` | not_implemented | no | Stage 11 不做 Windows 打包 |
 
 \* 需要 `features.novel_studio.enabled=true`。
 

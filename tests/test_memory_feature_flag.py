@@ -47,12 +47,11 @@ def test_memory_feature_flag_and_capabilities(monkeypatch, tmp_path):
     assert caps["memory_documents"].status == CapabilityStatus.AVAILABLE
     assert caps["memory_keyword_retrieval"].status == CapabilityStatus.AVAILABLE
     assert caps["memory_embedding_retrieval"].status == CapabilityStatus.NOT_IMPLEMENTED
-    assert caps["full_evaluation_center"].status == CapabilityStatus.NOT_IMPLEMENTED
-    assert caps["novel_evaluation"].status == CapabilityStatus.NOT_IMPLEMENTED
+    assert caps["full_evaluation_center"].status == CapabilityStatus.AVAILABLE
+    assert caps["novel_evaluation"].status == CapabilityStatus.AVAILABLE
 
 
 def test_memory_permissions():
     assert required_permission_for_request("GET", "/v1/memory/documents") == Permission.VIEW_MEMORY
     assert required_permission_for_request("POST", "/v1/memory/retrieve") == Permission.VIEW_MEMORY
     assert required_permission_for_request("POST", "/v1/memory/documents") == Permission.MANAGE_MEMORY
-

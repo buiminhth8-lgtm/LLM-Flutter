@@ -20,6 +20,7 @@ class JobType(str, Enum):
     LORA_MERGE = "LORA_MERGE"
     RAG_REBUILD = "RAG_REBUILD"
     CACHE_CLEANUP = "CACHE_CLEANUP"
+    EVALUATION = "EVALUATION"
 
 
 class JobStatus(str, Enum):

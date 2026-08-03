@@ -59,6 +59,7 @@ from .api.routers.context import router as context_router
 from .api.routers.datasets import router as datasets_router
 from .api.routers.diagnostics import router as diagnostics_router
 from .api.routers.downloads import router as downloads_router
+from .api.routers.evaluation import router as evaluation_router
 from .api.routers.finetune import router as finetune_router
 from .api.routers.jobs import router as jobs_router
 from .api.routers.memory import router as memory_router
@@ -77,6 +78,7 @@ from .context import ContextService
 from .datasets import DatasetService
 from .diagnostics import export_diagnostics
 from .downloads import DownloadManager
+from .evaluation import EvaluationService
 from .execution import run_blocking_io, run_cpu_bound
 from .finetune import FineTuneService
 from .generation import CancellationToken
@@ -136,6 +138,7 @@ _dataset_service: DatasetService | None = None
 _finetune_service: FineTuneService | None = None
 _adapter_evaluation_service: AdapterEvaluationService | None = None
 _memory_service: MemoryService | None = None
+_evaluation_service: EvaluationService | None = None
 _current_model_id: str | None = None
 _runner_model_ids: dict[str, str] = {}
 
@@ -152,6 +155,7 @@ def get_app(config: Config):
     global _model_repository, _job_repository, _job_queue, _download_manager, _adapter_repository, _gpu_scheduler
     global _novel_service, _prompt_service, _context_service, _writing_service
     global _revision_service, _dataset_service, _finetune_service, _adapter_evaluation_service, _memory_service
+    global _evaluation_service
     _config = config
     layout = layout_from_config(config)
     layout.ensure()
@@ -251,6 +255,7 @@ def get_app(config: Config):
     app.include_router(finetune_router)
     app.include_router(adapter_evaluation_router)
     app.include_router(memory_router)
+    app.include_router(evaluation_router)
 
     @app.middleware("http")
     async def request_id_middleware(request: Request, call_next):
@@ -678,6 +683,17 @@ def get_app(config: Config):
         adapter_evaluation_service=_adapter_evaluation_service,
     )
     _context_service.memory_service = _memory_service
+    _evaluation_service = EvaluationService.from_config(
+        config,
+        novel_service=_novel_service,
+        writing_service=_writing_service,
+        revision_service=_revision_service,
+        memory_service=_memory_service,
+        adapter_evaluation_service=_adapter_evaluation_service,
+        model_repository=_model_repository,
+        runtime_bridge=_writing_service.runtime_bridge,
+        job_queue=_job_queue,
+    )
     configure_api_state(
         writing_service=_writing_service,
         revision_service=_revision_service,
@@ -685,6 +701,7 @@ def get_app(config: Config):
         finetune_service=_finetune_service,
         adapter_evaluation_service=_adapter_evaluation_service,
         memory_service=_memory_service,
+        evaluation_service=_evaluation_service,
     )
 
     async def _load_text_model(model_id: str, request_id: str) -> dict:

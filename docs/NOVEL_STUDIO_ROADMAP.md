@@ -12,13 +12,14 @@ Stage 7 Dataset Versioning details: [NOVEL_STAGE7_DATASET_VERSIONING.md](NOVEL_S
 Stage 8 Fine-tune Center details: [NOVEL_STAGE8_FINETUNE_CENTER.md](NOVEL_STAGE8_FINETUNE_CENTER.md).
 Stage 9 Adapter Evaluation details: [NOVEL_STAGE9_ADAPTER_EVALUATION.md](NOVEL_STAGE9_ADAPTER_EVALUATION.md).
 Stage 10 RAG / Memory details: [NOVEL_STAGE10_RAG_MEMORY.md](NOVEL_STAGE10_RAG_MEMORY.md).
+Stage 11 Evaluation Center details: [NOVEL_STAGE11_EVALUATION_CENTER.md](NOVEL_STAGE11_EVALUATION_CENTER.md).
 
-Current implemented scope reaches Stage 10: completed Stage 8 Adapters can be
-compared in Stage 9, and Stage 10 can build long-form novel Memory from existing
-novel data, retrieve relevant chunks, persist retrieval traces, maintain chapter
-summary versions, and inject budgeted memory into ContextAssembler.
+Current implemented scope reaches Stage 11: completed Stage 8 Adapters can be
+compared in Stage 9, Stage 10 can build long-form novel Memory, and Stage 11 can
+run advisory automatic/manual evaluation across projects, chapters, generations,
+revisions, memory retrieval records, and adapter evaluation sessions.
 
-Stage 10 boundaries:
+Stage 11 boundaries:
 
 - `revision_records` saves `original_text`, `edited_text`, `diff_json`, tags, score, status, hashes, and `accepted_for_dataset`.
 - `revision_autosaves` saves editing drafts separately and never changes formal revision text.
@@ -28,7 +29,8 @@ Stage 10 boundaries:
 - `adapter_evaluation_*` records compare base vs adapter outputs and manual evaluation data.
 - `memory_*` records persist novel memory documents, chunks, index entries, and retrieval traces.
 - `chapter_summary_versions` stores manual or model-generated summary versions.
-- Full automatic Evaluation Center, automatic literary scoring, DPO/RLHF, and external vector database dependency remain later stages / out of scope.
+- `evaluation_*` records persist advisory runs, cases, metrics, findings, reports, and manual scores.
+- Training, DatasetVersion creation, DPO/RLHF, cloud judges, external vector database dependency, and Windows packaging remain out of Stage 11 scope.
 
 ## 阶段 0：工程基线整理与开发入口
 
@@ -106,5 +108,14 @@ Stage 10 boundaries:
 - 不包含完整 Evaluation Center、自动文学评分、训练、DPO/RLHF 或外部向量库强依赖。
 
 ## 阶段 11：Evaluation Center 完整评估中心
+
+- `evaluation_runs` records target, evaluator configuration, job status, summary, score, and errors.
+- `evaluation_cases` stores each evaluator execution snapshot.
+- `evaluation_metrics` and `evaluation_findings` persist automatic results for auditability.
+- `manual_evaluation_scores` stores human reviewer scores and notes.
+- `evaluation_reports` stores report JSON generated from persisted automatic/manual data.
+- Flutter adds Evaluation Center with run list, metrics, findings, manual scoring, and report panels.
+- Writing, Revision, Adapter Evaluation, and Memory pages expose evaluation entry points.
+- No training, DatasetVersion mutation, adapter activation, cloud judge, automatic content rewrite, or Windows packaging is included.
 
 ## 阶段 12：UI 产品化与 Windows 发布验收

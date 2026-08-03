@@ -560,9 +560,7 @@ class LlmStudioClient {
     return (body['data'] as List?) ?? const [];
   }
 
-  Future<Map<String, dynamic>> createMemoryDocument(
-    Map<String, Object?> body,
-  ) {
+  Future<Map<String, dynamic>> createMemoryDocument(Map<String, Object?> body) {
     return _postMap('/v1/memory/documents', body: body);
   }
 
@@ -577,7 +575,9 @@ class LlmStudioClient {
   }
 
   Future<Map<String, dynamic>> archiveMemoryDocument(String documentId) {
-    return _deleteMap('/v1/memory/documents/${Uri.encodeComponent(documentId)}');
+    return _deleteMap(
+      '/v1/memory/documents/${Uri.encodeComponent(documentId)}',
+    );
   }
 
   Future<Map<String, dynamic>> buildMemoryFromNovel(
@@ -1197,6 +1197,142 @@ class LlmStudioClient {
       '/v1/adapter-evaluations/results/${Uri.encodeComponent(resultId)}/create-revision',
       body: body,
     );
+  }
+
+  Future<Map<String, dynamic>> createEvaluationRun(Map<String, Object?> body) {
+    return _postMap(
+      '/v1/evaluation/runs',
+      body: body,
+      timeout: const Duration(minutes: 5),
+    );
+  }
+
+  Future<Map<String, dynamic>> runEvaluationSync(Map<String, Object?> body) {
+    return _postMap(
+      '/v1/evaluation/run-sync',
+      body: body,
+      timeout: const Duration(minutes: 5),
+    );
+  }
+
+  Future<List<dynamic>> evaluationRuns({
+    String? projectId,
+    String? targetType,
+    String? status,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final query = <String, String>{
+      if (projectId != null && projectId.isNotEmpty) 'project_id': projectId,
+      if (targetType != null && targetType.isNotEmpty)
+        'target_type': targetType,
+      if (status != null && status.isNotEmpty) 'status': status,
+      'limit': '$limit',
+      'offset': '$offset',
+    };
+    final body = await _getMap(
+      Uri(path: '/v1/evaluation/runs', queryParameters: query).toString(),
+    );
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> evaluationRun(String runId) {
+    return _getMap('/v1/evaluation/runs/${Uri.encodeComponent(runId)}');
+  }
+
+  Future<Map<String, dynamic>> startEvaluationRun(String runId) {
+    return _postMap(
+      '/v1/evaluation/runs/${Uri.encodeComponent(runId)}/start',
+      body: const {},
+      timeout: const Duration(minutes: 5),
+    );
+  }
+
+  Future<Map<String, dynamic>> cancelEvaluationRun(String runId) {
+    return _postMap(
+      '/v1/evaluation/runs/${Uri.encodeComponent(runId)}/cancel',
+      body: const {},
+    );
+  }
+
+  Future<Map<String, dynamic>> archiveEvaluationRun(String runId) {
+    return _deleteMap('/v1/evaluation/runs/${Uri.encodeComponent(runId)}');
+  }
+
+  Future<List<dynamic>> evaluationMetrics(String runId) async {
+    final body = await _getMap(
+      '/v1/evaluation/runs/${Uri.encodeComponent(runId)}/metrics',
+    );
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<List<dynamic>> evaluationFindings(
+    String runId, {
+    String? category,
+    String? severity,
+    String? status,
+    int limit = 100,
+    int offset = 0,
+  }) async {
+    final query = <String, String>{
+      if (category != null && category.isNotEmpty) 'category': category,
+      if (severity != null && severity.isNotEmpty) 'severity': severity,
+      if (status != null && status.isNotEmpty) 'status': status,
+      'limit': '$limit',
+      'offset': '$offset',
+    };
+    final body = await _getMap(
+      Uri(
+        path: '/v1/evaluation/runs/${Uri.encodeComponent(runId)}/findings',
+        queryParameters: query,
+      ).toString(),
+    );
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> updateEvaluationFinding(
+    String findingId,
+    Map<String, Object?> body,
+  ) {
+    return _patchMap(
+      '/v1/evaluation/findings/${Uri.encodeComponent(findingId)}',
+      body,
+    );
+  }
+
+  Future<Map<String, dynamic>> addManualEvaluationScore(
+    String runId,
+    Map<String, Object?> body,
+  ) {
+    return _postMap(
+      '/v1/evaluation/runs/${Uri.encodeComponent(runId)}/manual-score',
+      body: body,
+    );
+  }
+
+  Future<List<dynamic>> manualEvaluationScores(String runId) async {
+    final body = await _getMap(
+      '/v1/evaluation/runs/${Uri.encodeComponent(runId)}/manual-scores',
+    );
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> generateEvaluationReport(String runId) {
+    return _postMap(
+      '/v1/evaluation/runs/${Uri.encodeComponent(runId)}/report',
+      body: const {},
+    );
+  }
+
+  Future<List<dynamic>> evaluationReports(String runId) async {
+    final body = await _getMap(
+      '/v1/evaluation/runs/${Uri.encodeComponent(runId)}/reports',
+    );
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> evaluationReport(String reportId) {
+    return _getMap('/v1/evaluation/reports/${Uri.encodeComponent(reportId)}');
   }
 
   Future<String> ragQuery(String query, {int topK = 5}) async {

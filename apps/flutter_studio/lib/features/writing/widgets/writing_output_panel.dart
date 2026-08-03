@@ -11,6 +11,7 @@ class WritingOutputPanel extends StatelessWidget {
     required this.onSave,
     required this.onAppend,
     this.onEditAsRevision,
+    this.onEvaluateGeneration,
   });
 
   final String output;
@@ -21,6 +22,7 @@ class WritingOutputPanel extends StatelessWidget {
   final VoidCallback onSave;
   final VoidCallback onAppend;
   final VoidCallback? onEditAsRevision;
+  final VoidCallback? onEvaluateGeneration;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -59,6 +61,12 @@ class WritingOutputPanel extends StatelessWidget {
                   onPressed: canSave && !saving ? onEditAsRevision : null,
                   icon: const Icon(Icons.rate_review_outlined),
                   label: const Text('Edit as Revision'),
+                ),
+                OutlinedButton.icon(
+                  key: const Key('writing-evaluate-generation'),
+                  onPressed: canSave && !saving ? onEvaluateGeneration : null,
+                  icon: const Icon(Icons.fact_check_outlined),
+                  label: const Text('Evaluate'),
                 ),
               ],
             ),

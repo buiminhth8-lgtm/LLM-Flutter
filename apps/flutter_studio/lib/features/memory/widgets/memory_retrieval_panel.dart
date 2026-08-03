@@ -11,6 +11,7 @@ class MemoryRetrievalPanel extends StatelessWidget {
     required this.topKController,
     required this.maxTokensController,
     required this.onRetrieve,
+    this.onEvaluateRetrieval,
   });
 
   final MemoryRetrieveResultDto? result;
@@ -18,6 +19,7 @@ class MemoryRetrievalPanel extends StatelessWidget {
   final TextEditingController topKController;
   final TextEditingController maxTokensController;
   final VoidCallback onRetrieve;
+  final ValueChanged<String>? onEvaluateRetrieval;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -60,11 +62,29 @@ class MemoryRetrievalPanel extends StatelessWidget {
         ],
       ),
       const SizedBox(height: 8),
-      FilledButton.icon(
-        key: const Key('memory-retrieve'),
-        onPressed: onRetrieve,
-        icon: const Icon(Icons.search),
-        label: const Text('Retrieve'),
+      Row(
+        children: [
+          Expanded(
+            child: FilledButton.icon(
+              key: const Key('memory-retrieve'),
+              onPressed: onRetrieve,
+              icon: const Icon(Icons.search),
+              label: const Text('Retrieve'),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: OutlinedButton.icon(
+              key: const Key('memory-evaluate-retrieval'),
+              onPressed:
+                  result?.retrievalId == null || onEvaluateRetrieval == null
+                  ? null
+                  : () => onEvaluateRetrieval?.call(result!.retrievalId!),
+              icon: const Icon(Icons.fact_check_outlined),
+              label: const Text('Evaluate'),
+            ),
+          ),
+        ],
       ),
       const SizedBox(height: 8),
       if (result != null)

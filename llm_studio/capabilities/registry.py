@@ -8,6 +8,7 @@ from llm_studio.features import (
     is_adapter_evaluation_enabled,
     is_dataset_builder_enabled,
     is_dataset_versioning_enabled,
+    is_evaluation_center_enabled,
     is_finetune_center_enabled,
     is_memory_retrieval_enabled,
     is_novel_memory_enabled,
@@ -99,6 +100,15 @@ _CAPABILITIES: tuple[CapabilityInfo, ...] = (
     CapabilityInfo("adapter_manual_scoring", CapabilityStatus.NOT_IMPLEMENTED, "Manual adapter comparison scoring is not implemented.", False),
     CapabilityInfo("adapter_evaluation_report", CapabilityStatus.NOT_IMPLEMENTED, "Adapter evaluation reports are not implemented.", False),
     CapabilityInfo("full_evaluation_center", CapabilityStatus.NOT_IMPLEMENTED, "Full automatic Evaluation Center is not implemented.", False),
+    CapabilityInfo("evaluation_repetition", CapabilityStatus.NOT_IMPLEMENTED, "Repetition evaluation is planned but not implemented.", False),
+    CapabilityInfo("evaluation_style_consistency", CapabilityStatus.NOT_IMPLEMENTED, "Style consistency evaluation is planned but not implemented.", False),
+    CapabilityInfo("evaluation_character_consistency", CapabilityStatus.NOT_IMPLEMENTED, "Character consistency evaluation is planned but not implemented.", False),
+    CapabilityInfo("evaluation_world_consistency", CapabilityStatus.NOT_IMPLEMENTED, "World consistency evaluation is planned but not implemented.", False),
+    CapabilityInfo("evaluation_plot_coherence", CapabilityStatus.NOT_IMPLEMENTED, "Plot coherence evaluation is planned but not implemented.", False),
+    CapabilityInfo("evaluation_pacing", CapabilityStatus.NOT_IMPLEMENTED, "Pacing evaluation is planned but not implemented.", False),
+    CapabilityInfo("evaluation_memory_usage", CapabilityStatus.NOT_IMPLEMENTED, "Memory usage evaluation is planned but not implemented.", False),
+    CapabilityInfo("evaluation_foreshadowing", CapabilityStatus.NOT_IMPLEMENTED, "Foreshadowing evaluation is planned but not implemented.", False),
+    CapabilityInfo("evaluation_local_model_judge", CapabilityStatus.NOT_IMPLEMENTED, "Local model assisted evaluation is planned but not implemented.", False),
     CapabilityInfo("novel_rag_memory", CapabilityStatus.NOT_IMPLEMENTED, "Novel memory and long-form RAG are planned but not implemented.", False),
     CapabilityInfo("memory_documents", CapabilityStatus.NOT_IMPLEMENTED, "Novel memory documents are planned but not implemented.", False),
     CapabilityInfo("memory_keyword_retrieval", CapabilityStatus.NOT_IMPLEMENTED, "Keyword memory retrieval is planned but not implemented.", False),
@@ -213,6 +223,23 @@ def get_capabilities_for_config(config) -> tuple[CapabilityInfo, ...]:
                 "Memory retrieval is disabled by feature flag.",
                 False,
             )
+    if is_evaluation_center_enabled(config):
+        overrides.update(
+            {
+                "full_evaluation_center": (CapabilityStatus.AVAILABLE, "Full Evaluation Center runs deterministic heuristic evaluators and optional local model judging.", True),
+                "novel_evaluation": (CapabilityStatus.AVAILABLE, "Novel quality evaluation runs are persisted with metrics, findings, reports, and manual scores.", True),
+                "evaluation_repetition": (CapabilityStatus.AVAILABLE, "Sentence, paragraph, and phrase repetition heuristics are available.", True),
+                "evaluation_style_consistency": (CapabilityStatus.AVAILABLE, "Style heuristic metrics compare sentence length, punctuation, dialogue ratio, and POV signals.", True),
+                "evaluation_character_consistency": (CapabilityStatus.AVAILABLE, "Character consistency heuristics compare text against known character records.", True),
+                "evaluation_world_consistency": (CapabilityStatus.AVAILABLE, "World consistency heuristics compare text against world entries and timeline records.", True),
+                "evaluation_plot_coherence": (CapabilityStatus.AVAILABLE, "Plot coherence heuristics compare chapter goals, outlines, and open plot threads.", True),
+                "evaluation_pacing": (CapabilityStatus.AVAILABLE, "Pacing heuristics measure dialogue, description, action ratio, and long paragraphs.", True),
+                "evaluation_memory_usage": (CapabilityStatus.AVAILABLE, "Memory/RAG retrieval relevance and usage are evaluated from persisted retrieval records.", True),
+                "evaluation_foreshadowing": (CapabilityStatus.AVAILABLE, "Foreshadowing heuristics inspect registered clues from world, plot, timeline, and memory sources.", True),
+                "evaluation_local_model_judge": (CapabilityStatus.PARTIAL, "Optional local-model assisted judging reuses loaded Runtime and is advisory only.", True),
+                "windows_packaging": (CapabilityStatus.NOT_IMPLEMENTED, "Windows installer packaging remains out of Stage 11 scope.", False),
+            }
+        )
     existing = {cap.name for cap in _CAPABILITIES}
     result: list[CapabilityInfo] = []
     for cap in _CAPABILITIES:

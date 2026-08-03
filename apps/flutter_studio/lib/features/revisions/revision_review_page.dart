@@ -21,11 +21,13 @@ class RevisionReviewPage extends StatefulWidget {
     required this.controller,
     this.datasetController,
     this.onOpenDatasetSample,
+    this.onEvaluateRevision,
   });
 
   final RevisionController controller;
   final DatasetController? datasetController;
   final ValueChanged<String>? onOpenDatasetSample;
+  final ValueChanged<String>? onEvaluateRevision;
 
   @override
   State<RevisionReviewPage> createState() => _RevisionReviewPageState();
@@ -266,6 +268,13 @@ class _RevisionReviewPageState extends State<RevisionReviewPage> {
         RevisionDatasetCandidateToggle(
           value: state.acceptedForDataset,
           onChanged: widget.controller.setDatasetCandidate,
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          key: const Key('revision-evaluate-revision'),
+          onPressed: () => widget.onEvaluateRevision?.call(revision.revisionId),
+          icon: const Icon(Icons.fact_check_outlined),
+          label: const Text('Evaluate Revision'),
         ),
         if (widget.datasetController != null) ...[
           const SizedBox(height: 8),

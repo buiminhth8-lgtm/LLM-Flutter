@@ -12,9 +12,14 @@ import 'widgets/memory_retrieval_panel.dart';
 import 'widgets/memory_source_filter_bar.dart';
 
 class MemoryCenterPage extends StatefulWidget {
-  const MemoryCenterPage({super.key, required this.controller});
+  const MemoryCenterPage({
+    super.key,
+    required this.controller,
+    this.onEvaluateRetrieval,
+  });
 
   final MemoryController controller;
+  final ValueChanged<String>? onEvaluateRetrieval;
 
   @override
   State<MemoryCenterPage> createState() => _MemoryCenterPageState();
@@ -197,6 +202,7 @@ class _MemoryCenterPageState extends State<MemoryCenterPage> {
                     maxMemoryTokens:
                         int.tryParse(_maxMemoryTokens.text.trim()) ?? 1200,
                   ),
+                  onEvaluateRetrieval: widget.onEvaluateRetrieval,
                 ),
                 ChapterSummaryEditor(
                   chapterController: _chapter,

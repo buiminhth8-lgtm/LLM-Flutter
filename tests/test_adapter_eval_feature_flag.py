@@ -47,6 +47,6 @@ def test_adapter_eval_feature_flag_and_capabilities(monkeypatch, tmp_path):
     assert caps["adapter_base_compare"].status == CapabilityStatus.AVAILABLE
     assert caps["adapter_manual_scoring"].status == CapabilityStatus.AVAILABLE
     assert caps["adapter_evaluation_report"].status == CapabilityStatus.AVAILABLE
-    assert caps["full_evaluation_center"].status == CapabilityStatus.NOT_IMPLEMENTED
+    assert caps["full_evaluation_center"].status == CapabilityStatus.AVAILABLE
     assert caps["novel_rag_memory"].status == CapabilityStatus.AVAILABLE
-    assert caps["novel_evaluation"].status == CapabilityStatus.NOT_IMPLEMENTED
+    assert caps["novel_evaluation"].status == CapabilityStatus.AVAILABLE
