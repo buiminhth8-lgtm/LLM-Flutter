@@ -166,11 +166,15 @@ class ModelProvider(Protocol):
 - 已新增单元测试（`tests/test_model_gateway_*.py`）。
 - 未迁移任何业务调用点；未接入在线 API；未新增数据库表。
 
-### Phase 3: WritingService 迁移
+### Phase 3: WritingService 迁移（已实现）
 
-- 用 gateway.generate / generate_stream 替换 WritingRuntimeBridge 调用；
-  保留 bridge 作为兼容层。
-- generation_records 增加（可选）provider / usage 字段——如需要，走数据库迁移。
+- WritingRuntimeBridge 对外接口保持不变，内部经 ModelGatewayService 路由：
+  `WritingService -> WritingRuntimeBridge -> ModelGatewayService ->
+  LocalRuntimeProvider -> 现有 Runtime`。
+- 默认 provider 仍为 local_runtime；model_id / adapter_id / generation_params
+  透传不变；streaming、target_length、warnings、finish_reason、latency 与
+  generation_records 行为保持兼容。
+- 未接入任何在线 Provider；generation_records 字段未改。
 - 验收：/v1/writing/generate 与 /v1/writing/stream 行为不变，测试全绿。
 
 ### Phase 4: Model Profiles

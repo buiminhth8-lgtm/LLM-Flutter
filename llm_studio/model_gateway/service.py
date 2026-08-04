@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import inspect
 import time
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 from typing import Any
 
 from .errors import (
@@ -53,13 +54,13 @@ class ModelGatewayService:
             for name, provider in sorted(self._providers.items())
         ]
 
-    def generate(self, request: GenerateRequest) -> GenerateResult:
+    async def generate(self, request: GenerateRequest) -> GenerateResult:
         self._validate_request(request)
         provider_name = resolve_provider_name(request.provider)
         provider = self.get_provider(provider_name)
         started = time.monotonic()
         try:
-            result = provider.generate(request)
+            result = await provider.generate(request)
         except ModelGatewayError:
             raise
         except Exception as exc:
@@ -87,15 +88,21 @@ class ModelGatewayService:
             )
         return result
 
-    def stream_generate(
+    async def stream_generate(
         self,
         request: GenerateRequest,
-    ) -> Iterator[StreamChunk]:
+    ) -> AsyncIterator[StreamChunk]:
         self._validate_request(request)
         provider_name = resolve_provider_name(request.provider)
         provider = self.get_provider(provider_name)
+        streamer = provider.stream_generate(request)
         try:
-            yield from provider.stream_generate(request)
+            if inspect.isasyncgen(streamer):
+                async for chunk in streamer:
+                    yield chunk
+            else:
+                # Coroutine-style base implementation that raises immediately.
+                await streamer
         except ModelGatewayError:
             raise
         except Exception as exc:

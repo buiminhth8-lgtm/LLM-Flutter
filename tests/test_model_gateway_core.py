@@ -1,3 +1,5 @@
+import asyncio
+
 from llm_studio.model_gateway import (
     MODEL_GATEWAY_INVALID_REQUEST,
     MODEL_GATEWAY_PROVIDER_NOT_FOUND,
@@ -37,7 +39,7 @@ def test_service_raises_provider_not_found_for_unknown_provider():
     service = _service()
 
     try:
-        service.generate(GenerateRequest(provider="missing", prompt="正文"))
+        asyncio.run(service.generate(GenerateRequest(provider="missing", prompt="正文")))
     except ModelGatewayError as exc:
         assert exc.code == MODEL_GATEWAY_PROVIDER_NOT_FOUND
         assert "missing" in exc.message
@@ -49,7 +51,7 @@ def test_service_rejects_empty_prompt():
     service = _service()
 
     try:
-        service.generate(GenerateRequest(provider="fake", prompt="   "))
+        asyncio.run(service.generate(GenerateRequest(provider="fake", prompt="   ")))
     except ModelGatewayError as exc:
         assert exc.code == MODEL_GATEWAY_INVALID_REQUEST
     else:
@@ -59,11 +61,13 @@ def test_service_rejects_empty_prompt():
 def test_service_generate_returns_result_and_fills_latency():
     service = _service()
 
-    result = service.generate(
-        GenerateRequest(
-            provider="fake",
-            prompt="写一段正文",
-            generation_params={"fake_text": "生成内容"},
+    result = asyncio.run(
+        service.generate(
+            GenerateRequest(
+                provider="fake",
+                prompt="写一段正文",
+                generation_params={"fake_text": "生成内容"},
+            )
         )
     )
 

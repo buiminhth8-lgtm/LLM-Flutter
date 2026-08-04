@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 from typing import Any
 
 from .errors import FAKE_PROVIDER_ERROR, ModelGatewayError
@@ -20,7 +20,7 @@ class FakeProvider(BaseModelProvider):
     def __init__(self, default_text: str = DEFAULT_FAKE_TEXT):
         self.default_text = default_text
 
-    def generate(self, request: GenerateRequest) -> GenerateResult:
+    async def generate(self, request: GenerateRequest) -> GenerateResult:
         params = request.generation_params or {}
         self._raise_if_error(params)
         text = self._resolve_text(request, params)
@@ -40,7 +40,10 @@ class FakeProvider(BaseModelProvider):
             },
         )
 
-    def stream_generate(self, request: GenerateRequest) -> Iterator[StreamChunk]:
+    async def stream_generate(
+        self,
+        request: GenerateRequest,
+    ) -> AsyncIterator[StreamChunk]:
         params = request.generation_params or {}
         self._raise_if_error(params)
         text = self._resolve_text(request, params)
