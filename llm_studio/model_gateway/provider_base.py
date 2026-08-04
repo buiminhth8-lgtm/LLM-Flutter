@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 from typing import Any, Protocol, runtime_checkable
 
 from .errors import MODEL_GATEWAY_UNSUPPORTED_STREAMING, ModelGatewayError
@@ -15,9 +15,9 @@ class ModelProvider(Protocol):
 
     provider_name: str
 
-    def generate(self, request: GenerateRequest) -> GenerateResult: ...
+    async def generate(self, request: GenerateRequest) -> GenerateResult: ...
 
-    def stream_generate(self, request: GenerateRequest) -> Iterator[StreamChunk]: ...
+    def stream_generate(self, request: GenerateRequest) -> AsyncIterator[StreamChunk]: ...
 
     def get_capabilities(self) -> dict[str, Any]: ...
 
@@ -29,10 +29,13 @@ class BaseModelProvider:
 
     provider_name = "base"
 
-    def generate(self, request: GenerateRequest) -> GenerateResult:
+    async def generate(self, request: GenerateRequest) -> GenerateResult:
         raise NotImplementedError
 
-    def stream_generate(self, request: GenerateRequest) -> Iterator[StreamChunk]:
+    async def stream_generate(
+        self,
+        request: GenerateRequest,
+    ) -> AsyncIterator[StreamChunk]:
         raise ModelGatewayError(
             MODEL_GATEWAY_UNSUPPORTED_STREAMING,
             f"Provider '{self.provider_name}' does not support streaming.",

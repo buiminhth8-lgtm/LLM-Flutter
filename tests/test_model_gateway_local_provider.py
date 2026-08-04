@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 
 from llm_studio.model_gateway import (
@@ -72,7 +74,7 @@ def test_local_provider_raises_when_runtime_missing():
     provider = LocalRuntimeProvider()
 
     with pytest.raises(ModelGatewayError) as exc_info:
-        provider.generate(_request())
+        asyncio.run(provider.generate(_request()))
 
     assert exc_info.value.code == LOCAL_RUNTIME_UNAVAILABLE
 
@@ -81,7 +83,7 @@ def test_local_provider_generates_with_fake_bridge():
     bridge = FakeRuntimeBridge("生成的正文")
     provider = LocalRuntimeProvider(runtime_bridge=bridge)
 
-    result = provider.generate(_request())
+    result = asyncio.run(provider.generate(_request()))
 
     assert isinstance(result, GenerateResult)
     assert result.text == "生成的正文"
@@ -96,7 +98,7 @@ def test_local_provider_forwards_model_adapter_and_params():
     bridge = FakeRuntimeBridge()
     provider = LocalRuntimeProvider(runtime_bridge=bridge)
 
-    provider.generate(_request(max_tokens=64, temperature=0.5))
+    asyncio.run(provider.generate(_request(max_tokens=64, temperature=0.5)))
 
     call = bridge.calls[0]
     assert call["model_id"] == "model-1"
@@ -111,7 +113,7 @@ def test_local_provider_converts_runtime_exception():
     provider = LocalRuntimeProvider(runtime_bridge=bridge)
 
     with pytest.raises(ModelGatewayError) as exc_info:
-        provider.generate(_request())
+        asyncio.run(provider.generate(_request()))
 
     assert exc_info.value.code == MODEL_GATEWAY_GENERATION_FAILED
     assert exc_info.value.details["original_type"] == "RuntimeError"
@@ -120,7 +122,7 @@ def test_local_provider_converts_runtime_exception():
 def test_local_provider_supports_async_bridge_generate():
     provider = LocalRuntimeProvider(runtime_bridge=AsyncFakeRuntimeBridge())
 
-    result = provider.generate(_request())
+    result = asyncio.run(provider.generate(_request()))
 
     assert result.text == "async generated text"
 
@@ -129,7 +131,10 @@ def test_local_provider_streams_with_sync_bridge():
     bridge = FakeRuntimeBridge("同步流")
     provider = LocalRuntimeProvider(runtime_bridge=bridge)
 
-    chunks = list(provider.stream_generate(_request()))
+    async def _collect():
+        return [chunk async for chunk in provider.stream_generate(_request())]
+
+    chunks = asyncio.run(_collect())
 
     assert "".join(chunk.delta for chunk in chunks if chunk.event == "delta") == "同步流"
     assert chunks[-1].event == "done"
@@ -140,7 +145,10 @@ def test_local_provider_raises_unsupported_streaming_for_async_bridge():
     provider = LocalRuntimeProvider(runtime_bridge=AsyncFakeRuntimeBridge())
 
     with pytest.raises(ModelGatewayError) as exc_info:
-        list(provider.stream_generate(_request()))
+        async def _collect():
+            return [chunk async for chunk in provider.stream_generate(_request())]
+
+        asyncio.run(_collect())
 
     assert exc_info.value.code == MODEL_GATEWAY_UNSUPPORTED_STREAMING
 
