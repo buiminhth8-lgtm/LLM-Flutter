@@ -64,6 +64,7 @@ from .api.routers.finetune import router as finetune_router
 from .api.routers.health import router as health_router
 from .api.routers.jobs import router as jobs_router
 from .api.routers.memory import router as memory_router
+from .api.routers.model_profiles import router as model_profiles_router
 from .api.routers.novels import router as novels_router
 from .api.routers.prompts import router as prompts_router
 from .api.routers.revisions import router as revisions_router
@@ -92,6 +93,8 @@ from .generation.exceptions import (
 from .jobs import JobQueue, JobRepository, JobType
 from .jobs.exceptions import JobNotImplementedError
 from .memory import MemoryService
+from .model_gateway import LocalRuntimeProvider, ModelGatewayService
+from .model_gateway.profile_service import ModelProfileService
 from .models import LocalModelRepository
 from .models.exceptions import ModelDeleteError
 from .models.selection import ModelSelectionError, select_model_for_chat
@@ -265,6 +268,7 @@ def get_app(config: Config):
     app.include_router(adapter_evaluation_router)
     app.include_router(memory_router)
     app.include_router(evaluation_router)
+    app.include_router(model_profiles_router)
 
     @app.middleware("http")
     async def request_id_middleware(request: Request, call_next):
@@ -655,6 +659,12 @@ def get_app(config: Config):
             adapter_repository=_adapter_repository,
         ),
     )
+    _model_profile_service = ModelProfileService.from_config(config)
+    _writing_gateway = ModelGatewayService(profile_service=_model_profile_service)
+    _writing_gateway.register_provider(
+        LocalRuntimeProvider(runtime_bridge=_writing_service.runtime_bridge)
+    )
+    _writing_service.runtime_bridge.model_gateway = _writing_gateway
     _revision_service = RevisionService.from_config(
         config,
         novel_service=_novel_service,
@@ -714,6 +724,7 @@ def get_app(config: Config):
         adapter_evaluation_service=_adapter_evaluation_service,
         memory_service=_memory_service,
         evaluation_service=_evaluation_service,
+        model_profile_service=_model_profile_service,
     )
 
     async def _load_text_model(model_id: str, request_id: str) -> dict:

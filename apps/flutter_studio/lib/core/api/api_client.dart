@@ -450,6 +450,35 @@ class LlmStudioClient {
     return _postMap('/v1/prompts/render', body: body);
   }
 
+  Future<List<dynamic>> modelProfiles({
+    String? provider,
+    String? status,
+  }) async {
+    final query = <String, String>{
+      if (provider != null && provider.isNotEmpty) 'provider': provider,
+      if (status != null && status.isNotEmpty) 'status': status,
+    };
+    final path = Uri(
+      path: '/v1/model-profiles',
+      queryParameters: query.isEmpty ? null : query,
+    ).toString();
+    final body = await _getMap(path);
+    return (body['data'] as List?) ?? const [];
+  }
+
+  Future<Map<String, dynamic>> ensureModelProfileDefaults() async {
+    final body = await _postMap(
+      '/v1/model-profiles/defaults/ensure',
+      body: const {},
+    );
+    return Map<String, dynamic>.from(body);
+  }
+
+  Future<Map<String, dynamic>?> defaultModelProfile() async {
+    final body = await _getMap('/v1/model-profiles/default');
+    return body.isEmpty ? null : body;
+  }
+
   Future<Map<String, dynamic>> ensureDefaultPromptTemplates() async {
     final body = await _postMap('/v1/prompts/defaults/ensure', body: const {});
     final data = body['data'];

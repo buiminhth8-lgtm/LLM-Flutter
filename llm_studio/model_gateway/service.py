@@ -5,6 +5,7 @@ from __future__ import annotations
 import inspect
 import time
 from collections.abc import AsyncIterator
+from dataclasses import replace
 from typing import Any
 
 from .errors import (
@@ -12,6 +13,8 @@ from .errors import (
     MODEL_GATEWAY_INVALID_REQUEST,
     MODEL_GATEWAY_PROVIDER_NOT_FOUND,
     MODEL_GATEWAY_STREAM_FAILED,
+    MODEL_PROFILE_DISABLED,
+    MODEL_PROFILE_NOT_FOUND,
     ModelGatewayError,
 )
 from .fake_provider import FakeProvider
@@ -26,8 +29,10 @@ class ModelGatewayService:
     def __init__(
         self,
         providers: dict[str, ModelProvider] | None = None,
+        profile_service: Any | None = None,
     ) -> None:
         self._providers: dict[str, ModelProvider] = dict(providers or {})
+        self.profile_service = profile_service
         if "fake" not in self._providers:
             self.register_provider(FakeProvider())
 
@@ -56,11 +61,11 @@ class ModelGatewayService:
 
     async def generate(self, request: GenerateRequest) -> GenerateResult:
         self._validate_request(request)
-        provider_name = resolve_provider_name(request.provider)
+        provider_name, resolved_request = self._resolve_request(request)
         provider = self.get_provider(provider_name)
         started = time.monotonic()
         try:
-            result = await provider.generate(request)
+            result = await provider.generate(resolved_request)
         except ModelGatewayError:
             raise
         except Exception as exc:
@@ -93,9 +98,9 @@ class ModelGatewayService:
         request: GenerateRequest,
     ) -> AsyncIterator[StreamChunk]:
         self._validate_request(request)
-        provider_name = resolve_provider_name(request.provider)
+        provider_name, resolved_request = self._resolve_request(request)
         provider = self.get_provider(provider_name)
-        streamer = provider.stream_generate(request)
+        streamer = provider.stream_generate(resolved_request)
         try:
             if inspect.isasyncgen(streamer):
                 async for chunk in streamer:
@@ -123,3 +128,35 @@ class ModelGatewayService:
                 "GenerateRequest.prompt must not be empty.",
                 {"field": "prompt"},
             )
+
+    def _resolve_request(
+        self,
+        request: GenerateRequest,
+    ) -> tuple[str, GenerateRequest]:
+        """Resolve provider / model / default params from profile_id when set."""
+        if not request.profile_id:
+            return resolve_provider_name(request.provider), request
+        if self.profile_service is None:
+            raise ModelGatewayError(
+                MODEL_PROFILE_NOT_FOUND,
+                "Profile resolution is not configured.",
+                {"profile_id": request.profile_id},
+            )
+        profile = self.profile_service.get_profile(request.profile_id)
+        if profile.status != "enabled":
+            raise ModelGatewayError(
+                MODEL_PROFILE_DISABLED,
+                f"Model profile is not enabled: {request.profile_id}",
+                {"profile_id": request.profile_id, "status": profile.status},
+            )
+        merged_params = {
+            **profile.default_params,
+            **request.generation_params,
+        }
+        resolved = replace(
+            request,
+            provider=profile.provider,
+            model=request.model or profile.model,
+            generation_params=merged_params,
+        )
+        return resolve_provider_name(profile.provider, profile), resolved
