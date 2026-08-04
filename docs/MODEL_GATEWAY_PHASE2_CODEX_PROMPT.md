@@ -3,6 +3,10 @@
 > 本文件是下一阶段（`feat/model-gateway-core`）的任务草案，**不是本阶段执行内容**。
 > 当前分支 `chore/model-gateway-audit` 只产出审计与计划文档，不实现 Phase 2。
 
+> 状态：Phase 2 已实现（`feat/model-gateway-core`，`llm_studio/model_gateway/`）。
+> 本文档保留作为后续 WritingService 迁移（`refactor/writing-use-model-gateway`）
+> 的参考。
+
 ## 任务标题
 
 实现 Model Gateway 核心模块（local + fake Provider），不迁移业务调用点，

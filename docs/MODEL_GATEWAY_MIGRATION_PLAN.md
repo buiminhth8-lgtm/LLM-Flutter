@@ -159,11 +159,12 @@ class ModelProvider(Protocol):
 
 - 输出本审计报告与迁移计划、Phase 2 任务草案。只改 docs。
 
-### Phase 2: ModelGateway Core
+### Phase 2: ModelGateway Core（已实现）
 
-- 新增 `llm_studio/model_gateway/` 模块：schemas.py、provider_base.py、
-  service.py、errors.py、fake_provider.py。
-- 新增单元测试；不迁移任何业务调用点；不接入在线 API。
+- 已新增 `llm_studio/model_gateway/` 模块：schemas.py、provider_base.py、
+  service.py、errors.py、fake_provider.py、local_provider.py、routing.py。
+- 已新增单元测试（`tests/test_model_gateway_*.py`）。
+- 未迁移任何业务调用点；未接入在线 API；未新增数据库表。
 
 ### Phase 3: WritingService 迁移
 
