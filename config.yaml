@@ -108,6 +108,8 @@ novels:
   db_path: "./data/novels/novels.sqlite"
 prompts:
   db_path: "./data/novels/novels.sqlite"
+model_gateway:
+  db_path: "./data/novels/novels.sqlite"
 context:
   db_path: "./data/novels/novels.sqlite"
 writing:

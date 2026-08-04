@@ -135,6 +135,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "prompts": {
         "db_path": "./data/novels/novels.sqlite",
     },
+    "model_gateway": {
+        "db_path": "./data/novels/novels.sqlite",
+    },
     "context": {
         "db_path": "./data/novels/novels.sqlite",
     },
@@ -365,6 +368,7 @@ class Config:
             "uploads": ("temp_dir",),
             "novels": ("db_path",),
             "prompts": ("db_path",),
+            "model_gateway": ("db_path",),
             "context": ("db_path",),
             "writing": ("db_path",),
         }.items():

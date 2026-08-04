@@ -26,6 +26,7 @@ class ApiState:
     adapter_evaluation_service: Any | None = None
     memory_service: Any | None = None
     evaluation_service: Any | None = None
+    model_profile_service: Any | None = None
 
 
 _state = ApiState()

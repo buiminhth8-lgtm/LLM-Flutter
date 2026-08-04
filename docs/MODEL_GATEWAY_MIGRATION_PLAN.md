@@ -183,6 +183,9 @@ class ModelProvider(Protocol):
   profile 表或配置）。
 - Flutter 模型选择改为基于 profile 列表。
 
+（已实现：`model_profiles` 表、`ModelProfileService`、`/v1/model-profiles`
+API、Gateway profile_id 解析、内置 profiles。未接入在线 Provider。）
+
 ### Phase 5: OpenAI-Compatible Provider
 
 - 实现 OpenAICompatibleProvider + 配置（base_url / api_key 引用 / 模型）。
